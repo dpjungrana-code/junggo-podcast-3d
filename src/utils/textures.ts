@@ -586,11 +586,11 @@ export const createStudyBookStackTexture = (): THREE.CanvasTexture => {
   ctx.fillRect(0, 0, 1024, 1024);
 
   const spines = [
-    { label: "JLPT", bg: "#1c4a8a", fg: "#ffffff", trim: "#58b0ff" },
-    { label: "Japanese Grammar", bg: "#1b2434", fg: "#f4f6f8", trim: "#48f0b2" },
-    { label: "Vocabulary", bg: "#1d3d78", fg: "#ffffff", trim: "#93c5fd" },
-    { label: "Kanji", bg: "#272936", fg: "#f8fafc", trim: "#f59e0b" },
-    { label: "Conversation", bg: "#141a24", fg: "#e2e8f0", trim: "#38bdf8" },
+    { label: "JLPT", bg: "#1850a8", fg: "#ffffff", trim: "#60b8ff" },
+    { label: "Japanese Grammar", bg: "#1c273b", fg: "#f8fafc", trim: "#48f0b2" },
+    { label: "Vocabulary", bg: "#117a46", fg: "#ffffff", trim: "#86efac" },
+    { label: "Kanji", bg: "#d66a1c", fg: "#ffffff", trim: "#fde047" },
+    { label: "Conversation", bg: "#1d4ea6", fg: "#f8fafc", trim: "#7dd3fc" },
   ];
 
   const rowH = 1024 / spines.length;
@@ -601,21 +601,21 @@ export const createStudyBookStackTexture = (): THREE.CanvasTexture => {
     ctx.fillRect(0, y + 6, 1024, rowH - 12);
 
     // Subtle top edge highlight & bottom shelf contact shadow for 3D spine separation
-    ctx.fillStyle = "rgba(255, 255, 255, 0.14)";
-    ctx.fillRect(0, y + 6, 1024, 8);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+    ctx.fillRect(0, y + 6, 1024, 9);
     ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
     ctx.fillRect(0, y + rowH - 16, 1024, 10);
 
     // Accent spine stripe
     ctx.fillStyle = book.trim;
-    ctx.fillRect(36, y + 22, 22, rowH - 44);
+    ctx.fillRect(34, y + 22, 24, rowH - 44);
 
     // Crisp high-contrast sans-serif typography
     ctx.fillStyle = book.fg;
-    ctx.font = '800 72px "Avenir Next", "Helvetica Neue", sans-serif';
+    ctx.font = '800 78px "Avenir Next", "Helvetica Neue", sans-serif';
     ctx.textBaseline = "middle";
     ctx.textAlign = "left";
-    ctx.fillText(book.label, 96, y + rowH / 2 + 2);
+    ctx.fillText(book.label, 92, y + rowH / 2 + 2);
   });
 
   return finalizeTexture(canvas, 1, 1, 16);

@@ -4,6 +4,7 @@ import {
   Easing,
   Img,
   interpolate,
+  spring,
   staticFile,
   useCurrentFrame,
   useVideoConfig,
@@ -18,6 +19,7 @@ import {
   getActiveSection,
   getActiveSubtitle,
   isGuestSpeaker,
+  resolveCueGesture,
 } from "../data/demoEpisode";
 
 export type PresentationBoardProps = {
@@ -1181,9 +1183,85 @@ const OverviewBoardContent: React.FC<{
   );
 };
 
+const findSectionForTime = (
+  sections: readonly EpisodeSection[],
+  timeSec: number,
+): EpisodeSection | undefined => {
+  for (const section of sections) {
+    if (timeSec >= section.startSec && timeSec < section.endSec) {
+      return section;
+    }
+  }
+  return sections[sections.length - 1];
+};
+
+/**
+ * Computes a smooth 0..1 Remotion `spring()` zoom-in focus factor whenever
+ * either Sensei or Maria triggers `point_board` (explicitly or via keywords).
+ */
+const computeBoardZoomProgress = (
+  frame: number,
+  fps: number,
+  sections: readonly EpisodeSection[],
+  subtitles: readonly SubtitleCue[],
+): number => {
+  const rawWindows: [number, number][] = [];
+  for (const cue of subtitles) {
+    const midSec = (cue.startSec + cue.endSec) * 0.5;
+    const sec = findSectionForTime(sections, midSec);
+    const triggersZoom =
+      resolveCueGesture(cue, sec, false) === "point_board" ||
+      resolveCueGesture(cue, sec, true) === "point_board";
+    if (triggersZoom) {
+      rawWindows.push([cue.startSec, cue.endSec]);
+    }
+  }
+
+  if (rawWindows.length === 0) {
+    return 0;
+  }
+
+  // Merge adjacent/consecutive board-focus cues so zoom stays rock-steady
+  const merged: [number, number][] = [];
+  for (const [start, end] of rawWindows) {
+    const prev = merged[merged.length - 1];
+    if (prev && start - prev[1] <= 0.65) {
+      prev[1] = Math.max(prev[1], end);
+    } else {
+      merged.push([start, end]);
+    }
+  }
+
+  let maxZoom = 0;
+  for (const [startSec, endSec] of merged) {
+    const startFrame = Math.round(startSec * fps);
+    const endFrame = Math.round(endSec * fps);
+    if (frame < startFrame - 1 || frame > endFrame + Math.round(fps * 1.2)) {
+      continue;
+    }
+    const enter = spring({
+      frame: Math.max(0, frame - startFrame),
+      fps,
+      config: { damping: 16, stiffness: 130, mass: 0.85 },
+    });
+    const exit =
+      frame >= endFrame
+        ? 1 -
+          spring({
+            frame: frame - endFrame,
+            fps,
+            config: { damping: 18, stiffness: 120, mass: 0.9 },
+          })
+        : 1;
+    maxZoom = Math.max(maxZoom, Math.min(enter, exit));
+  }
+
+  return Math.max(0, Math.min(1, maxZoom));
+};
+
 /**
  * Straight, flat, front-facing 2D matte-dark presentation board with crisp
- * emerald-mint border matching `public/images/studio-reference.jpg`.
+ * emerald-mint border and `spring()` dynamic zoom-in focus mode on `point_board`.
  */
 export const PresentationBoard: React.FC<PresentationBoardProps> = ({
   episodeNumber,
@@ -1197,6 +1275,24 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const timeSec = frame / fps;
+
+  const zoomProgress = computeBoardZoomProgress(frame, fps, sections, subtitles);
+  const boardScale = interpolate(
+    zoomProgress,
+    [0, 1],
+    [1, isDual ? 1.18 : 1.18],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+  );
+  const boardSlideX = interpolate(
+    zoomProgress,
+    [0, 1],
+    [0, isDual ? -72 : -96],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+  );
+  const boardSlideY = interpolate(zoomProgress, [0, 1], [0, 26], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
   const activeSection = getActiveSection(sections, timeSec);
   const activeCue = getActiveSubtitle(subtitles, timeSec);
@@ -1253,6 +1349,18 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
           '"Hiragino Sans", "Noto Sans JP", "Avenir Next", "Helvetica Neue", sans-serif',
       }}
     >
+      {/* Subtle studio dim backdrop during dynamic `point_board` zoom-in focus */}
+      {zoomProgress > 0.01 ? (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundColor: "#040810",
+            opacity: zoomProgress * 0.4,
+          }}
+        />
+      ) : null}
+
       <div
         style={{
           position: "absolute",
@@ -1263,12 +1371,18 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
           backgroundColor: "#121b22",
           borderRadius: 16,
           border: "2.5px solid #2ee8a5",
-          boxShadow: "0 0 0 6px #182128, 0 22px 52px rgba(0, 0, 0, 0.55)",
+          boxShadow:
+            zoomProgress > 0.05
+              ? `0 0 0 6px #182128, 0 0 ${Math.round(32 * zoomProgress)}px rgba(46, 232, 165, ${(0.35 * zoomProgress).toFixed(2)}), 0 28px 68px rgba(0, 0, 0, 0.72)`
+              : "0 0 0 6px #182128, 0 22px 52px rgba(0, 0, 0, 0.55)",
           padding: "28px 32px",
           boxSizing: "border-box",
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
+          transformOrigin: "center center",
+          scale: boardScale,
+          translate: `${boardSlideX.toFixed(1)}px ${boardSlideY.toFixed(1)}px`,
         }}
       >
         <div

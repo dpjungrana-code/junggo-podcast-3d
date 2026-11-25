@@ -490,20 +490,32 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
 
   const quietFallback = 0.05 + 0.035 * Math.sin(timeSec * 1.9);
   const voiceEnergy = isHostSpeaking
-    ? Math.max(0.15, audio.volume)
+    ? Math.max(0.22, audio.volume)
     : quietFallback * 0.65;
+  const speechPeak = isHostSpeaking
+    ? clamp01((voiceEnergy - 0.3) * 1.5)
+    : 0;
 
-  // Expressive syllable-synced lip-sync aperture & rounding
+  // High-visibility vowel-morphing lip-sync driven by real-time audio spectrum & volume
+  const lowBand =
+    audio.spectrum.slice(0, 4).reduce((acc, v) => acc + v, 0) / 4;
+  const midBand =
+    audio.spectrum.slice(4, 14).reduce((acc, v) => acc + v, 0) / 10;
+  const vowelOpenBias = clamp01(0.5 + (midBand - lowBand) * 1.8);
   const syllableWave =
-    0.55 +
-    0.28 * Math.sin(timeSec * 16.5) +
-    0.17 * Math.cos(timeSec * 23.4 + 0.8);
+    0.58 +
+    0.26 * Math.sin(timeSec * 16.5) +
+    0.16 * Math.cos(timeSec * 23.4 + 0.8);
   const mouthOpen = isHostSpeaking
-    ? clamp01(voiceEnergy * (0.48 + 0.72 * syllableWave))
+    ? clamp01(Math.pow(voiceEnergy, 0.7) * (0.68 + 0.54 * syllableWave))
     : 0;
   const mouthWidth = isHostSpeaking
-    ? lerp(0.88, 1.18, 0.5 + 0.5 * Math.cos(timeSec * 11.4))
-    : 0.92;
+    ? lerp(
+        0.8,
+        1.34,
+        clamp01(vowelOpenBias * 0.65 + (0.5 + 0.5 * Math.cos(timeSec * 11.4)) * 0.35),
+      )
+    : 1.06;
 
   const vocabWeight = computeSectionWeight(
     sections,
@@ -673,7 +685,7 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     nodEncourageWeight * 0.02;
 
   const browRaise =
-    (isHostSpeaking ? voiceEnergy * 0.006 : 0) +
+    (isHostSpeaking ? voiceEnergy * 0.011 + speechPeak * 0.005 : 0) +
     quizWeight * 0.0045 +
     nodEncourageWeight * 0.008 +
     thinkingWeight * 0.005;
@@ -744,9 +756,9 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   // Left Arm (+X, viewer's right): teacher-like open-palm explaining & explicit `point_board` gesture
   const leftIdleShoulder: [number, number, number] = [-0.36, -0.06, 0.28];
   const leftSpeakShoulder: [number, number, number] = [
-    -0.9 + gesturePulse * 0.08 - quizRevealWeight * 0.1,
+    -0.9 + gesturePulse * 0.12 - speechPeak * 0.14 - quizRevealWeight * 0.1,
     -0.14,
-    0.76 + voiceEnergy * 0.08,
+    0.78 + voiceEnergy * 0.12 + speechPeak * 0.14,
   ];
   const leftExplainShoulder: [number, number, number] = [
     -0.92 + gestureAlt * 0.05,
@@ -1090,70 +1102,80 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
             browTilt={browTiltBase}
           />
 
-          {/* ==================== EXPRESSIVE D-SHAPED LIP-SYNC MOUTH ==================== */}
+          {/* ==================== EXPRESSIVE HIGH-VISIBILITY PIXAR LIP-SYNC MOUTH ==================== */}
           <group
             name="mouthGroup"
-            position={[0, -0.098, 0.276]}
-            rotation={[0.3, 0, 0]}
+            position={[0, -0.094, 0.278]}
+            rotation={[0.26, 0, 0]}
           >
             {mouthOpen > 0.06 ? (
               <group>
-                {/* Maroon oral cavity */}
+                {/* Rich dark-crimson oral cavity with pronounced jaw drop */}
                 <mesh
-                  position={[0, -mouthOpen * 0.008, 0]}
-                  scale={[mouthWidth * 1.02, 0.32 + mouthOpen * 0.65, 0.24]}
+                  position={[0, -mouthOpen * 0.014, 0]}
+                  scale={[mouthWidth * 1.04, 0.36 + mouthOpen * 0.86, 0.28]}
                 >
-                  <sphereGeometry args={[0.046, 14, 10]} />
-                  <meshStandardMaterial color="#421118" roughness={0.74} />
+                  <sphereGeometry args={[0.064, 16, 12]} />
+                  <meshStandardMaterial color="#360912" roughness={0.72} />
                 </mesh>
 
-                {/* Ivory upper teeth arch */}
+                {/* Crisp ivory upper teeth arch */}
                 <mesh
-                  position={[0, 0.011 + mouthOpen * 0.004, 0.008]}
-                  scale={[mouthWidth * 0.92, 1, 1]}
+                  position={[0, 0.015 + mouthOpen * 0.005, 0.011]}
+                  scale={[mouthWidth * 0.94, 1, 1]}
                 >
-                  <boxGeometry args={[0.052, 0.011, 0.01]} />
-                  <meshStandardMaterial color="#fcfbf7" roughness={0.22} />
+                  <boxGeometry args={[0.078, 0.015, 0.012]} />
+                  <meshStandardMaterial
+                    color="#ffffff"
+                    emissive="#fff6ed"
+                    emissiveIntensity={0.14}
+                    roughness={0.18}
+                  />
                 </mesh>
 
                 {/* Bright coral-pink curved tongue */}
                 <mesh
-                  position={[0, -0.009 - mouthOpen * 0.016, 0.008]}
-                  scale={[mouthWidth * 0.88, 0.38, 0.42]}
+                  position={[0, -0.012 - mouthOpen * 0.025, 0.011]}
+                  scale={[mouthWidth * 0.86, 0.44, 0.44]}
                 >
-                  <sphereGeometry args={[0.026, 10, 8]} />
-                  <meshStandardMaterial color="#ea6d7c" roughness={0.44} />
+                  <sphereGeometry args={[0.039, 12, 10]} />
+                  <meshStandardMaterial
+                    color="#f2667a"
+                    emissive="#4a1019"
+                    emissiveIntensity={0.28}
+                    roughness={0.42}
+                  />
                 </mesh>
 
                 {/* Soft upper lip rim */}
                 <mesh
-                  position={[0, 0.016, 0.007]}
+                  position={[0, 0.022, 0.01]}
                   rotation={[0, 0, 0.2]}
-                  scale={[mouthWidth * 1.02, 0.55, 0.6]}
+                  scale={[mouthWidth * 1.04, 0.56, 0.62]}
                 >
-                  <torusGeometry args={[0.042, 0.0042, 6, 14, Math.PI * 0.86]} />
-                  <meshStandardMaterial color="#ebb092" roughness={0.48} />
+                  <torusGeometry args={[0.056, 0.0052, 6, 16, Math.PI * 0.86]} />
+                  <meshStandardMaterial color="#e8a78a" roughness={0.46} />
                 </mesh>
 
-                {/* Dynamic lower lip rim */}
+                {/* Dynamic jaw-dropped lower lip rim */}
                 <mesh
-                  position={[0, -0.012 - mouthOpen * 0.028, 0.006]}
+                  position={[0, -0.015 - mouthOpen * 0.044, 0.009]}
                   rotation={[0, 0, Math.PI * 1.12]}
-                  scale={[mouthWidth * 0.96, 0.55 + mouthOpen * 0.38, 0.6]}
+                  scale={[mouthWidth * 0.98, 0.56 + mouthOpen * 0.44, 0.62]}
                 >
-                  <torusGeometry args={[0.04, 0.0042, 6, 14, Math.PI * 0.76]} />
-                  <meshStandardMaterial color="#e09c82" roughness={0.48} />
+                  <torusGeometry args={[0.053, 0.0052, 6, 16, Math.PI * 0.78]} />
+                  <meshStandardMaterial color="#dc9178" roughness={0.46} />
                 </mesh>
               </group>
             ) : (
-              /* Friendly relaxed closed smile */
+              /* Warm cheerful Pixar closed smile */
               <mesh
-                position={[0, 0.006, 0.007]}
-                rotation={[0, 0, Math.PI * 1.175]}
-                scale={[mouthWidth, 0.55, 0.6]}
+                position={[0, 0.006, 0.01]}
+                rotation={[0, 0, Math.PI * 1.16]}
+                scale={[mouthWidth, 0.58, 0.62]}
               >
-                <torusGeometry args={[0.038, 0.0045, 6, 14, Math.PI * 0.65]} />
-                <meshStandardMaterial color="#91483a" roughness={0.48} />
+                <torusGeometry args={[0.05, 0.0055, 6, 16, Math.PI * 0.68]} />
+                <meshStandardMaterial color="#8c3f34" roughness={0.44} />
               </mesh>
             )}
           </group>

@@ -200,18 +200,18 @@
       "id": "sub-1",
       "sectionId": "sec-intro",
       "speaker": "Sensei",
-      "japanese": "みなさん、こんばんは！今日はJLPT N4でよく使う五つの漢字を楽しく学びましょう。",
-      "romaji": "Minasan, konbanwa! Kyou wa JLPT N4 de yoku tsukau itsutsu no kanji o tanoshiku manabimashou.",
-      "english": "Good evening everyone! Today let's cheerfully learn five super-useful JLPT N4 Kanji.",
-      "pauseSec": 0.4
+      "japanese": "みなさん、こんばんは！JungGoポッドキャストへようこそ。マリアさん、今朝はちゃんと起きられましたか？",
+      "romaji": "Minasan, konbanwa! JungGo Poddokyasuto e youkoso. Maria-san, kesa wa chanto okiraremashita ka?",
+      "english": "Good evening everyone! Welcome to JungGo Podcast. Maria, did you actually wake up on time this morning?",
+      "pauseSec": 0.35
     },
     {
       "id": "sub-2",
       "sectionId": "sec-intro",
       "speaker": "Maria",
-      "japanese": "わあ、楽しみです！よろしくお願いします、先生！",
-      "romaji": "Waa, tanoshimi desu! Yoroshiku onegaishimasu, Sensei!",
-      "english": "Ooh, I'm excited! Please teach us well, Sensei!",
+      "japanese": "あはは、先生！目覚ましを三回止めて、ぎりぎりでした！でも今日はN4の漢字五つ、やる気満々です！",
+      "romaji": "Ahaha, Sensei! Mezamashi o sankai tomete, girigiri deshita! Demo kyou wa N4 no kanji itsutsu, yaruki manman desu!",
+      "english": "Haha, Sensei! I hit snooze three times and barely made it! Still, I'm super pumped for today's 5 N4 Kanji!",
       "pauseSec": 0.45
     },
     {
@@ -219,18 +219,18 @@
       "sectionId": "sec-kanji-1",
       "speaker": "Sensei",
       "gesture": "point_board",
-      "japanese": "まず一つ目の漢字、こちらのボードを見てください！「朝」、Morningです。",
-      "romaji": "Mazu hitotsume no kanji, kochira no boodo o mite kudasai! \"Asa\", Morning desu.",
-      "english": "First Kanji — please look at the board here! \"Asa\" means Morning.",
-      "pauseSec": 0.45
+      "japanese": "では一つ目、こちらのボードを見てください！「朝」、Morningです。太陽と月が一緒に入っていますよ。",
+      "romaji": "Dewa hitotsume, kochira no boodo o mite kudasai! \"Asa\", Morning desu. Taiyou to tsuki ga issho ni haitte imasu yo.",
+      "english": "First up, look here on the board! \"Asa\" means Morning — both the rising sun and fading moon are inside it.",
+      "pauseSec": 0.4
     },
     {
       "id": "sub-4",
       "sectionId": "sec-kanji-1",
       "speaker": "Maria",
-      "japanese": "毎朝の「朝」ですね！朝日と月のイラストで覚えやすいです！",
-      "romaji": "Maiasa no \"asa\" desu ne! Asahi to tsuki no irasuto de oboeyasui desu!",
-      "english": "That's the \"asa\" in every morning! The sunrise and moon picture makes it easy to remember!",
+      "japanese": "わあ、本当だ！私は毎朝コーヒーがないと動けないので、毎朝と朝食はすぐ覚えられそうです！",
+      "romaji": "Waa, hontou da! Watashi wa maiasa koohii ga nai to ugokenai node, maiasa to choushoku wa sugu oboeraresou desu!",
+      "english": "Whoa, you're right! I can't function every morning without coffee, so I'll remember \"maiasa\" and \"breakfast\" instantly!",
       "pauseSec": 0.35
     },
     {
@@ -238,28 +238,28 @@
       "sectionId": "sec-kanji-1",
       "speaker": "Sensei",
       "gesture": "nod_encourage",
-      "japanese": "いいですね！その調子で次に行きましょう。",
-      "romaji": "Ii desu ne! Sono choushi de tsugi ni ikimashou.",
-      "english": "Great job! Let's keep that momentum going to the next one.",
+      "japanese": "いいですね！コーヒーパワーで次の漢字へ行きましょう。",
+      "romaji": "Ii desu ne! Koohii pawaa de tsugi no kanji e ikimashou.",
+      "english": "Love it! Let's ride that coffee power straight to the next Kanji.",
       "pauseSec": 0.45
     },
     {
       "id": "sub-6",
       "sectionId": "sec-kanji-2",
       "speaker": "Sensei",
-      "japanese": "二つ目はこちらのボードを見てください！「駅」、Train Stationです。東京駅などで毎日見ますよ。",
-      "romaji": "Futatsume wa kochira no boodo o mite kudasai! \"Eki\", Train Station desu. Toukyou-eki nado de mainichi mimasu yo.",
-      "english": "Look here on the board for number two! \"Eki\" means Train Station — seen daily at Tokyo Station.",
-      "pauseSec": 0.45
+      "japanese": "二つ目、ボードを見てください！「駅」、Train Stationです。昔は馬が止まる場所だったので、左に馬があります。",
+      "romaji": "Futatsume, boodo o mite kudasai! \"Eki\", Train Station desu. Mukashi wa uma ga tomaru basho datta node, hidari ni uma ga arimasu.",
+      "english": "Look at the board for number two! \"Eki\" means Train Station — it has a horse on the left from old relay stations.",
+      "pauseSec": 0.4
     },
     {
       "id": "sub-7",
       "sectionId": "sec-kanji-2",
       "speaker": "Maria",
       "gesture": "point_board",
-      "japanese": "駅前の「駅」もこれですね！よくわかります。",
-      "romaji": "Ekimae no \"eki\" mo kore desu ne! Yoku wakarimasu.",
-      "english": "Look — the \"eki\" in front of the station uses this too! Got it.",
+      "japanese": "なるほど！私、東京駅でいつも迷子になるんですけど、これからは「駅」を見たら馬を思い出します！",
+      "romaji": "Naruhodo! Watashi, Toukyou-eki de itsumo maigo ni naru n desu kedo, kore kara wa \"eki\" o mitara uma o omoidashimasu!",
+      "english": "Aha! I always get lost at Tokyo Station, but from now on whenever I see \"eki\" on the board I'll picture a horse!",
       "pauseSec": 0.45
     },
     {
@@ -267,62 +267,90 @@
       "sectionId": "sec-kanji-3",
       "speaker": "Sensei",
       "gesture": "point_board",
-      "japanese": "三つ目を見てください！「勉」、Effortの意味です。日本語の勉強も、毎日のコツコツした力ですね。",
-      "romaji": "Mittsume o mite kudasai! \"Ben\", Effort no imi desu. Nihongo no benkyou mo, mainichi no kotsukotsu shita chikara desu ne.",
-      "english": "Look at number three! \"Ben\" means Effort — steady daily power for Japanese study.",
-      "pauseSec": 0.45
+      "japanese": "三つ目はこちら！「勉」、Effortです。日本語の勉強も、毎日コツコツ力を出すイメージですね。",
+      "romaji": "Mittsume wa kochira! \"Ben\", Effort desu. Nihongo no benkyou mo, mainichi kotsukotsu chikara o dasu imeeji desu ne.",
+      "english": "Number three right here! \"Ben\" means Effort — putting steady daily power into your Japanese study.",
+      "pauseSec": 0.35
     },
     {
       "id": "sub-9",
-      "sectionId": "sec-kanji-4",
-      "speaker": "Sensei",
-      "gesture": "point_board",
-      "japanese": "四つ目はこちら！「料」、IngredientsやFeeという意味です。日本料理や無料でも使います。",
-      "romaji": "Yottsume wa kochira! \"Ryou\", Ingredients ya Fee to iu imi desu. Nihon-ryouri ya muryou de mo tsukaimasu.",
-      "english": "Fourth on the board! \"Ryou\" means Ingredients or Fee, used in Japanese cooking and free-of-charge.",
-      "pauseSec": 0.4
+      "sectionId": "sec-kanji-3",
+      "speaker": "Maria",
+      "japanese": "毎日十分でも続けたら、私も漢字マスターになれますかね？",
+      "romaji": "Mainichi juppun demo tsuzuketara, watashi mo kanji masutaa ni naremasu ka ne?",
+      "english": "If I keep it up for even ten minutes a day, can I become a Kanji master too?",
+      "pauseSec": 0.35
     },
     {
       "id": "sub-10",
-      "sectionId": "sec-kanji-4",
-      "speaker": "Maria",
-      "japanese": "日本料理と無料、どっちも旅行ですぐ使えますね！",
-      "romaji": "Nihon-ryouri to muryou, docchi mo ryokou de sugu tsukaemasu ne!",
-      "english": "Japanese cooking and free of charge — both are super useful for travel!",
-      "pauseSec": 0.35
+      "sectionId": "sec-kanji-3",
+      "speaker": "Sensei",
+      "gesture": "nod_encourage",
+      "japanese": "もちろんです！継続は力なり、バッチリなれますよ！",
+      "romaji": "Mochiron desu! Keizoku wa chikara nari, bacchiri naremasu yo!",
+      "english": "Of course! Consistency is power — you'll totally nail it!",
+      "pauseSec": 0.45
     },
     {
       "id": "sub-11",
       "sectionId": "sec-kanji-4",
       "speaker": "Sensei",
-      "gesture": "nod_encourage",
-      "japanese": "素晴らしい！まさにその通りです。",
-      "romaji": "Subarashii! Masa ni sono toori desu.",
-      "english": "Wonderful! That's exactly right.",
-      "pauseSec": 0.45
+      "gesture": "point_board",
+      "japanese": "四つ目の漢字を見てください！「料」、IngredientsやFeeです。日本料理や、みんな大好きな「無料」にも使います。",
+      "romaji": "Yottsume no kanji o mite kudasai! \"Ryou\", Ingredients ya Fee desu. Nihon-ryouri ya, minna daisuki na \"muryou\" ni mo tsukaimasu.",
+      "english": "Look at Kanji number four! \"Ryou\" means Ingredients or Fee — used in Japanese cuisine and everyone's favorite word, \"free\"!",
+      "pauseSec": 0.35
     },
     {
       "id": "sub-12",
-      "sectionId": "sec-kanji-5",
-      "speaker": "Sensei",
-      "gesture": "point_board",
-      "japanese": "最後は五つ目、ボードを見てください！「話」、SpeakやStoryです。会話や電話の言葉に欠かせません。",
-      "romaji": "Saigo wa itsutsume, boodo o mite kudasai! \"Hanasu\", Speak ya Story desu. Kaiwa ya denwa no kotoba ni kakasemasen.",
-      "english": "Fifth and final Kanji on the board! \"Hanasu\" means Speak or Story, essential for conversation and phone.",
-      "pauseSec": 0.5
+      "sectionId": "sec-kanji-4",
+      "speaker": "Maria",
+      "japanese": "わあ、「無料」！おかわり無料のお店を見つけたら、テンション最高になりますね！",
+      "romaji": "Waa, \"muryou\"! Okawari muryou no omise o mitsuketara, tenshon saikou ni narimasu ne!",
+      "english": "Ooh, \"muryou\" (free)! Finding a restaurant with free refills instantly makes my whole day!",
+      "pauseSec": 0.35
     },
     {
       "id": "sub-13",
-      "sectionId": "sec-quiz",
+      "sectionId": "sec-kanji-4",
       "speaker": "Sensei",
-      "gesture": "thinking",
-      "japanese": "さあ、クイズです！ボードにある「駅」の意味はどれでしょう？考えてみてくださいね。",
-      "romaji": "Saa, kuizu desu! Boodo ni aru \"eki\" no imi wa dore deshou? Kangaete mite kudasai ne.",
-      "english": "Quiz time! What does the Kanji \"eki\" on the board mean? Take a moment to think!",
-      "pauseSec": 2.0
+      "gesture": "nod_encourage",
+      "japanese": "素晴らしいリアクションですね！まさに日本のリアルな表現です。",
+      "romaji": "Subarashii riakushon desu ne! Masa ni Nihon no riaru na hyougen desu.",
+      "english": "Awesome reaction! That's truly real everyday Japanese.",
+      "pauseSec": 0.45
     },
     {
       "id": "sub-14",
+      "sectionId": "sec-kanji-5",
+      "speaker": "Sensei",
+      "gesture": "point_board",
+      "japanese": "最後は五つ目、ボードを見てください！「話」、SpeakやStoryです。会話や電話で毎日使いますよ。",
+      "romaji": "Saigo wa itsutsume, boodo o mite kudasai! \"Hanasu\", Speak ya Story desu. Kaiwa ya denwa de mainichi tsukaimasu yo.",
+      "english": "Fifth and final Kanji on the board! \"Hanasu\" means Speak or Story — used daily in conversation and phone calls.",
+      "pauseSec": 0.35
+    },
+    {
+      "id": "sub-15",
+      "sectionId": "sec-kanji-5",
+      "speaker": "Maria",
+      "japanese": "先生とこうして楽しく会話できるのが、私の一番の楽しみです！",
+      "romaji": "Sensei to koushite tanoshiku kaiwa dekiru no ga, watashi no ichiban no tanoshimi desu!",
+      "english": "Having fun conversations with you like this, Sensei, is my favorite part of the day!",
+      "pauseSec": 0.45
+    },
+    {
+      "id": "sub-16",
+      "sectionId": "sec-quiz",
+      "speaker": "Sensei",
+      "gesture": "thinking",
+      "japanese": "さあ、お楽しみクイズです！「駅」の意味はどれでしょう？東京で迷子になる前に、考えてみてくださいね！",
+      "romaji": "Saa, otanoshimi kuizu desu! \"Eki\" no imi wa dore deshou? Toukyou de maigo ni naru mae ni, kangaete mite kudasai ne!",
+      "english": "Now for our fun quiz! What does the Kanji \"eki\" mean? Think carefully before getting lost in Tokyo!",
+      "pauseSec": 2.0
+    },
+    {
+      "id": "sub-17",
       "sectionId": "sec-quiz",
       "speaker": "Sensei",
       "gesture": "nod_encourage",

@@ -504,20 +504,32 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
 
   const quietFallback = 0.05 + 0.03 * Math.sin(timeSec * 1.7 + 1.1);
   const voiceEnergy = isMariaSpeaking
-    ? Math.max(0.15, audio.volume)
+    ? Math.max(0.22, audio.volume)
     : quietFallback * 0.65;
+  const speechPeak = isMariaSpeaking
+    ? clamp01((voiceEnergy - 0.3) * 1.5)
+    : 0;
 
-  // Syllable-synced mouth animation strictly active ONLY when Maria speaks
+  // High-visibility vowel-morphing lip-sync strictly active ONLY when Maria speaks
+  const lowBand =
+    audio.spectrum.slice(0, 4).reduce((acc, v) => acc + v, 0) / 4;
+  const midBand =
+    audio.spectrum.slice(4, 14).reduce((acc, v) => acc + v, 0) / 10;
+  const vowelOpenBias = clamp01(0.5 + (midBand - lowBand) * 1.8);
   const syllableWave =
-    0.55 +
-    0.27 * Math.sin(timeSec * 17.8 + 0.4) +
-    0.18 * Math.cos(timeSec * 24.6 + 1.2);
+    0.58 +
+    0.26 * Math.sin(timeSec * 17.8 + 0.4) +
+    0.16 * Math.cos(timeSec * 24.6 + 1.2);
   const mouthOpen = isMariaSpeaking
-    ? clamp01(voiceEnergy * (0.48 + 0.72 * syllableWave))
+    ? clamp01(Math.pow(voiceEnergy, 0.7) * (0.68 + 0.54 * syllableWave))
     : 0;
   const mouthWidth = isMariaSpeaking
-    ? lerp(0.88, 1.14, 0.5 + 0.5 * Math.cos(timeSec * 12.2))
-    : 0.94;
+    ? lerp(
+        0.8,
+        1.32,
+        clamp01(vowelOpenBias * 0.65 + (0.5 + 0.5 * Math.cos(timeSec * 12.2)) * 0.35),
+      )
+    : 1.06;
 
   const logoTexture = useMemo(() => createHoodieLogoTexture(), []);
 
@@ -677,7 +689,7 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
     quizWeight * -0.09;
 
   const browRaise =
-    (isMariaSpeaking ? voiceEnergy * 0.006 : 0) +
+    (isMariaSpeaking ? voiceEnergy * 0.011 + speechPeak * 0.005 : 0) +
     lookAtSenseiWeight * 0.0035 +
     quizWeight * 0.004;
   const browTiltBase = 0.08 - quizWeight * 0.035;
@@ -692,9 +704,9 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
 
   // Right Arm (-X, facing Sensei): natural conversational gesture when Maria speaks
   const rightShoulderRot: [number, number, number] = [
-    -0.34 - speakingMode * 0.36 + gestureAlt * 0.06,
-    0.1 + speakingMode * 0.1,
-    -0.26 - speakingMode * 0.24,
+    -0.34 - speakingMode * 0.42 - speechPeak * 0.14 + gestureAlt * 0.08,
+    0.1 + speakingMode * 0.12,
+    -0.26 - speakingMode * 0.28 - speechPeak * 0.08,
   ];
   const rightElbowRot: [number, number, number] = [
     -1.06 + speakingMode * 0.12 + gesturePulse * 0.1,
@@ -994,60 +1006,70 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
             browTilt={browTiltBase}
           />
 
-          {/* ==================== EXPRESSIVE LIP-SYNC MOUTH CUTOUT ==================== */}
+          {/* ==================== EXPRESSIVE HIGH-VISIBILITY LIP-SYNC MOUTH CUTOUT ==================== */}
           <group
             name="mariaMouthGroup"
-            position={[0, -0.095, 0.267]}
-            rotation={[0.3, 0, 0]}
+            position={[0, -0.092, 0.27]}
+            rotation={[0.26, 0, 0]}
           >
             {mouthOpen > 0.06 ? (
               <group>
                 <mesh
-                  position={[0, -mouthOpen * 0.008, 0]}
-                  scale={[mouthWidth * 1.0, 0.3 + mouthOpen * 0.65, 0.24]}
+                  position={[0, -mouthOpen * 0.014, 0]}
+                  scale={[mouthWidth * 1.02, 0.34 + mouthOpen * 0.84, 0.28]}
                 >
-                  <sphereGeometry args={[0.044, 14, 10]} />
-                  <meshStandardMaterial color="#4a111a" roughness={0.72} />
+                  <sphereGeometry args={[0.062, 16, 12]} />
+                  <meshStandardMaterial color="#3c0914" roughness={0.7} />
                 </mesh>
                 <mesh
-                  position={[0, 0.011 + mouthOpen * 0.004, 0.008]}
-                  scale={[mouthWidth * 0.9, 1, 1]}
+                  position={[0, 0.015 + mouthOpen * 0.005, 0.011]}
+                  scale={[mouthWidth * 0.92, 1, 1]}
                 >
-                  <boxGeometry args={[0.05, 0.01, 0.01]} />
-                  <meshStandardMaterial color="#fcfbf7" roughness={0.22} />
+                  <boxGeometry args={[0.074, 0.014, 0.012]} />
+                  <meshStandardMaterial
+                    color="#ffffff"
+                    emissive="#fff6ed"
+                    emissiveIntensity={0.14}
+                    roughness={0.18}
+                  />
                 </mesh>
                 <mesh
-                  position={[0, -0.009 - mouthOpen * 0.015, 0.008]}
-                  scale={[mouthWidth * 0.86, 0.38, 0.42]}
+                  position={[0, -0.012 - mouthOpen * 0.024, 0.011]}
+                  scale={[mouthWidth * 0.86, 0.44, 0.44]}
                 >
-                  <sphereGeometry args={[0.025, 10, 8]} />
-                  <meshStandardMaterial color="#ef7182" roughness={0.42} />
+                  <sphereGeometry args={[0.037, 12, 10]} />
+                  <meshStandardMaterial
+                    color="#f4697f"
+                    emissive="#4a1019"
+                    emissiveIntensity={0.28}
+                    roughness={0.4}
+                  />
                 </mesh>
                 <mesh
-                  position={[0, 0.015, 0.007]}
+                  position={[0, 0.021, 0.01]}
                   rotation={[0, 0, 0.2]}
-                  scale={[mouthWidth * 1.0, 0.55, 0.6]}
+                  scale={[mouthWidth * 1.02, 0.56, 0.62]}
                 >
-                  <torusGeometry args={[0.04, 0.004, 6, 14, Math.PI * 0.86]} />
-                  <meshStandardMaterial color="#ea9d8c" roughness={0.46} />
+                  <torusGeometry args={[0.054, 0.005, 6, 16, Math.PI * 0.86]} />
+                  <meshStandardMaterial color="#ea998a" roughness={0.44} />
                 </mesh>
                 <mesh
-                  position={[0, -0.012 - mouthOpen * 0.026, 0.006]}
+                  position={[0, -0.015 - mouthOpen * 0.042, 0.009]}
                   rotation={[0, 0, Math.PI * 1.12]}
-                  scale={[mouthWidth * 0.94, 0.55 + mouthOpen * 0.36, 0.6]}
+                  scale={[mouthWidth * 0.96, 0.56 + mouthOpen * 0.42, 0.62]}
                 >
-                  <torusGeometry args={[0.038, 0.004, 6, 14, Math.PI * 0.76]} />
-                  <meshStandardMaterial color="#e2877c" roughness={0.46} />
+                  <torusGeometry args={[0.051, 0.005, 6, 16, Math.PI * 0.78]} />
+                  <meshStandardMaterial color="#e08078" roughness={0.44} />
                 </mesh>
               </group>
             ) : (
               <mesh
-                position={[0, 0.006, 0.007]}
-                rotation={[0, 0, Math.PI * 1.175]}
-                scale={[mouthWidth, 0.55, 0.6]}
+                position={[0, 0.006, 0.01]}
+                rotation={[0, 0, Math.PI * 1.16]}
+                scale={[mouthWidth, 0.58, 0.62]}
               >
-                <torusGeometry args={[0.036, 0.0044, 6, 14, Math.PI * 0.65]} />
-                <meshStandardMaterial color="#9e4347" roughness={0.46} />
+                <torusGeometry args={[0.048, 0.0054, 6, 16, Math.PI * 0.68]} />
+                <meshStandardMaterial color="#9e3e44" roughness={0.44} />
               </mesh>
             )}
           </group>
