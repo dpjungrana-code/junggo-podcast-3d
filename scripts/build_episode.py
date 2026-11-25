@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import html
 import json
 import re
 from dataclasses import dataclass
@@ -228,6 +229,130 @@ def _resolve_voice_profile(speaker: str) -> tuple[str, str, str]:
     return VOICE_PROFILE_MAP.get(key, VOICE_PROFILE_MAP["sensei"])
 
 
+def _safe_slug(raw: str) -> str:
+    cleaned = re.sub(r"[^a-zA-Z0-9_-]+", "-", raw).strip("-").lower()
+    return cleaned or "visual"
+
+
+def _generate_visual_svg(
+    slug: str,
+    visual_prompt: str,
+    kanji_data: dict[str, Any] | None,
+    out_dir: Path,
+) -> str:
+    """Generates a clean vector SVG diagram into `public/images/generated/` when no manual image exists."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = f"{_safe_slug(slug)}.svg"
+    out_file = out_dir / safe_name
+
+    kanji_char = str((kanji_data or {}).get("kanji", "")).strip()
+    meaning = str((kanji_data or {}).get("meaningEn", "")).strip()
+    haystack = f"{visual_prompt} {kanji_char} {meaning}".lower()
+
+    if any(k in haystack for k in ("朝", "morning", "sunrise", "dawn", "sun")):
+        body = (
+            '<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">'
+            '<stop offset="0%" stop-color="#0f172a"/><stop offset="65%" stop-color="#1e3a5f"/>'
+            '<stop offset="100%" stop-color="#7c2d12"/></linearGradient></defs>'
+            '<rect width="240" height="240" rx="22" fill="url(#sky)"/>'
+            '<circle cx="176" cy="56" r="18" fill="#fde68a" opacity="0.88"/>'
+            '<circle cx="184" cy="52" r="15" fill="#13223b"/>'
+            '<circle cx="118" cy="142" r="46" fill="#f59e0b" opacity="0.22"/>'
+            '<circle cx="118" cy="142" r="32" fill="#ef4444"/>'
+            '<path d="M118 96 V84 M82 110 L73 101 M154 110 L163 101" '
+            'stroke="#fbbf24" stroke-width="4" stroke-linecap="round"/>'
+            '<path d="M0 172 Q65 136 128 166 T240 156 V240 H0 Z" fill="#0d5434"/>'
+            '<path d="M0 194 Q95 162 175 186 T240 180 V240 H0 Z" fill="#148c53"/>'
+            '<circle cx="52" cy="60" r="3" fill="#36f2ae"/>'
+            '<circle cx="94" cy="44" r="2.5" fill="#ffffff" opacity="0.8"/>'
+        )
+    elif any(k in haystack for k in ("駅", "station", "train", "rail", "platform")):
+        body = (
+            '<rect width="240" height="240" rx="22" fill="#0c1522"/>'
+            '<rect x="24" y="28" width="192" height="42" rx="10" fill="#132230" stroke="#36f2ae" stroke-width="2.5"/>'
+            '<rect x="44" y="45" width="152" height="8" rx="4" fill="#148c53"/>'
+            '<rect x="92" y="37" width="56" height="24" rx="6" fill="#36f2ae"/>'
+            '<path d="M72 216 L96 168 M168 216 L144 168" stroke="#64748b" stroke-width="5" stroke-linecap="round"/>'
+            '<path d="M78 202 H162 M86 186 H154" stroke="#334155" stroke-width="4"/>'
+            '<rect x="64" y="84" width="112" height="86" rx="22" fill="#e2e8f0" stroke="#36f2ae" stroke-width="3"/>'
+            '<rect x="78" y="98" width="84" height="34" rx="9" fill="#0f172a"/>'
+            '<rect x="64" y="138" width="112" height="10" fill="#148c53"/>'
+            '<circle cx="88" cy="157" r="7" fill="#fbbf24"/>'
+            '<circle cx="152" cy="157" r="7" fill="#fbbf24"/>'
+        )
+    elif any(k in haystack for k in ("勉", "強", "study", "notebook", "book", "pencil", "effort")):
+        body = (
+            '<rect width="240" height="240" rx="22" fill="#0d1520"/>'
+            '<path d="M36 68 Q78 54 120 74 Q162 54 204 68 V184 Q162 170 120 190 Q78 170 36 184 Z" '
+            'fill="#162230" stroke="#36f2ae" stroke-width="3"/>'
+            '<line x1="120" y1="74" x2="120" y2="190" stroke="#36f2ae" stroke-width="2.5"/>'
+            '<path d="M54 96 H104 M54 116 H100 M54 136 H96 M136 96 H186 M136 116 H180" '
+            'stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>'
+            '<g transform="translate(154 114) rotate(32)">'
+            '<rect x="-9" y="-42" width="18" height="68" rx="4" fill="#f59e0b"/>'
+            '<polygon points="-9,26 9,26 0,44" fill="#fde68a"/>'
+            '<rect x="-9" y="-42" width="18" height="12" rx="3" fill="#ef4444"/></g>'
+            '<polygon points="62,36 66,46 76,46 68,52 71,62 62,56 53,62 56,52 48,46 58,46" fill="#fbbf24"/>'
+            '<circle cx="182" cy="44" r="5" fill="#36f2ae"/>'
+        )
+    elif any(k in haystack for k in ("料", "理", "食", "cook", "food", "bowl", "kitchen", "meal")):
+        body = (
+            '<rect width="240" height="240" rx="22" fill="#0d151d"/>'
+            '<path d="M84 74 C76 58 94 48 86 34 M120 70 C112 52 130 42 122 26 M156 74 C148 58 166 48 158 34" '
+            'fill="none" stroke="#36f2ae" stroke-width="4.5" stroke-linecap="round" opacity="0.85"/>'
+            '<line x1="138" y1="102" x2="206" y2="62" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/>'
+            '<line x1="144" y1="112" x2="212" y2="82" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/>'
+            '<ellipse cx="118" cy="116" rx="70" ry="20" fill="#f8fafc"/>'
+            '<ellipse cx="118" cy="118" rx="60" ry="14" fill="#c27832"/>'
+            '<path d="M48 118 C48 182 188 182 188 118 Z" fill="#148c53" stroke="#36f2ae" stroke-width="2.5"/>'
+            '<rect x="86" y="174" width="64" height="14" rx="5" fill="#0e663c"/>'
+            '<circle cx="98" cy="115" r="9" fill="#fde68a"/>'
+            '<circle cx="132" cy="114" r="8" fill="#ef4444"/>'
+        )
+    elif any(k in haystack for k in ("話", "語", "speak", "talk", "conversation", "bubble", "chat")):
+        body = (
+            '<rect width="240" height="240" rx="22" fill="#0c151f"/>'
+            '<rect x="28" y="44" width="130" height="82" rx="20" fill="#148c53" stroke="#36f2ae" stroke-width="2.5"/>'
+            '<polygon points="56,124 44,148 80,124" fill="#148c53"/>'
+            '<rect x="88" y="106" width="124" height="78" rx="20" fill="#1e293b" stroke="#fbbf24" stroke-width="2.5"/>'
+            '<polygon points="184,182 196,204 162,182" fill="#1e293b"/>'
+            '<circle cx="68" cy="85" r="7" fill="#ffffff"/>'
+            '<circle cx="93" cy="85" r="7" fill="#ffffff"/>'
+            '<circle cx="118" cy="85" r="7" fill="#ffffff"/>'
+            '<path d="M114 145 H184 M114 162 H164" stroke="#fde68a" stroke-width="5" stroke-linecap="round"/>'
+            '<path d="M196 58 Q210 72 196 86 M206 48 Q226 72 206 96" '
+            'fill="none" stroke="#36f2ae" stroke-width="4" stroke-linecap="round"/>'
+        )
+    elif any(k in haystack for k in ("雨", "天", "気", "weather", "rain", "cloud")):
+        body = (
+            '<rect width="240" height="240" rx="22" fill="#0c1522"/>'
+            '<circle cx="158" cy="68" r="24" fill="#f59e0b"/>'
+            '<path d="M54 136 H182 A26 26 0 0 0 182 86 A38 38 0 0 0 110 74 A30 30 0 0 0 54 136 Z" '
+            'fill="#e2e8f0"/>'
+            '<path d="M76 154 L66 184 M112 154 L102 184 M148 154 L138 184 M182 154 L172 184" '
+            'stroke="#60a5fa" stroke-width="5" stroke-linecap="round"/>'
+        )
+    else:
+        badge_text = html.escape(kanji_char or "漢")
+        sub_text = html.escape((meaning or visual_prompt)[:24])
+        body = (
+            '<rect width="240" height="240" rx="22" fill="#0c141d"/>'
+            '<rect x="26" y="26" width="188" height="188" rx="18" fill="#121b22" stroke="#36f2ae" stroke-width="2.5"/>'
+            '<line x1="120" y1="30" x2="120" y2="210" stroke="rgba(54,242,174,0.28)" stroke-dasharray="6 5" stroke-width="1.5"/>'
+            '<line x1="30" y1="120" x2="210" y2="120" stroke="rgba(54,242,174,0.28)" stroke-dasharray="6 5" stroke-width="1.5"/>'
+            f'<text x="120" y="138" text-anchor="middle" fill="#ffffff" font-size="92" font-weight="900">{badge_text}</text>'
+            f'<text x="120" y="198" text-anchor="middle" fill="#36f2ae" font-size="16" font-weight="700">{sub_text}</text>'
+        )
+
+    svg_doc = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">\n'
+        f"  {body}\n"
+        "</svg>\n"
+    )
+    out_file.write_text(svg_doc, encoding="utf-8")
+    return f"images/generated/{safe_name}"
+
+
 async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: Path) -> dict[str, Any]:
     raw_script = json.loads(script_path.read_text(encoding="utf-8"))
 
@@ -269,8 +394,10 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
     combined_audio.extend(lead_bytes)
     cursor_sec += lead_dur
 
+    generated_dir = audio_out_path.parent.parent / "images" / "generated"
     subtitles: list[dict[str, Any]] = []
     section_spans: dict[str, list[float]] = {}
+    section_line_starts: dict[str, list[float]] = {}
 
     for idx, (line, stream) in enumerate(zip(raw_lines, synthesized)):
         start_sec = round(cursor_sec, 3)
@@ -287,14 +414,24 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
             "romaji": line.get("romaji", ""),
             "english": line.get("english", ""),
         }
+        if line.get("gesture"):
+            cue_obj["gesture"] = line["gesture"]
         if line.get("imageUrl"):
             cue_obj["imageUrl"] = line["imageUrl"]
+        elif line.get("visualPrompt"):
+            cue_obj["imageUrl"] = _generate_visual_svg(
+                slug=f"cue-{cue_obj['id']}",
+                visual_prompt=str(line["visualPrompt"]),
+                kanji_data=None,
+                out_dir=generated_dir,
+            )
         if line.get("imageCaption"):
             cue_obj["imageCaption"] = line["imageCaption"]
         subtitles.append(cue_obj)
 
         sec_id = line.get("sectionId")
         if sec_id:
+            section_line_starts.setdefault(sec_id, []).append(start_sec)
             if sec_id not in section_spans:
                 section_spans[sec_id] = [start_sec, end_sec]
             else:
@@ -358,10 +495,42 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
                 "startSec": sec_start,
                 "endSec": sec_end,
             }
+            if sec.get("gesture"):
+                built_sec["gesture"] = sec["gesture"]
             if "vocab" in sec:
                 built_sec["vocab"] = sec["vocab"]
+
+            kanji_payload: dict[str, Any] | None = (
+                dict(sec["kanji"]) if isinstance(sec.get("kanji"), dict) else None
+            )
+
+            sec_image_url = sec.get("imageUrl") or sec.get("imageSrc")
+            if not sec_image_url and kanji_payload is not None:
+                sec_image_url = kanji_payload.get("imageUrl")
+
+            prompt_text = str(
+                sec.get("visualPrompt")
+                or (kanji_payload.get("visualPrompt") if kanji_payload else "")
+                or ""
+            ).strip()
+
+            if not sec_image_url and (prompt_text or kanji_payload is not None):
+                sec_image_url = _generate_visual_svg(
+                    slug=sec_id,
+                    visual_prompt=prompt_text,
+                    kanji_data=kanji_payload,
+                    out_dir=generated_dir,
+                )
+
+            if kanji_payload is not None:
+                if sec_image_url and not kanji_payload.get("imageUrl"):
+                    kanji_payload["imageUrl"] = sec_image_url
+                built_sec["kanji"] = kanji_payload
+
             if sec.get("imageUrl"):
                 built_sec["imageUrl"] = sec["imageUrl"]
+            elif sec_image_url:
+                built_sec["imageUrl"] = sec_image_url
             if sec.get("imageSrc"):
                 built_sec["imageSrc"] = sec["imageSrc"]
             if sec.get("imageCaption"):
@@ -369,12 +538,23 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
             if "quiz" in sec:
                 quiz = dict(sec["quiz"])
                 sec_dur = max(1.0, sec_end - sec_start)
-                quiz.setdefault("countdownStartSec", round(sec_start + sec_dur * 0.2, 3))
-                quiz.setdefault("countdownDurationSec", round(sec_dur * 0.48, 3))
-                quiz.setdefault(
-                    "revealSec",
-                    round(quiz["countdownStartSec"] + quiz["countdownDurationSec"], 3),
-                )
+                quiz_line_starts = section_line_starts.get(sec_id, [])
+                if "revealSec" not in quiz and len(quiz_line_starts) >= 2:
+                    default_cd_start = round(quiz_line_starts[0] + 0.3, 3)
+                    default_reveal = round(quiz_line_starts[-1], 3)
+                    quiz.setdefault("countdownStartSec", default_cd_start)
+                    quiz.setdefault("revealSec", default_reveal)
+                    quiz.setdefault(
+                        "countdownDurationSec",
+                        round(max(0.8, default_reveal - quiz["countdownStartSec"]), 3),
+                    )
+                else:
+                    quiz.setdefault("countdownStartSec", round(sec_start + sec_dur * 0.2, 3))
+                    quiz.setdefault("countdownDurationSec", round(sec_dur * 0.48, 3))
+                    quiz.setdefault(
+                        "revealSec",
+                        round(quiz["countdownStartSec"] + quiz["countdownDurationSec"], 3),
+                    )
                 built_sec["quiz"] = quiz
             sections.append(built_sec)
 

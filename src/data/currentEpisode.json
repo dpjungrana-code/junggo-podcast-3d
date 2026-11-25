@@ -1,8 +1,8 @@
 {
-  "episodeNumber": "EP. 01",
-  "title": "Morning Coffee in Tokyo",
-  "jlptLevel": "JLPT N5",
-  "durationSec": 31.704,
+  "episodeNumber": "EP. 02",
+  "title": "5 Essential JLPT N4 Kanji",
+  "jlptLevel": "JLPT N4",
+  "durationSec": 114.336,
   "audioSrc": "audio/current_episode.mp3",
   "sections": [
     {
@@ -10,69 +10,214 @@
       "type": "intro",
       "label": "INTRO",
       "startSec": 0.0,
-      "endSec": 6.396
+      "endSec": 15.804
     },
     {
-      "id": "sec-vocab",
-      "type": "vocabulary",
-      "label": "VOCABULARY",
-      "startSec": 6.396,
-      "endSec": 14.22,
-      "vocab": {
-        "word": "おいしい",
-        "reading": "美味しい",
-        "romaji": "oishii",
-        "meaning": "Delicious / Tasty",
-        "partOfSpeech": "i-Adjective",
-        "jlptLevel": "JLPT N5",
-        "exampleJp": "このコーヒーはとてもおいしいです。",
-        "exampleRomaji": "Kono koohii wa totemo oishii desu.",
-        "exampleEn": "This coffee is very delicious."
-      }
+      "id": "sec-kanji-1",
+      "type": "kanji_lesson",
+      "label": "KANJI 1 / 5",
+      "startSec": 15.804,
+      "endSec": 35.652,
+      "kanji": {
+        "kanji": "朝",
+        "jlptLevel": "JLPT N4",
+        "strokeCount": 12,
+        "onyomi": "チョウ",
+        "kunyomi": "あさ",
+        "meaningEn": "Morning",
+        "meaningNp": "बिहान (Bihana)",
+        "mnemonic": "Sun rising through tall grass while the fading moon stays on the right.",
+        "visualPrompt": "morning sunrise over emerald hills with fading moon",
+        "examples": [
+          {
+            "word": "毎朝",
+            "reading": "まいあさ",
+            "romaji": "maiasa",
+            "meaning": "Every morning"
+          },
+          {
+            "word": "朝食",
+            "reading": "ちょうしょく",
+            "romaji": "choushoku",
+            "meaning": "Breakfast"
+          }
+        ],
+        "imageUrl": "images/generated/sec-kanji-1.svg"
+      },
+      "imageUrl": "images/generated/sec-kanji-1.svg"
     },
     {
-      "id": "sec-dialogue",
-      "type": "dialogue",
-      "label": "DIALOGUE",
-      "startSec": 14.22,
-      "endSec": 22.14
+      "id": "sec-kanji-2",
+      "type": "kanji_lesson",
+      "label": "KANJI 2 / 5",
+      "startSec": 35.652,
+      "endSec": 51.468,
+      "kanji": {
+        "kanji": "駅",
+        "jlptLevel": "JLPT N4",
+        "strokeCount": 14,
+        "onyomi": "エキ",
+        "kunyomi": "—",
+        "meaningEn": "Train Station",
+        "meaningNp": "रेल स्टेशन (Train Station)",
+        "mnemonic": "Long ago, fast relay horses (馬) stopped to trade messages at each station.",
+        "visualPrompt": "tokyo train station platform with glowing green sign",
+        "examples": [
+          {
+            "word": "東京駅",
+            "reading": "とうきょうえき",
+            "romaji": "Toukyou-eki",
+            "meaning": "Tokyo Station"
+          },
+          {
+            "word": "駅前",
+            "reading": "えきまえ",
+            "romaji": "ekimae",
+            "meaning": "In front of station"
+          }
+        ],
+        "imageUrl": "images/generated/sec-kanji-2.svg"
+      },
+      "imageUrl": "images/generated/sec-kanji-2.svg"
+    },
+    {
+      "id": "sec-kanji-3",
+      "type": "kanji_lesson",
+      "label": "KANJI 3 / 5",
+      "startSec": 51.468,
+      "endSec": 62.052,
+      "kanji": {
+        "kanji": "勉",
+        "jlptLevel": "JLPT N4",
+        "strokeCount": 10,
+        "onyomi": "ベン",
+        "kunyomi": "つと.める",
+        "meaningEn": "Effort / Diligence",
+        "meaningNp": "मेहनत / प्रयास (Mehanat)",
+        "mnemonic": "Putting strong power (力) into overcoming obstacles — the spirit of study!",
+        "visualPrompt": "open japanese study notebook with sparkling stars and pencil",
+        "examples": [
+          {
+            "word": "勉強",
+            "reading": "べんきょう",
+            "romaji": "benkyou",
+            "meaning": "Study"
+          },
+          {
+            "word": "勤勉",
+            "reading": "きんべん",
+            "romaji": "kinben",
+            "meaning": "Diligent / Hardworking"
+          }
+        ],
+        "imageUrl": "images/generated/sec-kanji-3.svg"
+      },
+      "imageUrl": "images/generated/sec-kanji-3.svg"
+    },
+    {
+      "id": "sec-kanji-4",
+      "type": "kanji_lesson",
+      "label": "KANJI 4 / 5",
+      "startSec": 62.052,
+      "endSec": 81.9,
+      "kanji": {
+        "kanji": "料",
+        "jlptLevel": "JLPT N4",
+        "strokeCount": 10,
+        "onyomi": "リョウ",
+        "kunyomi": "—",
+        "meaningEn": "Ingredients / Fee",
+        "meaningNp": "सामग्री र शुल्क (Material & Fee)",
+        "mnemonic": "Measuring rice (米) with a ladle (斗) to prepare meals or weigh exact fees.",
+        "visualPrompt": "steaming japanese cooking bowl with chopsticks",
+        "examples": [
+          {
+            "word": "料理",
+            "reading": "りょうり",
+            "romaji": "ryouri",
+            "meaning": "Cooking / Cuisine"
+          },
+          {
+            "word": "無料",
+            "reading": "むりょう",
+            "romaji": "muryou",
+            "meaning": "Free of charge"
+          }
+        ],
+        "imageUrl": "images/generated/sec-kanji-4.svg"
+      },
+      "imageUrl": "images/generated/sec-kanji-4.svg"
+    },
+    {
+      "id": "sec-kanji-5",
+      "type": "kanji_lesson",
+      "label": "KANJI 5 / 5",
+      "startSec": 81.9,
+      "endSec": 92.676,
+      "kanji": {
+        "kanji": "話",
+        "jlptLevel": "JLPT N4",
+        "strokeCount": 13,
+        "onyomi": "ワ",
+        "kunyomi": "はな.す・はなし",
+        "meaningEn": "Speak / Story",
+        "meaningNp": "कुराकानी / बोल्नु (Speak / Talk)",
+        "mnemonic": "Words (言) flowing cleanly over the tongue (舌) when friends talk.",
+        "visualPrompt": "two glowing conversation speech bubbles with sound waves",
+        "examples": [
+          {
+            "word": "会話",
+            "reading": "かいわ",
+            "romaji": "kaiwa",
+            "meaning": "Conversation"
+          },
+          {
+            "word": "電話",
+            "reading": "でんわ",
+            "romaji": "denwa",
+            "meaning": "Telephone"
+          }
+        ],
+        "imageUrl": "images/generated/sec-kanji-5.svg"
+      },
+      "imageUrl": "images/generated/sec-kanji-5.svg"
     },
     {
       "id": "sec-quiz",
       "type": "quiz",
       "label": "QUICK QUIZ",
-      "startSec": 22.14,
-      "endSec": 31.704,
+      "startSec": 92.676,
+      "endSec": 114.336,
       "quiz": {
-        "title": "JLPT N5 LISTENING CHECK",
-        "questionJp": "「おいしい」の意味はどれ？",
-        "questionEn": "What does \"oishii\" mean in English?",
+        "title": "JLPT N4 KANJI CHECK",
+        "questionJp": "「駅」の意味はどれでしょう？",
+        "questionEn": "Which English meaning matches the Kanji 「駅」?",
         "options": [
           {
             "label": "A",
-            "jp": "あつい",
-            "romaji": "atsui",
-            "english": "Hot",
+            "jp": "朝",
+            "romaji": "asa",
+            "english": "Morning",
             "isCorrect": false
           },
           {
             "label": "B",
-            "jp": "おいしい",
-            "romaji": "oishii",
-            "english": "Delicious",
+            "jp": "駅",
+            "romaji": "eki",
+            "english": "Train Station",
             "isCorrect": true
           },
           {
             "label": "C",
-            "jp": "たかい",
-            "romaji": "takai",
-            "english": "Expensive",
+            "jp": "話",
+            "romaji": "hanasu",
+            "english": "Speak / Story",
             "isCorrect": false
           }
         ],
-        "countdownStartSec": 24.053,
-        "countdownDurationSec": 4.591,
-        "revealSec": 28.644
+        "countdownStartSec": 93.228,
+        "revealSec": 104.016,
+        "countdownDurationSec": 10.788
       }
     }
   ],
@@ -80,38 +225,136 @@
     {
       "id": "sub-1",
       "startSec": 0.36,
-      "endSec": 6.168,
+      "endSec": 9.168,
       "speaker": "Sensei",
-      "japanese": "みなさん、こんばんは！JungGoポッドキャストへようこそ。",
-      "romaji": "Minasan, konbanwa! JungGo Poddokyasuto e youkoso.",
-      "english": "Good evening, everyone! Welcome to the JungGo Podcast."
+      "japanese": "みなさん、こんばんは！今日はJLPT N4でよく使う五つの漢字を楽しく学びましょう。",
+      "romaji": "Minasan, konbanwa! Kyou wa JLPT N4 de yoku tsukau itsutsu no kanji o tanoshiku manabimashou.",
+      "english": "Good evening everyone! Today let's cheerfully learn five super-useful JLPT N4 Kanji."
     },
     {
       "id": "sub-2",
-      "startSec": 6.624,
-      "endSec": 13.944,
-      "speaker": "Sensei",
-      "japanese": "今日のN5キーワードは「おいしい」です。このコーヒーはとてもおいしいです。",
-      "romaji": "Kyou no N5 kiiwaado wa \"oishii\" desu. Kono koohii wa totemo oishii desu.",
-      "english": "Today's N5 keyword is \"oishii.\" This coffee is very delicious."
+      "startSec": 9.576,
+      "endSec": 15.576,
+      "speaker": "Maria",
+      "japanese": "わあ、楽しみです！よろしくお願いします、先生！",
+      "romaji": "Waa, tanoshimi desu! Yoroshiku onegaishimasu, Sensei!",
+      "english": "Ooh, I'm excited! Please teach us well, Sensei!"
     },
     {
       "id": "sub-3",
-      "startSec": 14.496,
-      "endSec": 21.864,
-      "speaker": "Maria",
-      "japanese": "すみません、ホットコーヒーをひとつください。わあ、とてもおいしいですね！",
-      "romaji": "Sumimasen, hotto koohii o hitotsu kudasai. Waa, totemo oishii desu ne!",
-      "english": "Excuse me, one hot coffee please. Wow, it's really delicious!"
+      "startSec": 16.032,
+      "endSec": 22.944,
+      "speaker": "Sensei",
+      "japanese": "まず一つ目の漢字、こちらのボードを見てください！「朝」、Morningです。",
+      "romaji": "Mazu hitotsume no kanji, kochira no boodo o mite kudasai! \"Asa\", Morning desu.",
+      "english": "First Kanji — please look at the board here! \"Asa\" means Morning.",
+      "gesture": "point_board"
     },
     {
       "id": "sub-4",
-      "startSec": 22.416,
-      "endSec": 30.984,
+      "startSec": 23.4,
+      "endSec": 30.12,
+      "speaker": "Maria",
+      "japanese": "毎朝の「朝」ですね！朝日と月のイラストで覚えやすいです！",
+      "romaji": "Maiasa no \"asa\" desu ne! Asahi to tsuki no irasuto de oboeyasui desu!",
+      "english": "That's the \"asa\" in every morning! The sunrise and moon picture makes it easy to remember!"
+    },
+    {
+      "id": "sub-5",
+      "startSec": 30.48,
+      "endSec": 35.424,
       "speaker": "Sensei",
-      "japanese": "さあ、クイズです！「おいしい」の意味はどれでしょう？正解はBのDeliciousでした！",
-      "romaji": "Saa, kuizu desu! \"Oishii\" no imi wa dore deshou? Seikai wa B no Delicious deshita!",
-      "english": "Now for a quick quiz! What does \"oishii\" mean? The correct answer is B, Delicious!"
+      "japanese": "いいですね！その調子で次に行きましょう。",
+      "romaji": "Ii desu ne! Sono choushi de tsugi ni ikimashou.",
+      "english": "Great job! Let's keep that momentum going to the next one.",
+      "gesture": "nod_encourage"
+    },
+    {
+      "id": "sub-6",
+      "startSec": 35.88,
+      "endSec": 45.432,
+      "speaker": "Sensei",
+      "japanese": "二つ目はこちらのボードを見てください！「駅」、Train Stationです。東京駅などで毎日見ますよ。",
+      "romaji": "Futatsume wa kochira no boodo o mite kudasai! \"Eki\", Train Station desu. Toukyou-eki nado de mainichi mimasu yo.",
+      "english": "Look here on the board for number two! \"Eki\" means Train Station — seen daily at Tokyo Station."
+    },
+    {
+      "id": "sub-7",
+      "startSec": 45.888,
+      "endSec": 51.24,
+      "speaker": "Maria",
+      "japanese": "駅前の「駅」もこれですね！よくわかります。",
+      "romaji": "Ekimae no \"eki\" mo kore desu ne! Yoku wakarimasu.",
+      "english": "So the \"eki\" in front of the station uses this too! Got it."
+    },
+    {
+      "id": "sub-8",
+      "startSec": 51.696,
+      "endSec": 61.824,
+      "speaker": "Sensei",
+      "japanese": "三つ目を見てください！「勉」、Effortの意味です。日本語の勉強も、毎日のコツコツした力ですね。",
+      "romaji": "Mittsume o mite kudasai! \"Ben\", Effort no imi desu. Nihongo no benkyou mo, mainichi no kotsukotsu shita chikara desu ne.",
+      "english": "Look at number three! \"Ben\" means Effort — steady daily power for Japanese study.",
+      "gesture": "point_board"
+    },
+    {
+      "id": "sub-9",
+      "startSec": 62.28,
+      "endSec": 71.544,
+      "speaker": "Sensei",
+      "japanese": "四つ目はこちら！「料」、IngredientsやFeeという意味です。日本料理や無料でも使います。",
+      "romaji": "Yottsume wa kochira! \"Ryou\", Ingredients ya Fee to iu imi desu. Nihon-ryouri ya muryou de mo tsukaimasu.",
+      "english": "Fourth on the board! \"Ryou\" means Ingredients or Fee, used in Japanese cooking and free-of-charge.",
+      "gesture": "point_board"
+    },
+    {
+      "id": "sub-10",
+      "startSec": 71.952,
+      "endSec": 76.8,
+      "speaker": "Maria",
+      "japanese": "日本料理と無料、どっちも旅行ですぐ使えますね！",
+      "romaji": "Nihon-ryouri to muryou, docchi mo ryokou de sugu tsukaemasu ne!",
+      "english": "Japanese cooking and free of charge — both are super useful for travel!"
+    },
+    {
+      "id": "sub-11",
+      "startSec": 77.16,
+      "endSec": 81.672,
+      "speaker": "Sensei",
+      "japanese": "素晴らしい！まさにその通りです。",
+      "romaji": "Subarashii! Masa ni sono toori desu.",
+      "english": "Wonderful! That's exactly right.",
+      "gesture": "nod_encourage"
+    },
+    {
+      "id": "sub-12",
+      "startSec": 82.128,
+      "endSec": 92.424,
+      "speaker": "Sensei",
+      "japanese": "最後は五つ目、ボードを見てください！「話」、SpeakやStoryです。会話や電話の言葉に欠かせません。",
+      "romaji": "Saigo wa itsutsume, boodo o mite kudasai! \"Hanasu\", Speak ya Story desu. Kaiwa ya denwa no kotoba ni kakasemasen.",
+      "english": "Fifth and final Kanji on the board! \"Hanasu\" means Speak or Story, essential for conversation and phone.",
+      "gesture": "point_board"
+    },
+    {
+      "id": "sub-13",
+      "startSec": 92.928,
+      "endSec": 102.024,
+      "speaker": "Sensei",
+      "japanese": "さあ、クイズです！ボードにある「駅」の意味はどれでしょう？考えてみてくださいね。",
+      "romaji": "Saa, kuizu desu! Boodo ni aru \"eki\" no imi wa dore deshou? Kangaete mite kudasai ne.",
+      "english": "Quiz time! What does the Kanji \"eki\" on the board mean? Take a moment to think!",
+      "gesture": "thinking"
+    },
+    {
+      "id": "sub-14",
+      "startSec": 104.016,
+      "endSec": 113.616,
+      "speaker": "Sensei",
+      "japanese": "正解はBのTrain Station、駅でした！よくできましたね！また次のエピソードで会いましょう。",
+      "romaji": "Seikai wa B no Train Station, eki deshita! Yoku dekimashita ne! Mata tsugi no episoodo de aimashou.",
+      "english": "The correct answer is B, Train Station! Well done! See you in the next episode.",
+      "gesture": "nod_encourage"
     }
   ]
 }

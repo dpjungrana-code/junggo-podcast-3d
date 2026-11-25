@@ -10,6 +10,7 @@ import {
 } from "remotion";
 import {
   EpisodeSection,
+  KanjiLessonData,
   QuizCardData,
   SubtitleCue,
   VocabCardData,
@@ -380,6 +381,10 @@ const QuizBoardContent: React.FC<{
   readonly timeSec: number;
 }> = ({ quiz, timeSec }) => {
   const revealed = timeSec >= quiz.revealSec;
+  const correctOpt = quiz.options.find((opt) => opt.isCorrect);
+  const revealSummary = correctOpt
+    ? `${correctOpt.label} — ${correctOpt.jp} (${correctOpt.romaji}) = ${correctOpt.english}!`
+    : "CORRECT ANSWER!";
   const remainingFraction = interpolate(
     timeSec,
     [
@@ -525,7 +530,7 @@ const QuizBoardContent: React.FC<{
             marginBottom: 6,
           }}
         >
-          {revealed ? "B — おいしい (oishii) = Delicious!" : "TIME REMAINING"}
+          {revealed ? revealSummary : "TIME REMAINING"}
         </div>
         <div
           style={{
@@ -550,12 +555,355 @@ const QuizBoardContent: React.FC<{
   );
 };
 
+/**
+ * Dedicated `kanji_lesson` spotlight card: large Kanji box with 十字リーダー
+ * stroke-guide crosshairs, On/Kun reading pills, English + Nepali meanings,
+ * mnemonic tip, auto-generated illustration slot, and 2 example compounds.
+ */
+const KanjiLessonBoardContent: React.FC<{
+  readonly kanji: KanjiLessonData;
+  readonly sectionStartFrame: number;
+  readonly visualUrl?: string;
+  readonly visualCaption?: string;
+}> = ({ kanji, sectionStartFrame, visualUrl, visualCaption }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const mediaUrl = visualUrl ?? kanji.imageUrl;
+  const mediaCaption = visualCaption ?? kanji.imageCaption;
+
+  const kanjiScale = interpolate(
+    frame,
+    [sectionStartFrame, sectionStartFrame + Math.max(8, Math.round(0.32 * fps))],
+    [0.93, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.out(Easing.cubic),
+    },
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+      {/* Header Row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              color: "#ffffff",
+              backgroundColor: "#148c53",
+              padding: "5px 15px",
+              borderRadius: 999,
+            }}
+          >
+            {kanji.jlptLevel}
+          </span>
+          {kanji.strokeCount ? (
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "#98c8b6",
+                backgroundColor: "rgba(255, 255, 255, 0.08)",
+                padding: "5px 12px",
+                borderRadius: 999,
+              }}
+            >
+              {kanji.strokeCount} Strokes
+            </span>
+          ) : null}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <AudioWaveIcon />
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#e2f5ec" }}>
+            Kanji Spotlight
+          </span>
+        </div>
+      </div>
+
+      {/* Hero Row: Calligraphy Box + Readings/Meaning/Mnemonic + Optional Vector Visual */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "stretch",
+          gap: 14,
+        }}
+      >
+        {/* Crisp Kanji Calligraphy Box with 十字リーダー Stroke Guides */}
+        <div
+          style={{
+            position: "relative",
+            width: 148,
+            height: 148,
+            flexShrink: 0,
+            borderRadius: 14,
+            backgroundColor: "#0b1116",
+            border: "2px solid rgba(54, 242, 174, 0.48)",
+            boxShadow: "inset 0 0 24px rgba(54, 242, 174, 0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
+          <svg
+            width="148"
+            height="148"
+            viewBox="0 0 148 148"
+            style={{ position: "absolute", inset: 0 }}
+          >
+            <line
+              x1="0"
+              y1="0"
+              x2="148"
+              y2="148"
+              stroke="rgba(255, 255, 255, 0.06)"
+              strokeWidth="1"
+              strokeDasharray="4 4"
+            />
+            <line
+              x1="148"
+              y1="0"
+              x2="0"
+              y2="148"
+              stroke="rgba(255, 255, 255, 0.06)"
+              strokeWidth="1"
+              strokeDasharray="4 4"
+            />
+            <line
+              x1="74"
+              y1="4"
+              x2="74"
+              y2="144"
+              stroke="rgba(54, 242, 174, 0.34)"
+              strokeWidth="1.5"
+              strokeDasharray="6 5"
+            />
+            <line
+              x1="4"
+              y1="74"
+              x2="144"
+              y2="74"
+              stroke="rgba(54, 242, 174, 0.34)"
+              strokeWidth="1.5"
+              strokeDasharray="6 5"
+            />
+          </svg>
+          <span
+            style={{
+              position: "relative",
+              fontSize: 94,
+              fontWeight: 900,
+              color: "#ffffff",
+              lineHeight: 1,
+              scale: kanjiScale,
+            }}
+          >
+            {kanji.kanji}
+          </span>
+        </div>
+
+        {/* Center Info Column */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            gap: 7,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: 23,
+                fontWeight: 900,
+                color: "#ffffff",
+                lineHeight: 1.15,
+              }}
+            >
+              {kanji.meaningEn}
+            </div>
+            {kanji.meaningNp ? (
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: "#fde68a",
+                  marginTop: 2,
+                  fontFamily:
+                    '"Kohinoor Devanagari", "Noto Sans Devanagari", "Devanagari MT", sans-serif',
+                }}
+              >
+                {kanji.meaningNp}
+              </div>
+            ) : null}
+          </div>
+
+          {/* On-yomi & Kun-yomi Reading Pills */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                backgroundColor: "#0d141a",
+                border: "1px solid rgba(96, 165, 250, 0.35)",
+                borderRadius: 8,
+                padding: "3px 8px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 800,
+                  color: "#ffffff",
+                  backgroundColor: "#1d4ed8",
+                  padding: "1px 5px",
+                  borderRadius: 4,
+                }}
+              >
+                音 ON
+              </span>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: "#dbeafe" }}>
+                {kanji.onyomi}
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                backgroundColor: "#0d141a",
+                border: "1px solid rgba(54, 242, 174, 0.35)",
+                borderRadius: 8,
+                padding: "3px 8px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 800,
+                  color: "#ffffff",
+                  backgroundColor: "#148c53",
+                  padding: "1px 5px",
+                  borderRadius: 4,
+                }}
+              >
+                訓 KUN
+              </span>
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: "#bbf7d0" }}>
+                {kanji.kunyomi}
+              </span>
+            </div>
+          </div>
+
+          {/* Mnemonic Memory Tip Box */}
+          <div
+            style={{
+              backgroundColor: "#0d141a",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderLeft: "3px solid #f59e0b",
+              borderRadius: 8,
+              padding: "6px 10px",
+              fontSize: 13,
+              fontWeight: 500,
+              color: "#d6e6df",
+              lineHeight: 1.32,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 10.5,
+                fontWeight: 800,
+                letterSpacing: "0.06em",
+                color: "#fbbf24",
+                marginRight: 6,
+              }}
+            >
+              TIP
+            </span>
+            {kanji.mnemonic}
+          </div>
+        </div>
+
+        {/* Auto-Generated Illustration Slot */}
+        {mediaUrl ? (
+          <MediaVisualFrame
+            imageUrl={mediaUrl}
+            caption={mediaCaption}
+            width={118}
+            height={146}
+          />
+        ) : null}
+      </div>
+
+      <div
+        style={{
+          height: 1,
+          backgroundColor: "rgba(54, 242, 174, 0.22)",
+        }}
+      />
+
+      {/* 2 Example Words Grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 10,
+        }}
+      >
+        {kanji.examples.slice(0, 2).map((ex) => (
+          <div
+            key={`${ex.word}-${ex.romaji}`}
+            style={{
+              backgroundColor: "#0d141a",
+              border: "1px solid rgba(54, 242, 174, 0.22)",
+              borderRadius: 12,
+              padding: "10px 14px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 3,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span style={{ fontSize: 22, fontWeight: 800, color: "#ffffff" }}>
+                {ex.word}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#36f2ae" }}>
+                {ex.reading}
+              </span>
+            </div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: "#94a3b8" }}>
+              {ex.romaji}
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>
+              {ex.meaning}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const OverviewBoardContent: React.FC<{
   readonly episodeNumber: string;
   readonly episodeTitle: string;
   readonly jlptLevel: string;
   readonly activeSection: EpisodeSection;
   readonly featuredVocab?: VocabCardData;
+  readonly kanjiList: readonly KanjiLessonData[];
   readonly activeCue: SubtitleCue | null;
   readonly visualUrl?: string;
   readonly visualCaption?: string;
@@ -565,6 +913,7 @@ const OverviewBoardContent: React.FC<{
   jlptLevel,
   activeSection,
   featuredVocab,
+  kanjiList,
   activeCue,
   visualUrl,
   visualCaption,
@@ -717,12 +1066,69 @@ const OverviewBoardContent: React.FC<{
             {episodeTitle}
           </div>
           <div style={{ fontSize: 19, fontWeight: 500, color: "#b6c5d4" }}>
-            Warm, clear JLPT N5 Japanese you can use in real Tokyo cafes.
+            Step-by-step {jlptLevel} Japanese podcast lesson with Sensei & Maria.
           </div>
         </div>
       )}
 
-      {!visualUrl && featuredVocab ? (
+      {!visualUrl && kanjiList.length > 0 ? (
+        <div
+          style={{
+            backgroundColor: "#0d141a",
+            border: "1px solid rgba(54, 242, 174, 0.25)",
+            borderRadius: 14,
+            padding: "14px 18px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              color: "#36f2ae",
+            }}
+          >
+            TODAY&apos;S TARGET KANJI ({kanjiList.length})
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            {kanjiList.slice(0, 5).map((item) => (
+              <div
+                key={item.kanji}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  backgroundColor: "#121b22",
+                  border: "1px solid rgba(54, 242, 174, 0.22)",
+                  borderRadius: 10,
+                  padding: "8px 6px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 3,
+                }}
+              >
+                <span style={{ fontSize: 32, fontWeight: 900, color: "#ffffff" }}>
+                  {item.kanji}
+                </span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#98c8b6",
+                    textAlign: "center",
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {item.meaningEn.split("/")[0].trim()}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : !visualUrl && featuredVocab ? (
         <div
           style={{
             backgroundColor: "#0d141a",
@@ -791,14 +1197,19 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
   const activeSection = getActiveSection(sections, timeSec);
   const activeCue = getActiveSubtitle(subtitles, timeSec);
   const featuredVocab = sections.find((s) => s.vocab)?.vocab;
+  const kanjiList = sections
+    .map((s) => s.kanji)
+    .filter((k): k is KanjiLessonData => Boolean(k));
   const activeVisualUrl =
     activeCue?.imageUrl ??
+    activeSection.kanji?.imageUrl ??
     activeSection.vocab?.imageUrl ??
     activeSection.vocab?.imageSrc ??
     activeSection.imageUrl ??
     activeSection.imageSrc;
   const activeVisualCaption =
     activeCue?.imageCaption ??
+    activeSection.kanji?.imageCaption ??
     activeSection.vocab?.imageCaption ??
     activeSection.imageCaption;
 
@@ -863,9 +1274,17 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
             translate: `0px ${contentOffsetY}px`,
           }}
         >
-          {(activeSection.type === "vocabulary" ||
-            activeSection.type === "grammar") &&
-          activeSection.vocab ? (
+          {(activeSection.type === "kanji_lesson" || Boolean(activeSection.kanji)) &&
+          activeSection.kanji ? (
+            <KanjiLessonBoardContent
+              kanji={activeSection.kanji}
+              sectionStartFrame={sectionStartFrame}
+              visualUrl={activeVisualUrl}
+              visualCaption={activeVisualCaption}
+            />
+          ) : (activeSection.type === "vocabulary" ||
+              activeSection.type === "grammar") &&
+            activeSection.vocab ? (
             <VocabBoardContent
               vocab={activeSection.vocab}
               sectionLabel={activeSection.label}
@@ -881,6 +1300,7 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
               jlptLevel={jlptLevel}
               activeSection={activeSection}
               featuredVocab={featuredVocab}
+              kanjiList={kanjiList}
               activeCue={activeCue}
               visualUrl={activeVisualUrl}
               visualCaption={activeVisualCaption}

@@ -3,8 +3,37 @@ export type PodcastSectionType =
   | "story"
   | "vocabulary"
   | "grammar"
+  | "kanji_lesson"
   | "dialogue"
   | "quiz";
+
+export type HostGestureType =
+  | "point_board"
+  | "nod_encourage"
+  | "thinking"
+  | "none";
+
+export type KanjiExampleWord = {
+  readonly word: string;
+  readonly reading: string;
+  readonly romaji: string;
+  readonly meaning: string;
+};
+
+export type KanjiLessonData = {
+  readonly kanji: string;
+  readonly jlptLevel: string;
+  readonly onyomi: string;
+  readonly kunyomi: string;
+  readonly meaningEn: string;
+  readonly meaningNp?: string;
+  readonly mnemonic: string;
+  readonly strokeCount?: number;
+  readonly examples: readonly KanjiExampleWord[];
+  readonly visualPrompt?: string;
+  readonly imageUrl?: string;
+  readonly imageCaption?: string;
+};
 
 export type SubtitleCue = {
   readonly id: string;
@@ -14,6 +43,7 @@ export type SubtitleCue = {
   readonly japanese: string;
   readonly romaji: string;
   readonly english: string;
+  readonly gesture?: HostGestureType;
   readonly imageUrl?: string;
   readonly imageCaption?: string;
 };
@@ -21,6 +51,78 @@ export type SubtitleCue = {
 export const isGuestSpeaker = (speaker: string): boolean => {
   const normalized = speaker.trim().toLowerCase();
   return normalized === "maria" || normalized === "yuki";
+};
+
+const POINT_BOARD_KEYWORDS = [
+  "見てください",
+  "みてください",
+  "こちら",
+  "ボード",
+  "画面",
+  "図",
+  "写真",
+  "look here",
+  "on the board",
+  "look at the board",
+  "picture",
+  "diagram",
+  "take a look",
+];
+
+const NOD_ENCOURAGE_KEYWORDS = [
+  "正解",
+  "素晴らしい",
+  "いいですね",
+  "その通り",
+  "よくできました",
+  "バッチリ",
+  "すごい",
+  "correct",
+  "great job",
+  "well done",
+  "exactly",
+  "good question",
+  "nice question",
+];
+
+const THINKING_KEYWORDS = [
+  "どれでしょう",
+  "考えて",
+  "クイズ",
+  "意味は",
+  "what does",
+  "which one",
+  "can you guess",
+  "think about",
+];
+
+export const resolveCueGesture = (
+  cue: SubtitleCue,
+  section?: EpisodeSection,
+): HostGestureType => {
+  if (cue.gesture !== undefined) {
+    return cue.gesture;
+  }
+  if (isGuestSpeaker(cue.speaker)) {
+    return "none";
+  }
+
+  const jp = cue.japanese;
+  const en = cue.english.toLowerCase();
+  const matchesAny = (keywords: readonly string[]) =>
+    keywords.some((kw) => jp.includes(kw) || en.includes(kw));
+
+  if (matchesAny(POINT_BOARD_KEYWORDS)) {
+    return "point_board";
+  }
+  if (matchesAny(NOD_ENCOURAGE_KEYWORDS)) {
+    return "nod_encourage";
+  }
+  if (matchesAny(THINKING_KEYWORDS)) {
+    return "thinking";
+  }
+
+  return section?.gesture ?? "none";
 };
 
 export type VocabCardData = {
@@ -62,7 +164,9 @@ export type EpisodeSection = {
   readonly label: string;
   readonly startSec: number;
   readonly endSec: number;
+  readonly gesture?: HostGestureType;
   readonly vocab?: VocabCardData;
+  readonly kanji?: KanjiLessonData;
   readonly quiz?: QuizCardData;
   readonly imageUrl?: string;
   readonly imageSrc?: string;
