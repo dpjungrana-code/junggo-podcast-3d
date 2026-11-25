@@ -673,7 +673,7 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
   const rimIntensity = interpolate(quizFactor, [0, 1], [1.45, 2.35]);
   const ambientIntensity = interpolate(quizFactor, [0, 1], [0.48, 0.3]);
   const neonGlowIntensity =
-    0.92 + audio.volume * 0.24 + Math.sin(timeSec * 4.5) * 0.03;
+    0.78 + audio.volume * 0.16 + Math.sin(timeSec * 4.5) * 0.025;
 
   return (
     <group>
@@ -836,11 +836,17 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
         {/* Top-Right Cascading Hanging Ivy */}
         <HangingIvy3D position={[0.56, 1.02, 0.14]} />
 
-        {/* Middle Shelf: Labeled JLPT / Japanese Grammar / Vocabulary / Kanji / Conversation Stack */}
-        <mesh position={[0.14, 0.03, 0.02]} castShadow receiveShadow>
-          <boxGeometry args={[0.54, 0.37, 0.24]} />
-          <meshStandardMaterial map={textures.studyBooks} roughness={0.65} />
-        </mesh>
+        {/* Middle Shelf: Ivory Book Block + Dedicated Front Spine Plane for Crisp 1080p Legibility */}
+        <group position={[0.14, 0.03, 0.02]}>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[0.56, 0.38, 0.24]} />
+            <meshStandardMaterial color="#e6dfd0" roughness={0.78} />
+          </mesh>
+          <mesh position={[0, 0, 0.122]}>
+            <planeGeometry args={[0.56, 0.38]} />
+            <meshStandardMaterial map={textures.studyBooks} roughness={0.58} />
+          </mesh>
+        </group>
         {/* Two vertical colorful books on left of middle shelf */}
         <mesh position={[-0.42, 0.05, 0.02]} castShadow>
           <boxGeometry args={[0.075, 0.41, 0.22]} />
@@ -869,8 +875,8 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
       </group>
 
       {/* ================= CENTERED "JungGo PODCAST STUDIO" NEON SIGN ================= */}
-      <mesh position={[-0.45, 2.26, -1.96]}>
-        <planeGeometry args={[2.12, 1.06]} />
+      <mesh position={[-0.42, 2.64, -1.96]}>
+        <planeGeometry args={[1.88, 0.94]} />
         <meshStandardMaterial
           map={textures.neon}
           emissiveMap={textures.neon}
@@ -960,8 +966,8 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
         {/* Far-Left White Ceramic Potted Leafy Plant */}
         <PottedPlant position={[-1.88, 0.78, 0.46]} scale={1.18} potColor="#eceae4" />
 
-        {/* White Ceramic "JungGo" Mug on Coaster (emblem facing camera) */}
-        <group position={[-1.44, 0.78, 0.4]} rotation={[0, Math.PI - 0.18, 0]}>
+        {/* White Ceramic "JungGo" Mug on Coaster (emblem centered facing camera) */}
+        <group position={[-1.44, 0.78, 0.4]} rotation={[0, Math.PI + 0.46, 0]}>
           <mesh position={[0, 0.004, 0]} receiveShadow>
             <cylinderGeometry args={[0.095, 0.095, 0.008, 20]} />
             <meshStandardMaterial color="#181b22" roughness={0.8} />

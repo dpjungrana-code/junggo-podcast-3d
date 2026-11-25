@@ -278,17 +278,20 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
         cursor_sec += stream.duration_sec
         end_sec = round(cursor_sec, 3)
 
-        subtitles.append(
-            {
-                "id": line.get("id", f"sub-{idx + 1}"),
-                "startSec": start_sec,
-                "endSec": end_sec,
-                "speaker": line.get("speaker", "Sensei"),
-                "japanese": line["japanese"],
-                "romaji": line.get("romaji", ""),
-                "english": line.get("english", ""),
-            }
-        )
+        cue_obj: dict[str, Any] = {
+            "id": line.get("id", f"sub-{idx + 1}"),
+            "startSec": start_sec,
+            "endSec": end_sec,
+            "speaker": line.get("speaker", "Sensei"),
+            "japanese": line["japanese"],
+            "romaji": line.get("romaji", ""),
+            "english": line.get("english", ""),
+        }
+        if line.get("imageUrl"):
+            cue_obj["imageUrl"] = line["imageUrl"]
+        if line.get("imageCaption"):
+            cue_obj["imageCaption"] = line["imageCaption"]
+        subtitles.append(cue_obj)
 
         sec_id = line.get("sectionId")
         if sec_id:
@@ -357,8 +360,12 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
             }
             if "vocab" in sec:
                 built_sec["vocab"] = sec["vocab"]
-            if "imageSrc" in sec:
+            if sec.get("imageUrl"):
+                built_sec["imageUrl"] = sec["imageUrl"]
+            if sec.get("imageSrc"):
                 built_sec["imageSrc"] = sec["imageSrc"]
+            if sec.get("imageCaption"):
+                built_sec["imageCaption"] = sec["imageCaption"]
             if "quiz" in sec:
                 quiz = dict(sec["quiz"])
                 sec_dur = max(1.0, sec_end - sec_start)

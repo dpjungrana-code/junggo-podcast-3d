@@ -34,7 +34,79 @@ const resolveImageSrc = (src: string): string => {
   ) {
     return src;
   }
-  return staticFile(src);
+  return staticFile(src.replace(/^\/+/, ""));
+};
+
+/**
+ * Clean framed visual / kanji diagram card with opaque dark backdrop,
+ * `object-contain` sizing, optional caption, and Remotion frame fade-in.
+ */
+const MediaVisualFrame: React.FC<{
+  readonly imageUrl: string;
+  readonly caption?: string;
+  readonly width?: number | string;
+  readonly height?: number;
+}> = ({ imageUrl, caption, width = "100%", height = 220 }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const fade = interpolate(frame % Math.max(12, Math.round(fps * 1000)), [0, 8], [0.92, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  return (
+    <div
+      style={{
+        width,
+        flexShrink: 0,
+        borderRadius: 14,
+        overflow: "hidden",
+        border: "1px solid rgba(54, 242, 174, 0.28)",
+        backgroundColor: "#0b1116",
+        display: "flex",
+        flexDirection: "column",
+        opacity: fade,
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          height,
+          padding: 10,
+          boxSizing: "border-box",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#0b1116",
+        }}
+      >
+        <Img
+          src={resolveImageSrc(imageUrl)}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+          }}
+        />
+      </div>
+      {caption ? (
+        <div
+          style={{
+            padding: "6px 12px",
+            borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+            backgroundColor: "#0f171e",
+            fontSize: 13,
+            fontWeight: 600,
+            color: "#b7d9ca",
+            textAlign: "center",
+            lineHeight: 1.3,
+          }}
+        >
+          {caption}
+        </div>
+      ) : null}
+    </div>
+  );
 };
 
 /**
@@ -117,7 +189,12 @@ const AudioWaveIcon: React.FC = () => (
 const VocabBoardContent: React.FC<{
   readonly vocab: VocabCardData;
   readonly sectionLabel: string;
-}> = ({ vocab, sectionLabel }) => {
+  readonly visualUrl?: string;
+  readonly visualCaption?: string;
+}> = ({ vocab, sectionLabel, visualUrl, visualCaption }) => {
+  const mediaUrl = visualUrl ?? vocab.imageUrl ?? vocab.imageSrc;
+  const mediaCaption = visualCaption ?? vocab.imageCaption;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {/* Header Row */}
@@ -234,22 +311,13 @@ const VocabBoardContent: React.FC<{
           </div>
         </div>
 
-        {vocab.imageSrc ? (
-          <div
-            style={{
-              width: 162,
-              flexShrink: 0,
-              borderRadius: 14,
-              overflow: "hidden",
-              border: "1px solid rgba(255, 255, 255, 0.14)",
-              backgroundColor: "#0e151b",
-            }}
-          >
-            <Img
-              src={resolveImageSrc(vocab.imageSrc)}
-              style={{ width: 162, height: 138, objectFit: "cover" }}
-            />
-          </div>
+        {mediaUrl ? (
+          <MediaVisualFrame
+            imageUrl={mediaUrl}
+            caption={mediaCaption}
+            width={196}
+            height={146}
+          />
         ) : (
           <RamenBowlIllustration />
         )}
@@ -489,6 +557,8 @@ const OverviewBoardContent: React.FC<{
   readonly activeSection: EpisodeSection;
   readonly featuredVocab?: VocabCardData;
   readonly activeCue: SubtitleCue | null;
+  readonly visualUrl?: string;
+  readonly visualCaption?: string;
 }> = ({
   episodeNumber,
   episodeTitle,
@@ -496,6 +566,8 @@ const OverviewBoardContent: React.FC<{
   activeSection,
   featuredVocab,
   activeCue,
+  visualUrl,
+  visualCaption,
 }) => {
   const isDialogue = activeSection.type === "dialogue";
 
@@ -537,7 +609,11 @@ const OverviewBoardContent: React.FC<{
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <AudioWaveIcon />
           <span style={{ fontSize: 15, fontWeight: 700, color: "#e2f5ec" }}>
-            {isDialogue ? "Cafe Dialogue" : "Today's Lesson"}
+            {visualUrl && !isDialogue
+              ? "Visual Guide"
+              : isDialogue
+                ? "Cafe Dialogue"
+                : "Today's Lesson"}
           </span>
         </div>
       </div>
@@ -545,50 +621,88 @@ const OverviewBoardContent: React.FC<{
       {isDialogue && activeCue ? (
         <div
           style={{
-            backgroundColor: "#0d141a",
-            border: "1px solid rgba(251, 191, 36, 0.28)",
-            borderRadius: 14,
-            padding: "20px 22px",
             display: "flex",
-            flexDirection: "column",
-            gap: 10,
+            alignItems: "stretch",
+            gap: 16,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 800,
-                padding: "4px 10px",
-                borderRadius: 6,
-                backgroundColor: isGuestSpeaker(activeCue.speaker)
-                  ? "#f59e0b"
-                  : "#148c53",
-                color: isGuestSpeaker(activeCue.speaker) ? "#1f1402" : "#ffffff",
-              }}
-            >
-              {activeCue.speaker}
-            </span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "#9fb0c0" }}>
-              Natural Tokyo Cafe Conversation
-            </span>
-          </div>
           <div
             style={{
-              fontSize: 32,
-              fontWeight: 800,
-              color: "#ffffff",
-              lineHeight: 1.3,
+              flex: 1,
+              backgroundColor: "#0d141a",
+              border: "1px solid rgba(251, 191, 36, 0.28)",
+              borderRadius: 14,
+              padding: "18px 20px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              gap: 10,
             }}
           >
-            {activeCue.japanese}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  backgroundColor: isGuestSpeaker(activeCue.speaker)
+                    ? "#f59e0b"
+                    : "#148c53",
+                  color: isGuestSpeaker(activeCue.speaker) ? "#1f1402" : "#ffffff",
+                }}
+              >
+                {activeCue.speaker}
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#9fb0c0" }}>
+                Natural Tokyo Cafe Conversation
+              </span>
+            </div>
+            <div
+              style={{
+                fontSize: visualUrl ? 26 : 32,
+                fontWeight: 800,
+                color: "#ffffff",
+                lineHeight: 1.3,
+              }}
+            >
+              {activeCue.japanese}
+            </div>
+            <div style={{ fontSize: visualUrl ? 16 : 18, fontWeight: 600, color: "#fde68a" }}>
+              {activeCue.romaji}
+            </div>
+            <div style={{ fontSize: visualUrl ? 17 : 19, fontWeight: 500, color: "#cbd5e1" }}>
+              {activeCue.english}
+            </div>
           </div>
-          <div style={{ fontSize: 18, fontWeight: 600, color: "#fde68a" }}>
-            {activeCue.romaji}
+
+          {visualUrl ? (
+            <MediaVisualFrame
+              imageUrl={visualUrl}
+              caption={visualCaption}
+              width={210}
+              height={196}
+            />
+          ) : null}
+        </div>
+      ) : visualUrl ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div
+            style={{
+              fontSize: 30,
+              fontWeight: 900,
+              color: "#ffffff",
+              lineHeight: 1.15,
+            }}
+          >
+            {episodeTitle}
           </div>
-          <div style={{ fontSize: 19, fontWeight: 500, color: "#cbd5e1" }}>
-            {activeCue.english}
-          </div>
+          <MediaVisualFrame
+            imageUrl={visualUrl}
+            caption={visualCaption}
+            width="100%"
+            height={230}
+          />
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -608,20 +722,7 @@ const OverviewBoardContent: React.FC<{
         </div>
       )}
 
-      {activeSection.imageSrc ? (
-        <div
-          style={{
-            borderRadius: 14,
-            overflow: "hidden",
-            border: "1px solid rgba(255, 255, 255, 0.12)",
-          }}
-        >
-          <Img
-            src={resolveImageSrc(activeSection.imageSrc)}
-            style={{ width: "100%", height: 148, objectFit: "cover" }}
-          />
-        </div>
-      ) : featuredVocab ? (
+      {!visualUrl && featuredVocab ? (
         <div
           style={{
             backgroundColor: "#0d141a",
@@ -690,6 +791,16 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
   const activeSection = getActiveSection(sections, timeSec);
   const activeCue = getActiveSubtitle(subtitles, timeSec);
   const featuredVocab = sections.find((s) => s.vocab)?.vocab;
+  const activeVisualUrl =
+    activeCue?.imageUrl ??
+    activeSection.vocab?.imageUrl ??
+    activeSection.vocab?.imageSrc ??
+    activeSection.imageUrl ??
+    activeSection.imageSrc;
+  const activeVisualCaption =
+    activeCue?.imageCaption ??
+    activeSection.vocab?.imageCaption ??
+    activeSection.imageCaption;
 
   const fadeFrames = Math.max(6, Math.round(0.32 * fps));
   const sectionStartFrame = Math.round(activeSection.startSec * fps);
@@ -758,6 +869,8 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
             <VocabBoardContent
               vocab={activeSection.vocab}
               sectionLabel={activeSection.label}
+              visualUrl={activeVisualUrl}
+              visualCaption={activeVisualCaption}
             />
           ) : activeSection.type === "quiz" && activeSection.quiz ? (
             <QuizBoardContent quiz={activeSection.quiz} timeSec={timeSec} />
@@ -769,6 +882,8 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
               activeSection={activeSection}
               featuredVocab={featuredVocab}
               activeCue={activeCue}
+              visualUrl={activeVisualUrl}
+              visualCaption={activeVisualCaption}
             />
           )}
         </div>

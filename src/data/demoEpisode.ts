@@ -14,6 +14,8 @@ export type SubtitleCue = {
   readonly japanese: string;
   readonly romaji: string;
   readonly english: string;
+  readonly imageUrl?: string;
+  readonly imageCaption?: string;
 };
 
 export const isGuestSpeaker = (speaker: string): boolean => {
@@ -31,6 +33,7 @@ export type VocabCardData = {
   readonly exampleJp: string;
   readonly exampleRomaji: string;
   readonly exampleEn: string;
+  readonly imageUrl?: string;
   readonly imageSrc?: string;
   readonly imageCaption?: string;
 };
@@ -61,7 +64,9 @@ export type EpisodeSection = {
   readonly endSec: number;
   readonly vocab?: VocabCardData;
   readonly quiz?: QuizCardData;
+  readonly imageUrl?: string;
   readonly imageSrc?: string;
+  readonly imageCaption?: string;
 };
 
 export type EpisodeData = {

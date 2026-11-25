@@ -19,10 +19,11 @@ const finalizeTexture = (
   canvas: HTMLCanvasElement,
   repeatX = 1,
   repeatY = 1,
+  anisotropy = 8,
 ): THREE.CanvasTexture => {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 8;
+  texture.anisotropy = anisotropy;
   if (repeatX !== 1 || repeatY !== 1) {
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
@@ -141,9 +142,9 @@ export const createNeonSignTexture = (): THREE.CanvasTexture => {
   ctx.clearRect(0, 0, 1024, 512);
 
   // Subtle ambient warm-mint & crimson halo
-  const halo = ctx.createRadialGradient(512, 232, 24, 512, 232, 370);
-  halo.addColorStop(0, "rgba(56, 235, 165, 0.14)");
-  halo.addColorStop(0.5, "rgba(235, 65, 72, 0.08)");
+  const halo = ctx.createRadialGradient(512, 224, 24, 512, 224, 340);
+  halo.addColorStop(0, "rgba(56, 235, 165, 0.11)");
+  halo.addColorStop(0.5, "rgba(235, 65, 72, 0.06)");
   halo.addColorStop(1, "rgba(0, 0, 0, 0)");
   ctx.fillStyle = halo;
   ctx.fillRect(0, 0, 1024, 512);
@@ -151,81 +152,82 @@ export const createNeonSignTexture = (): THREE.CanvasTexture => {
   // Bright Red Rising Sun + Emerald Mt. Fuji emblem at top center
   ctx.save();
   ctx.beginPath();
-  ctx.arc(512, 108, 52, 0, Math.PI * 2);
+  ctx.arc(512, 100, 50, 0, Math.PI * 2);
   ctx.fillStyle = "#f02e3a";
-  ctx.shadowColor = "rgba(240, 46, 58, 0.72)";
-  ctx.shadowBlur = 14;
+  ctx.shadowColor = "rgba(240, 46, 58, 0.6)";
+  ctx.shadowBlur = 9;
   ctx.fill();
 
   // Mt. Fuji silhouette
   ctx.beginPath();
-  ctx.moveTo(412, 150);
-  ctx.lineTo(490, 86);
-  ctx.lineTo(534, 86);
-  ctx.lineTo(612, 150);
+  ctx.moveTo(416, 140);
+  ctx.lineTo(490, 78);
+  ctx.lineTo(534, 78);
+  ctx.lineTo(608, 140);
   ctx.closePath();
   ctx.fillStyle = "#0e6b43";
-  ctx.shadowColor = "rgba(26, 175, 110, 0.45)";
-  ctx.shadowBlur = 8;
+  ctx.shadowColor = "rgba(26, 175, 110, 0.35)";
+  ctx.shadowBlur = 5;
   ctx.fill();
 
   // Crisp snow cap
   ctx.beginPath();
-  ctx.moveTo(490, 86);
-  ctx.lineTo(534, 86);
-  ctx.lineTo(554, 112);
-  ctx.lineTo(533, 105);
-  ctx.lineTo(512, 118);
-  ctx.lineTo(492, 105);
-  ctx.lineTo(470, 112);
+  ctx.moveTo(490, 78);
+  ctx.lineTo(534, 78);
+  ctx.lineTo(554, 104);
+  ctx.lineTo(533, 97);
+  ctx.lineTo(512, 110);
+  ctx.lineTo(492, 97);
+  ctx.lineTo(470, 104);
   ctx.closePath();
   ctx.fillStyle = "#f7faf8";
-  ctx.shadowBlur = 5;
+  ctx.shadowBlur = 2;
   ctx.fill();
   ctx.restore();
 
   // Main "JungGo" neon lettering
   ctx.save();
   ctx.font =
-    '900 150px "Hiragino Sans", "Avenir Next", "Helvetica Neue", sans-serif';
+    '900 144px "Hiragino Sans", "Avenir Next", "Helvetica Neue", sans-serif';
   ctx.textBaseline = "middle";
   ctx.textAlign = "right";
-  ctx.shadowColor = "rgba(255, 255, 255, 0.65)";
-  ctx.shadowBlur = 14;
+  ctx.shadowColor = "rgba(255, 255, 255, 0.45)";
+  ctx.shadowBlur = 8;
   ctx.fillStyle = "#ffffff";
-  ctx.fillText("Jung", 538, 244);
+  ctx.fillText("Jung", 538, 220);
 
   ctx.textAlign = "left";
-  ctx.shadowColor = "rgba(44, 240, 168, 0.8)";
-  ctx.shadowBlur = 18;
+  ctx.shadowColor = "rgba(44, 240, 168, 0.62)";
+  ctx.shadowBlur = 11;
   ctx.fillStyle = "#36f2ae";
-  ctx.fillText("Go", 544, 244);
+  ctx.fillText("Go", 544, 220);
   ctx.restore();
 
   // Crisp white "PODCAST STUDIO" subtitle
   ctx.save();
   ctx.font =
-    '800 44px "Avenir Next", "Helvetica Neue", "Hiragino Sans", sans-serif';
+    '800 42px "Avenir Next", "Helvetica Neue", "Hiragino Sans", sans-serif';
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.shadowColor = "rgba(255, 245, 225, 0.55)";
-  ctx.shadowBlur = 8;
+  ctx.shadowColor = "rgba(255, 245, 225, 0.4)";
+  ctx.shadowBlur = 5;
   ctx.fillStyle = "#fff8ee";
-  ctx.fillText("P O D C A S T   S T U D I O", 512, 344);
+  ctx.fillText("P O D C A S T   S T U D I O", 512, 336);
   ctx.restore();
 
   // Reference tagline: "Learn • Grow • Speak Japanese"
   ctx.save();
   ctx.font =
-    '600 26px "Avenir Next", "Helvetica Neue", "Hiragino Sans", sans-serif';
+    '600 25px "Avenir Next", "Helvetica Neue", "Hiragino Sans", sans-serif';
   ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   ctx.fillStyle = "#f5efe6";
-  ctx.shadowColor = "rgba(255, 235, 200, 0.35)";
-  ctx.shadowBlur = 5;
-  ctx.fillText("Learn  •  Grow  •  Speak Japanese", 512, 402);
+  ctx.shadowColor = "rgba(255, 235, 200, 0.25)";
+  ctx.shadowBlur = 3;
+  ctx.fillText("Learn  •  Grow  •  Speak Japanese", 512, 388);
   ctx.restore();
 
-  return finalizeTexture(canvas);
+  return finalizeTexture(canvas, 1, 1, 16);
 };
 
 /**
@@ -415,50 +417,57 @@ export const createScriptNotesTexture = (): THREE.CanvasTexture => {
  * White ceramic mug texture with JungGo Mt. Fuji emblem & wordmark.
  */
 export const createMugTexture = (): THREE.CanvasTexture => {
-  const [canvas, ctx] = makeCanvas(512, 256);
+  const [canvas, ctx] = makeCanvas(1024, 512);
 
-  ctx.fillStyle = "#f4f1ec";
-  ctx.fillRect(0, 0, 512, 256);
+  ctx.fillStyle = "#f5f2ed";
+  ctx.fillRect(0, 0, 1024, 512);
 
-  // Subtle ceramic rim sheen
-  ctx.fillStyle = "#e3ddd4";
-  ctx.fillRect(0, 0, 512, 10);
+  // Subtle ceramic rim sheen & base shadow band
+  ctx.fillStyle = "#e6e0d6";
+  ctx.fillRect(0, 0, 1024, 18);
+  ctx.fillStyle = "#e9e3da";
+  ctx.fillRect(0, 492, 1024, 20);
 
-  // Draw emblem centered at x=256 (facing camera)
+  // Draw emblem tightly centered around u = 0.5 (x = 512) with generous horizontal padding
+  const cx = 512;
   ctx.beginPath();
-  ctx.arc(256, 95, 28, 0, Math.PI * 2);
+  ctx.arc(cx, 186, 50, 0, Math.PI * 2);
   ctx.fillStyle = "#d92b2b";
   ctx.fill();
 
   ctx.beginPath();
-  ctx.moveTo(206, 122);
-  ctx.lineTo(246, 84);
-  ctx.lineTo(266, 84);
-  ctx.lineTo(306, 122);
+  ctx.moveTo(cx - 72, 232);
+  ctx.lineTo(cx - 18, 168);
+  ctx.lineTo(cx + 18, 168);
+  ctx.lineTo(cx + 72, 232);
   ctx.closePath();
-  ctx.fillStyle = "#1b6b46";
+  ctx.fillStyle = "#166843";
   ctx.fill();
 
   ctx.beginPath();
-  ctx.moveTo(246, 84);
-  ctx.lineTo(266, 84);
-  ctx.lineTo(277, 98);
-  ctx.lineTo(256, 94);
-  ctx.lineTo(235, 98);
+  ctx.moveTo(cx - 18, 168);
+  ctx.lineTo(cx + 18, 168);
+  ctx.lineTo(cx + 32, 192);
+  ctx.lineTo(cx, 185);
+  ctx.lineTo(cx - 32, 192);
   ctx.closePath();
   ctx.fillStyle = "#ffffff";
   ctx.fill();
 
-  ctx.font = '800 42px "Avenir Next", "Helvetica Neue", sans-serif';
+  // Measure full "JungGo" wordmark so the combined wordmark stays centered on x = 512
+  ctx.font = '800 56px "Avenir Next", "Helvetica Neue", sans-serif';
   ctx.textBaseline = "middle";
-  ctx.textAlign = "right";
-  ctx.fillStyle = "#152026";
-  ctx.fillText("Jung", 268, 168);
   ctx.textAlign = "left";
-  ctx.fillStyle = "#1b6b46";
-  ctx.fillText("Go", 270, 168);
+  const jungWidth = ctx.measureText("Jung").width;
+  const goWidth = ctx.measureText("Go").width;
+  const startX = cx - (jungWidth + goWidth) / 2;
 
-  return finalizeTexture(canvas);
+  ctx.fillStyle = "#152026";
+  ctx.fillText("Jung", startX, 308);
+  ctx.fillStyle = "#166843";
+  ctx.fillText("Go", startX + jungWidth, 308);
+
+  return finalizeTexture(canvas, 1, 1, 16);
 };
 
 /**
@@ -572,9 +581,9 @@ export const createTokyoSkyTexture = (): THREE.CanvasTexture => {
  * Horizontal stack of labeled JLPT / Japanese study books for the left shelf.
  */
 export const createStudyBookStackTexture = (): THREE.CanvasTexture => {
-  const [canvas, ctx] = makeCanvas(512, 512);
-  ctx.fillStyle = "#161a22";
-  ctx.fillRect(0, 0, 512, 512);
+  const [canvas, ctx] = makeCanvas(1024, 1024);
+  ctx.fillStyle = "#0e1218";
+  ctx.fillRect(0, 0, 1024, 1024);
 
   const spines = [
     { label: "JLPT", bg: "#1c4a8a", fg: "#ffffff", trim: "#58b0ff" },
@@ -584,21 +593,32 @@ export const createStudyBookStackTexture = (): THREE.CanvasTexture => {
     { label: "Conversation", bg: "#141a24", fg: "#e2e8f0", trim: "#38bdf8" },
   ];
 
-  const rowH = 512 / spines.length;
+  const rowH = 1024 / spines.length;
   spines.forEach((book, idx) => {
     const y = idx * rowH;
+    // Book spine body
     ctx.fillStyle = book.bg;
-    ctx.fillRect(0, y + 3, 512, rowH - 6);
+    ctx.fillRect(0, y + 6, 1024, rowH - 12);
+
+    // Subtle top edge highlight & bottom shelf contact shadow for 3D spine separation
+    ctx.fillStyle = "rgba(255, 255, 255, 0.14)";
+    ctx.fillRect(0, y + 6, 1024, 8);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+    ctx.fillRect(0, y + rowH - 16, 1024, 10);
+
+    // Accent spine stripe
     ctx.fillStyle = book.trim;
-    ctx.fillRect(18, y + 10, 12, rowH - 20);
+    ctx.fillRect(36, y + 22, 22, rowH - 44);
+
+    // Crisp high-contrast sans-serif typography
     ctx.fillStyle = book.fg;
-    ctx.font = '800 38px "Avenir Next", "Helvetica Neue", sans-serif';
+    ctx.font = '800 72px "Avenir Next", "Helvetica Neue", sans-serif';
     ctx.textBaseline = "middle";
     ctx.textAlign = "left";
-    ctx.fillText(book.label, 52, y + rowH / 2);
+    ctx.fillText(book.label, 96, y + rowH / 2 + 2);
   });
 
-  return finalizeTexture(canvas);
+  return finalizeTexture(canvas, 1, 1, 16);
 };
 
 /**
