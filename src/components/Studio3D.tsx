@@ -923,19 +923,19 @@ export const Studio3D: React.FC<Studio3DProps> = ({
         decay={2}
       />
 
-      {/* 4. Warm Recessed Bookshelf Bay Glows */}
+      {/* 4. Warm Recessed Bookshelf Bay Glows (angled & tucked behind shelf lip for zero spine glare) */}
       <pointLight
-        position={[-2.35, 2.22, -1.62]}
-        intensity={interpolate(quizFactor, [0, 1], [1.65, 0.95])}
+        position={[-2.35, 2.22, -1.68]}
+        intensity={interpolate(quizFactor, [0, 1], [1.45, 0.85])}
         color="#ffab40"
-        distance={3.0}
+        distance={2.9}
         decay={2}
       />
       <pointLight
-        position={[-2.35, 1.52, -1.66]}
-        intensity={interpolate(quizFactor, [0, 1], [0.95, 0.55])}
+        position={[-2.35, 1.84, -1.82]}
+        intensity={interpolate(quizFactor, [0, 1], [0.72, 0.42])}
         color="#ffb24d"
-        distance={2.8}
+        distance={2.5}
         decay={2}
       />
 
@@ -1053,28 +1053,37 @@ export const Studio3D: React.FC<Studio3DProps> = ({
         {/* Top-Right Cascading Hanging Ivy */}
         <HangingIvy3D position={[0.56, 1.02, 0.14]} />
 
-        {/* Middle Shelf: Larger Vibrant Study Books + Maneki-neko Lucky Cat */}
-        <group position={[0.04, 0.05, 0.03]}>
+        {/* Middle Shelf: ~22% Larger Zero-Glare Matte Study Books + Maneki-neko Lucky Cat */}
+        <group position={[-0.08, 0.095, 0.03]}>
           <mesh castShadow receiveShadow>
-            <boxGeometry args={[0.6, 0.42, 0.25]} />
-            <meshStandardMaterial color="#ece5d6" roughness={0.75} />
+            <boxGeometry args={[0.73, 0.51, 0.26]} />
+            <meshStandardMaterial
+              color="#ebe4d5"
+              roughness={0.92}
+              metalness={0.0}
+            />
           </mesh>
-          <mesh position={[0, 0, 0.127]}>
-            <planeGeometry args={[0.6, 0.42]} />
-            <meshStandardMaterial map={textures.studyBooks} roughness={0.82} />
+          <mesh position={[0, 0, 0.132]}>
+            <planeGeometry args={[0.73, 0.51]} />
+            <meshStandardMaterial
+              map={textures.studyBooks}
+              roughness={0.95}
+              metalness={0.0}
+              envMapIntensity={0.15}
+            />
           </mesh>
         </group>
-        {/* Two vertical colorful reference books on far-left of middle shelf */}
-        <mesh position={[-0.44, 0.05, 0.02]} castShadow>
-          <boxGeometry args={[0.08, 0.43, 0.22]} />
-          <meshStandardMaterial color="#1d5b9c" roughness={0.62} />
-        </mesh>
-        <mesh position={[-0.35, 0.03, 0.02]} castShadow>
-          <boxGeometry args={[0.075, 0.4, 0.22]} />
-          <meshStandardMaterial color="#f59e0b" roughness={0.62} />
+        {/* Sleek vertical accent book on far-left edge */}
+        <mesh position={[-0.5, 0.095, 0.02]} castShadow>
+          <boxGeometry args={[0.072, 0.51, 0.23]} />
+          <meshStandardMaterial
+            color="#d97706"
+            roughness={0.88}
+            metalness={0.0}
+          />
         </mesh>
         {/* Cute Ceramic Maneki-neko Lucky Cat on right side of middle shelf */}
-        <ManekiNeko3D position={[0.45, -0.155, 0.05]} />
+        <ManekiNeko3D position={[0.43, -0.155, 0.05]} />
 
         {/* Bottom Shelf: Matte-black Studio Camera Prop */}
         <group position={[-0.22, -0.72, 0.04]} rotation={[0, 0.35, 0]}>

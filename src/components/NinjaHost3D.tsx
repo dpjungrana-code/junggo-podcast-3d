@@ -9,6 +9,7 @@ import {
   SubtitleCue,
   getActiveSection,
   getActiveSubtitle,
+  isAddressingCoHost,
   isGuestSpeaker,
   resolveCueGesture,
 } from "../data/demoEpisode";
@@ -202,6 +203,58 @@ const computeGestureWeight = (
   return clamp01(maxWeight);
 };
 
+/**
+ * Smooth 0..1 envelope when the host directly addresses their co-host (by name,
+ * question phrasing, or dialogue handoff) without pointing at the board.
+ */
+const computeAddressCoHostWeight = (
+  sections: readonly EpisodeSection[],
+  subtitles: readonly SubtitleCue[] | undefined,
+  forGuest: boolean,
+  timeSec: number,
+): number => {
+  if (!subtitles || subtitles.length === 0) {
+    return 0;
+  }
+  let maxWeight = 0;
+  for (let i = 0; i < subtitles.length; i++) {
+    const cue = subtitles[i];
+    if (isGuestSpeaker(cue.speaker) !== forGuest) {
+      continue;
+    }
+    const midSec = (cue.startSec + cue.endSec) * 0.5;
+    const sec = findSectionAt(sections, midSec);
+    if (resolveCueGesture(cue, sec, forGuest) === "point_board") {
+      continue;
+    }
+    if (!isAddressingCoHost(cue, subtitles[i + 1])) {
+      continue;
+    }
+    const enter = interpolate(
+      timeSec,
+      [cue.startSec - 0.16, cue.startSec + 0.24],
+      [0, 1],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.inOut(Easing.cubic),
+      },
+    );
+    const exit = interpolate(
+      timeSec,
+      [cue.endSec - 0.12, cue.endSec + 0.36],
+      [1, 0],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.inOut(Easing.cubic),
+      },
+    );
+    maxWeight = Math.max(maxWeight, Math.min(enter, exit));
+  }
+  return clamp01(maxWeight);
+};
+
 type StylizedEyeProps = {
   readonly name: string;
   readonly position: readonly [number, number, number];
@@ -247,10 +300,15 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
         <meshStandardMaterial color="#1f1512" roughness={0.58} />
       </mesh>
 
-      {/* Glossy white sclera */}
+      {/* Wet-look glossy white sclera */}
       <mesh scale={[1.0, 1.06, 0.34]}>
         <sphereGeometry args={[0.052, 18, 14]} />
-        <meshStandardMaterial color="#fcfdff" roughness={0.2} />
+        <meshPhysicalMaterial
+          color="#fcfdff"
+          roughness={0.14}
+          clearcoat={1.0}
+          clearcoatRoughness={0.06}
+        />
       </mesh>
 
       {/* Bold upper lash arch */}
@@ -263,15 +321,25 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
         <meshStandardMaterial color="#161113" roughness={0.38} />
       </mesh>
 
-      {/* Movable Iris, Pupil, and Catchlights */}
+      {/* Movable Glossy Iris, Pupil, and Bright Cornea Catchlights */}
       <group position={[pupilOffsetX, pupilOffsetY, 0.0185]}>
         <mesh>
           <circleGeometry args={[0.0365, 20]} />
-          <meshStandardMaterial color="#241008" roughness={0.26} />
+          <meshPhysicalMaterial
+            color="#241008"
+            roughness={0.12}
+            clearcoat={1.0}
+            clearcoatRoughness={0.05}
+          />
         </mesh>
         <mesh position={[0, 0, 0.001]}>
           <circleGeometry args={[0.033, 20]} />
-          <meshStandardMaterial color="#613118" roughness={0.22} />
+          <meshPhysicalMaterial
+            color="#613118"
+            roughness={0.14}
+            clearcoat={0.95}
+            clearcoatRoughness={0.06}
+          />
         </mesh>
         <mesh position={[0, -0.009, 0.002]} scale={[0.92, 0.72, 1]}>
           <circleGeometry args={[0.022, 16]} />
@@ -377,12 +445,24 @@ const ArticulatedArm3D: React.FC<ArticulatedArmProps> = ({
     >
       <mesh castShadow receiveShadow>
         <sphereGeometry args={[0.086, 14, 10]} />
-        <meshStandardMaterial color="#11834b" roughness={0.74} />
+        <meshPhysicalMaterial
+          color="#11834b"
+          roughness={0.78}
+          sheen={0.55}
+          sheenRoughness={0.62}
+          sheenColor="#4ade9c"
+        />
       </mesh>
 
       <mesh position={[0, -0.1, 0]} castShadow receiveShadow>
         <capsuleGeometry args={[0.071, 0.14, 6, 12]} />
-        <meshStandardMaterial color="#11834b" roughness={0.74} />
+        <meshPhysicalMaterial
+          color="#11834b"
+          roughness={0.78}
+          sheen={0.55}
+          sheenRoughness={0.62}
+          sheenColor="#4ade9c"
+        />
       </mesh>
 
       <group
@@ -391,12 +471,24 @@ const ArticulatedArm3D: React.FC<ArticulatedArmProps> = ({
       >
         <mesh castShadow receiveShadow>
           <sphereGeometry args={[0.07, 12, 10]} />
-          <meshStandardMaterial color="#0f7845" roughness={0.76} />
+          <meshPhysicalMaterial
+            color="#0f7845"
+            roughness={0.8}
+            sheen={0.5}
+            sheenRoughness={0.65}
+            sheenColor="#4ade9c"
+          />
         </mesh>
 
         <mesh position={[0, -0.09, 0]} castShadow receiveShadow>
           <capsuleGeometry args={[0.066, 0.125, 6, 12]} />
-          <meshStandardMaterial color="#11834b" roughness={0.74} />
+          <meshPhysicalMaterial
+            color="#11834b"
+            roughness={0.78}
+            sheen={0.55}
+            sheenRoughness={0.62}
+            sheenColor="#4ade9c"
+          />
         </mesh>
 
         {/* Ribbed emerald wrist cuff */}
@@ -484,31 +576,53 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   const activeSection = getActiveSection(sections, timeSec);
   const activeCue = subtitles ? getActiveSubtitle(subtitles, timeSec) : null;
 
+  // Dual-Lock Lip-Sync: locked BOTH to exact cue timestamps [startSec, endSec] AND real-time audio spectrum
   const isHostCueActive =
-    activeCue !== null ? !isGuestSpeaker(activeCue.speaker) : audio.isSpeaking;
-  const isHostSpeaking = audio.isSpeaking && isHostCueActive;
+    activeCue !== null &&
+    !isGuestSpeaker(activeCue.speaker) &&
+    timeSec >= activeCue.startSec &&
+    timeSec <= activeCue.endSec;
+  const isHostSpeaking = isHostCueActive || (activeCue === null && audio.isSpeaking);
+
+  const cueEdgeFade = isHostCueActive && activeCue
+    ? Math.min(
+        interpolate(timeSec, [activeCue.startSec, activeCue.startSec + 0.06], [0, 1], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        }),
+        interpolate(timeSec, [activeCue.endSec - 0.07, activeCue.endSec], [1, 0], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        }),
+      )
+    : isHostSpeaking
+      ? 1
+      : 0;
+
+  // Multi-harmonic Japanese syllable cadence guarantees continuous lip-sync across quieter syllables
+  const syllableWave =
+    0.6 +
+    0.25 * Math.sin(timeSec * 16.5) +
+    0.15 * Math.cos(timeSec * 23.4 + 0.8);
+  const syllableFloor = 0.34 * (0.48 + 0.52 * syllableWave);
 
   const quietFallback = 0.05 + 0.035 * Math.sin(timeSec * 1.9);
   const voiceEnergy = isHostSpeaking
-    ? Math.max(0.22, audio.volume)
+    ? Math.max(syllableFloor, audio.volume * 1.15) * cueEdgeFade
     : quietFallback * 0.65;
   const speechPeak = isHostSpeaking
-    ? clamp01((voiceEnergy - 0.3) * 1.5)
+    ? clamp01((voiceEnergy - 0.28) * 1.5)
     : 0;
 
-  // High-visibility vowel-morphing lip-sync driven by real-time audio spectrum & volume
   const lowBand =
     audio.spectrum.slice(0, 4).reduce((acc, v) => acc + v, 0) / 4;
   const midBand =
     audio.spectrum.slice(4, 14).reduce((acc, v) => acc + v, 0) / 10;
   const vowelOpenBias = clamp01(0.5 + (midBand - lowBand) * 1.8);
-  const syllableWave =
-    0.58 +
-    0.26 * Math.sin(timeSec * 16.5) +
-    0.16 * Math.cos(timeSec * 23.4 + 0.8);
-  const mouthOpen = isHostSpeaking
-    ? clamp01(Math.pow(voiceEnergy, 0.7) * (0.68 + 0.54 * syllableWave))
-    : 0;
+  const mouthOpen =
+    isHostSpeaking && cueEdgeFade > 0.05
+      ? clamp01(Math.pow(voiceEnergy, 0.72) * (0.68 + 0.52 * syllableWave))
+      : 0;
   const mouthWidth = isHostSpeaking
     ? lerp(
         0.8,
@@ -529,6 +643,9 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     timeSec,
     isDual,
   );
+  const addressMariaWeight = isDual
+    ? computeAddressCoHostWeight(sections, subtitles, false, timeSec)
+    : 0;
   const quizRevealWeight = computeQuizRevealWeight(sections, timeSec);
 
   const pointBoardWeight = computeGestureWeight(
@@ -607,17 +724,17 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     };
   }, [logoTexture, torsoGeometry, upperTailGeometry, lowerTailGeometry]);
 
-  // Natural Eye Blinking (~3.2s = frame % 96) + occasional double-blinks
-  const cycleFrame = frame % 96;
-  const cycleIndex = Math.floor(frame / 96);
-  const primaryBlink = interpolate(cycleFrame, [86, 89, 90, 93], [0, 1, 1, 0], {
+  // Natural Eye Blinking (~3.0s = frame % 90) + occasional double-blinks (offset from Maria's 3.4s)
+  const cycleFrame = frame % 90;
+  const cycleIndex = Math.floor(frame / 90);
+  const primaryBlink = interpolate(cycleFrame, [80, 83, 84, 87], [0, 1, 1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.inOut(Easing.cubic),
   });
   const secondaryBlink =
     cycleIndex % 3 === 1
-      ? interpolate(cycleFrame, [76, 78.5, 79.5, 82], [0, 1, 1, 0], {
+      ? interpolate(cycleFrame, [70, 72.5, 73.5, 76], [0, 1, 1, 0], {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
           easing: Easing.inOut(Easing.cubic),
@@ -625,13 +742,16 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
       : 0;
   const blinkAmount = Math.max(primaryBlink, secondaryBlink);
 
-  // Subtle gaze tracking between camera and right-side board
+  // Smart cross-character gaze (~22deg toward Maria when addressing/listening) & board tracking
+  const coHostEngageWeight = clamp01(
+    Math.max(dialogueGuestWeight, addressMariaWeight),
+  );
   const baseBoardGlance =
     vocabWeight * (0.65 + 0.35 * Math.sin(timeSec * 1.15)) +
     quizWeight * 0.45 * (1 - quizRevealWeight);
   const basePupilX =
-    clamp01(baseBoardGlance + dialogueGuestWeight * (isDual ? 0.95 : 0.5)) *
-      0.011 +
+    clamp01(baseBoardGlance + coHostEngageWeight * (isDual ? 1.0 : 0.5)) *
+      0.0135 +
     Math.sin(timeSec * 0.85) * 0.0018;
   const pupilOffsetX = lerp(basePupilX, 0.0155, pointBoardWeight);
   const pupilOffsetY =
@@ -643,21 +763,21 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   // Breathing & Torso Motion
   const breathY = Math.sin(timeSec * 2.15) * 0.011;
   const baseTorsoYaw =
-    vocabWeight * 0.1 +
-    dialogueGuestWeight * (isDual ? 0.12 : 0.06) +
+    vocabWeight * 0.09 +
+    coHostEngageWeight * (isDual ? 0.14 : 0.06) +
     Math.sin(timeSec * 0.75) * 0.018;
   const torsoYaw = lerp(baseTorsoYaw, 0.16, pointBoardWeight);
   const torsoPitch = voiceEnergy * 0.024 + quizRevealWeight * -0.022;
 
-  // Head Turning, Nodding & Tilting
+  // Head Turning, Nodding & Tilting (~0.38 rad / ~22deg eye-contact toward Maria)
   const speakBobY = isHostSpeaking ? voiceEnergy * 0.012 : 0;
   const baseHeadTurnTarget =
-    vocabWeight * (0.22 + 0.08 * Math.sin(timeSec * 1.1)) +
-    dialogueGuestWeight * (isDual ? 0.3 : 0.18) +
+    vocabWeight * (0.18 + 0.06 * Math.sin(timeSec * 1.1)) +
+    coHostEngageWeight * (isDual ? 0.38 : 0.18) +
     quizWeight * (0.08 * (1 - quizRevealWeight));
   const headTurnTarget = lerp(baseHeadTurnTarget, 0.44, pointBoardWeight);
   const headYaw =
-    headTurnTarget +
+    Math.min(0.46, headTurnTarget) +
     Math.sin(timeSec * 1.05) * 0.03 * (1 - pointBoardWeight * 0.5) +
     (isHostSpeaking ? Math.cos(timeSec * 4.8) * voiceEnergy * 0.02 : 0);
 
@@ -903,14 +1023,20 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
         position={[0, breathY, 0]}
         rotation={[torsoPitch, torsoYaw, 0]}
       >
-        {/* Vibrant Emerald-Green JungGo Hoodie */}
+        {/* Vibrant Velvet Emerald-Green JungGo Hoodie */}
         <mesh
           geometry={torsoGeometry}
           scale={[1.08, 1, 0.86]}
           castShadow
           receiveShadow
         >
-          <meshStandardMaterial color="#11834b" roughness={0.74} />
+          <meshPhysicalMaterial
+            color="#11834b"
+            roughness={0.78}
+            sheen={0.55}
+            sheenRoughness={0.62}
+            sheenColor="#4ade9c"
+          />
         </mesh>
 
         {/* Crisp Curved "JungGo" Chest Wordmark */}
@@ -940,7 +1066,13 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
           castShadow
         >
           <torusGeometry args={[0.165, 0.054, 10, 22]} />
-          <meshStandardMaterial color="#0e6b3d" roughness={0.78} />
+          <meshPhysicalMaterial
+            color="#0e6b3d"
+            roughness={0.8}
+            sheen={0.45}
+            sheenRoughness={0.65}
+            sheenColor="#34d399"
+          />
         </mesh>
         <mesh
           position={[0, 0.46, -0.06]}
@@ -949,7 +1081,13 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
           castShadow
         >
           <torusGeometry args={[0.175, 0.048, 10, 20]} />
-          <meshStandardMaterial color="#148e52" roughness={0.76} />
+          <meshPhysicalMaterial
+            color="#148e52"
+            roughness={0.78}
+            sheen={0.5}
+            sheenRoughness={0.62}
+            sheenColor="#4ade9c"
+          />
         </mesh>
 
         {/* Emerald Drawstrings with Light Aglets */}
@@ -1008,7 +1146,13 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
           {/* Warm Peach Chibi Pixar Head */}
           <mesh castShadow receiveShadow>
             <sphereGeometry args={[0.292, 28, 22]} />
-            <meshStandardMaterial color="#ffd4b5" roughness={0.48} />
+            <meshPhysicalMaterial
+              color="#ffd4b5"
+              roughness={0.44}
+              sheen={0.22}
+              sheenRoughness={0.75}
+              sheenColor="#ffe8d6"
+            />
           </mesh>
 
           {/* Warm Rosy Cheek Blush */}

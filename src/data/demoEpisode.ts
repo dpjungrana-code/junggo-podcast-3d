@@ -98,6 +98,49 @@ const THINKING_KEYWORDS = [
   "think about",
 ];
 
+const ADDRESS_MARIA_KEYWORDS = [
+  "マリアさん",
+  "マリア",
+  "maria",
+  "どうですか",
+  "ですか？",
+  "ね？",
+  "よね",
+];
+
+const ADDRESS_SENSEI_KEYWORDS = [
+  "先生",
+  "sensei",
+  "ですか？",
+  "ね？",
+  "ますか",
+];
+
+/**
+ * Detects whether the active speaker is directly addressing their co-host
+ * (via name/question keywords or a direct conversational handoff to the next cue).
+ */
+export const isAddressingCoHost = (
+  cue: SubtitleCue,
+  nextCue?: SubtitleCue,
+): boolean => {
+  const fromGuest = isGuestSpeaker(cue.speaker);
+  const jp = cue.japanese;
+  const en = cue.english.toLowerCase();
+  const keywords = fromGuest ? ADDRESS_SENSEI_KEYWORDS : ADDRESS_MARIA_KEYWORDS;
+  if (keywords.some((kw) => jp.includes(kw) || en.includes(kw))) {
+    return true;
+  }
+  if (
+    nextCue &&
+    isGuestSpeaker(nextCue.speaker) !== fromGuest &&
+    nextCue.startSec - cue.endSec <= 1.25
+  ) {
+    return true;
+  }
+  return false;
+};
+
 export const resolveCueGesture = (
   cue: SubtitleCue,
   section?: EpisodeSection,

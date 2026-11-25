@@ -7,6 +7,7 @@ import {
   PodcastSectionType,
   SubtitleCue,
   getActiveSubtitle,
+  isAddressingCoHost,
   isGuestSpeaker,
   resolveCueGesture,
 } from "../data/demoEpisode";
@@ -154,6 +155,57 @@ const computeSpeakerGestureWeight = (
   return clamp01(maxWeight);
 };
 
+/**
+ * Smooth 0..1 envelope when Maria directly addresses Sensei (by name, question
+ * phrasing, or dialogue handoff) without pointing at the board.
+ */
+const computeAddressSenseiWeight = (
+  sections: readonly EpisodeSection[],
+  subtitles: readonly SubtitleCue[] | undefined,
+  timeSec: number,
+): number => {
+  if (!subtitles || subtitles.length === 0) {
+    return 0;
+  }
+  let maxWeight = 0;
+  for (let i = 0; i < subtitles.length; i++) {
+    const cue = subtitles[i];
+    if (!isGuestSpeaker(cue.speaker)) {
+      continue;
+    }
+    const midSec = (cue.startSec + cue.endSec) * 0.5;
+    const sec = findSectionAt(sections, midSec);
+    if (resolveCueGesture(cue, sec, true) === "point_board") {
+      continue;
+    }
+    if (!isAddressingCoHost(cue, subtitles[i + 1])) {
+      continue;
+    }
+    const enter = interpolate(
+      timeSec,
+      [cue.startSec - 0.16, cue.startSec + 0.24],
+      [0, 1],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.inOut(Easing.cubic),
+      },
+    );
+    const exit = interpolate(
+      timeSec,
+      [cue.endSec - 0.12, cue.endSec + 0.36],
+      [1, 0],
+      {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+        easing: Easing.inOut(Easing.cubic),
+      },
+    );
+    maxWeight = Math.max(maxWeight, Math.min(enter, exit));
+  }
+  return clamp01(maxWeight);
+};
+
 type FemaleEyeProps = {
   readonly name: string;
   readonly side: "left" | "right";
@@ -202,10 +254,15 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
         <meshStandardMaterial color="#1f1512" roughness={0.56} />
       </mesh>
 
-      {/* Glossy white sclera */}
+      {/* Wet-look glossy white sclera */}
       <mesh scale={[1.02, 1.08, 0.34]}>
         <sphereGeometry args={[0.052, 18, 14]} />
-        <meshStandardMaterial color="#fcfdff" roughness={0.2} />
+        <meshPhysicalMaterial
+          color="#fcfdff"
+          roughness={0.14}
+          clearcoat={1.0}
+          clearcoatRoughness={0.06}
+        />
       </mesh>
 
       {/* Bold upper lash arch */}
@@ -234,15 +291,25 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
         <meshStandardMaterial color="#140f12" roughness={0.36} />
       </mesh>
 
-      {/* Movable Iris, Pupil, and Catchlights */}
+      {/* Movable Glossy Iris, Pupil, and Bright Cornea Catchlights */}
       <group position={[pupilOffsetX, pupilOffsetY, 0.0185]}>
         <mesh>
           <circleGeometry args={[0.037, 20]} />
-          <meshStandardMaterial color="#240f0c" roughness={0.25} />
+          <meshPhysicalMaterial
+            color="#240f0c"
+            roughness={0.12}
+            clearcoat={1.0}
+            clearcoatRoughness={0.05}
+          />
         </mesh>
         <mesh position={[0, 0, 0.001]}>
           <circleGeometry args={[0.0335, 20]} />
-          <meshStandardMaterial color="#592616" roughness={0.22} />
+          <meshPhysicalMaterial
+            color="#592616"
+            roughness={0.14}
+            clearcoat={0.95}
+            clearcoatRoughness={0.06}
+          />
         </mesh>
         <mesh position={[0, -0.009, 0.002]} scale={[0.92, 0.72, 1]}>
           <circleGeometry args={[0.022, 16]} />
@@ -325,7 +392,7 @@ type FemaleArmProps = {
 };
 
 /**
- * Smooth articulated teal ninja sleeve, matte-black wrist wrap, and sculpted hand.
+ * Smooth articulated crimson-red velvet hoodie sleeve, matte-black wrist wrap, and sculpted Pixar hand.
  */
 const FemaleArticulatedArm3D: React.FC<FemaleArmProps> = ({
   name,
@@ -347,12 +414,24 @@ const FemaleArticulatedArm3D: React.FC<FemaleArmProps> = ({
     >
       <mesh castShadow receiveShadow>
         <sphereGeometry args={[0.082, 14, 10]} />
-        <meshStandardMaterial color="#0f646e" roughness={0.72} />
+        <meshPhysicalMaterial
+          color="#b82538"
+          roughness={0.78}
+          sheen={0.58}
+          sheenRoughness={0.62}
+          sheenColor="#ff7a8a"
+        />
       </mesh>
 
       <mesh position={[0, -0.098, 0]} castShadow receiveShadow>
         <capsuleGeometry args={[0.066, 0.136, 6, 12]} />
-        <meshStandardMaterial color="#0f646e" roughness={0.72} />
+        <meshPhysicalMaterial
+          color="#b82538"
+          roughness={0.78}
+          sheen={0.58}
+          sheenRoughness={0.62}
+          sheenColor="#ff7a8a"
+        />
       </mesh>
 
       <group
@@ -361,28 +440,46 @@ const FemaleArticulatedArm3D: React.FC<FemaleArmProps> = ({
       >
         <mesh castShadow receiveShadow>
           <sphereGeometry args={[0.066, 12, 10]} />
-          <meshStandardMaterial color="#0c555e" roughness={0.74} />
+          <meshPhysicalMaterial
+            color="#9e1e2f"
+            roughness={0.8}
+            sheen={0.52}
+            sheenRoughness={0.65}
+            sheenColor="#ff7a8a"
+          />
         </mesh>
 
         <mesh position={[0, -0.088, 0]} castShadow receiveShadow>
           <capsuleGeometry args={[0.061, 0.122, 6, 12]} />
-          <meshStandardMaterial color="#0f646e" roughness={0.72} />
+          <meshPhysicalMaterial
+            color="#b82538"
+            roughness={0.78}
+            sheen={0.58}
+            sheenRoughness={0.62}
+            sheenColor="#ff7a8a"
+          />
         </mesh>
 
-        {/* Ribbed teal cuff */}
+        {/* Ribbed crimson cuff */}
         <mesh position={[0, -0.16, 0]} castShadow>
           <cylinderGeometry args={[0.056, 0.049, 0.034, 14]} />
-          <meshStandardMaterial color="#093f46" roughness={0.8} />
+          <meshPhysicalMaterial
+            color="#8e1928"
+            roughness={0.82}
+            sheen={0.45}
+            sheenRoughness={0.65}
+            sheenColor="#ff7a8a"
+          />
         </mesh>
 
-        {/* Matte-black wrist wrap with crimson accent stripe */}
+        {/* Matte-black wrist wrap with gold-crimson accent stripe */}
         <mesh position={[0, -0.188, 0]} castShadow>
           <cylinderGeometry args={[0.042, 0.038, 0.032, 14]} />
           <meshStandardMaterial color="#171b22" roughness={0.7} />
         </mesh>
         <mesh position={[0, -0.175, 0]}>
           <cylinderGeometry args={[0.043, 0.043, 0.008, 14]} />
-          <meshStandardMaterial color="#d93848" roughness={0.55} />
+          <meshStandardMaterial color="#f5b82e" metalness={0.5} roughness={0.35} />
         </mesh>
 
         {/* Expressive Peach Hand */}
@@ -458,14 +555,23 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   const activeSection = findSectionAt(sections, timeSec);
   const activeCue = subtitles ? getActiveSubtitle(subtitles, timeSec) : null;
 
+  // Dual-Lock Lip-Sync: locked BOTH to Maria's exact cue timestamps [startSec, endSec] AND audio spectrum
   const isMariaCueActive =
-    activeCue !== null && isGuestSpeaker(activeCue.speaker);
-  const isMariaSpeaking = audio.isSpeaking && isMariaCueActive;
+    activeCue !== null &&
+    isGuestSpeaker(activeCue.speaker) &&
+    timeSec >= activeCue.startSec &&
+    timeSec <= activeCue.endSec;
+  const isMariaSpeaking = isMariaCueActive;
 
   const mariaSpeakingWeight = computeSpeakerEnvelope(subtitles, true, timeSec);
   const senseiSpeakingWeight = computeSpeakerEnvelope(
     subtitles,
     false,
+    timeSec,
+  );
+  const addressSenseiWeight = computeAddressSenseiWeight(
+    sections,
+    subtitles,
     timeSec,
   );
   const senseiPointWeight = computeSpeakerGestureWeight(
@@ -502,27 +608,47 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
     timeSec,
   );
 
+  const cueEdgeFade =
+    isMariaCueActive && activeCue
+      ? Math.min(
+          interpolate(
+            timeSec,
+            [activeCue.startSec, activeCue.startSec + 0.06],
+            [0, 1],
+            { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+          ),
+          interpolate(
+            timeSec,
+            [activeCue.endSec - 0.07, activeCue.endSec],
+            [1, 0],
+            { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+          ),
+        )
+      : 0;
+
+  const syllableWave =
+    0.6 +
+    0.25 * Math.sin(timeSec * 17.8 + 0.4) +
+    0.15 * Math.cos(timeSec * 24.6 + 1.2);
+  const syllableFloor = 0.34 * (0.48 + 0.52 * syllableWave);
+
   const quietFallback = 0.05 + 0.03 * Math.sin(timeSec * 1.7 + 1.1);
   const voiceEnergy = isMariaSpeaking
-    ? Math.max(0.22, audio.volume)
+    ? Math.max(syllableFloor, audio.volume * 1.15) * cueEdgeFade
     : quietFallback * 0.65;
   const speechPeak = isMariaSpeaking
-    ? clamp01((voiceEnergy - 0.3) * 1.5)
+    ? clamp01((voiceEnergy - 0.28) * 1.5)
     : 0;
 
-  // High-visibility vowel-morphing lip-sync strictly active ONLY when Maria speaks
   const lowBand =
     audio.spectrum.slice(0, 4).reduce((acc, v) => acc + v, 0) / 4;
   const midBand =
     audio.spectrum.slice(4, 14).reduce((acc, v) => acc + v, 0) / 10;
   const vowelOpenBias = clamp01(0.5 + (midBand - lowBand) * 1.8);
-  const syllableWave =
-    0.58 +
-    0.26 * Math.sin(timeSec * 17.8 + 0.4) +
-    0.16 * Math.cos(timeSec * 24.6 + 1.2);
-  const mouthOpen = isMariaSpeaking
-    ? clamp01(Math.pow(voiceEnergy, 0.7) * (0.68 + 0.54 * syllableWave))
-    : 0;
+  const mouthOpen =
+    isMariaSpeaking && cueEdgeFade > 0.05
+      ? clamp01(Math.pow(voiceEnergy, 0.72) * (0.68 + 0.52 * syllableWave))
+      : 0;
   const mouthWidth = isMariaSpeaking
     ? lerp(
         0.8,
@@ -627,10 +753,13 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
       : 0;
   const blinkAmount = Math.max(primaryBlink, doubleBlink);
 
-  // Cross-character gaze & board tracking
-  // Look LEFT (-X) at Sensei when Sensei speaks; look RIGHT (+X) at board when referencing board
-  const lookAtSenseiWeight =
-    senseiSpeakingWeight * (1 - senseiPointWeight * 0.85);
+  // Smart cross-character gaze (~22deg / -0.38 rad left toward Sensei) & board tracking
+  const lookAtSenseiWeight = clamp01(
+    Math.max(
+      senseiSpeakingWeight * (1 - senseiPointWeight * 0.85),
+      addressSenseiWeight,
+    ),
+  );
   const lookAtBoardWeight = clamp01(
     Math.max(
       senseiPointWeight * 0.9,
@@ -639,9 +768,10 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
       quizWeight * 0.55,
     ),
   );
-  const greetCameraWeight = introWeight * mariaSpeakingWeight;
+  const greetCameraWeight =
+    introWeight * mariaSpeakingWeight * (1 - addressSenseiWeight);
 
-  const baseHeadYaw = lerp(-0.14, -0.28, lookAtSenseiWeight);
+  const baseHeadYaw = lerp(-0.14, -0.38, lookAtSenseiWeight);
   const speakingHeadYaw = lerp(baseHeadYaw, 0.08, greetCameraWeight);
   const headYaw =
     lerp(speakingHeadYaw, 0.36, lookAtBoardWeight) +
@@ -649,7 +779,7 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
 
   const pupilOffsetX =
     lerp(
-      lerp(-0.004, -0.0115, lookAtSenseiWeight),
+      lerp(-0.004, -0.0135, lookAtSenseiWeight),
       0.0145,
       lookAtBoardWeight,
     ) +
@@ -662,7 +792,7 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   // Breathing, posture & attentive listening nods
   const breathY = Math.sin(timeSec * 2.3 + 1.2) * 0.01;
   const torsoYaw = lerp(
-    lerp(-0.06, -0.1, lookAtSenseiWeight),
+    lerp(-0.06, -0.14, lookAtSenseiWeight),
     0.1,
     lookAtBoardWeight,
   );
@@ -790,14 +920,20 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
         position={[0, breathY, 0]}
         rotation={[torsoPitch, torsoYaw, 0]}
       >
-        {/* Sleek Deep-Teal JungGo Ninja Hoodie */}
+        {/* Rich Crimson Velvet JungGo Ninja Hoodie */}
         <mesh
           geometry={torsoGeometry}
           scale={[1.04, 1, 0.86]}
           castShadow
           receiveShadow
         >
-          <meshStandardMaterial color="#0f646e" roughness={0.72} />
+          <meshPhysicalMaterial
+            color="#b82538"
+            roughness={0.78}
+            sheen={0.58}
+            sheenRoughness={0.62}
+            sheenColor="#ff7a8a"
+          />
         </mesh>
 
         {/* Crisp Curved "JungGo" Chest Wordmark */}
@@ -827,7 +963,13 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
           castShadow
         >
           <torusGeometry args={[0.158, 0.05, 10, 22]} />
-          <meshStandardMaterial color="#0b4b53" roughness={0.76} />
+          <meshPhysicalMaterial
+            color="#8e1928"
+            roughness={0.8}
+            sheen={0.48}
+            sheenRoughness={0.65}
+            sheenColor="#ff7a8a"
+          />
         </mesh>
         <mesh
           position={[0, 0.456, -0.058]}
@@ -836,10 +978,16 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
           castShadow
         >
           <torusGeometry args={[0.168, 0.045, 10, 20]} />
-          <meshStandardMaterial color="#137580" roughness={0.74} />
+          <meshPhysicalMaterial
+            color="#cf3347"
+            roughness={0.76}
+            sheen={0.55}
+            sheenRoughness={0.62}
+            sheenColor="#ff8c9b"
+          />
         </mesh>
 
-        {/* Crimson Drawstrings */}
+        {/* Warm Gold-Ivory Drawstrings */}
         {[-1, 1].map((side) => (
           <group
             key={side}
@@ -848,11 +996,11 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
           >
             <mesh castShadow>
               <cylinderGeometry args={[0.0065, 0.0065, 0.14, 8]} />
-              <meshStandardMaterial color="#c93142" roughness={0.74} />
+              <meshStandardMaterial color="#f5d388" roughness={0.62} />
             </mesh>
             <mesh position={[0, -0.075, 0]}>
               <cylinderGeometry args={[0.008, 0.007, 0.02, 8]} />
-              <meshStandardMaterial color="#f5e6e8" roughness={0.4} />
+              <meshStandardMaterial color="#fff8eb" roughness={0.35} />
             </mesh>
           </group>
         ))}
@@ -892,10 +1040,16 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
           position={[0, 0.75 + speakBobY, 0.02]}
           rotation={[headPitch, headYaw, headRoll]}
         >
-          {/* Warm Peach Chibi Head */}
+          {/* Warm Peach Pixar Chibi Head */}
           <mesh castShadow receiveShadow>
             <sphereGeometry args={[0.282, 28, 22]} />
-            <meshStandardMaterial color="#ffd7bc" roughness={0.48} />
+            <meshPhysicalMaterial
+              color="#ffd7bc"
+              roughness={0.44}
+              sheen={0.22}
+              sheenRoughness={0.75}
+              sheenColor="#ffece0"
+            />
           </mesh>
 
           {/* Soft Rosy Cheek Blush */}

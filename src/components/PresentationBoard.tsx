@@ -1280,19 +1280,24 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
   const boardScale = interpolate(
     zoomProgress,
     [0, 1],
-    [1, isDual ? 1.18 : 1.18],
+    [1, isDual ? 1.32 : 1.38],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
   const boardSlideX = interpolate(
     zoomProgress,
     [0, 1],
-    [0, isDual ? -72 : -96],
+    [0, isDual ? -28 : -115],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
-  const boardSlideY = interpolate(zoomProgress, [0, 1], [0, 26], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const boardSlideY = interpolate(
+    zoomProgress,
+    [0, 1],
+    [0, isDual ? 48 : 52],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    },
+  );
 
   const activeSection = getActiveSection(sections, timeSec);
   const activeCue = getActiveSubtitle(subtitles, timeSec);
@@ -1349,14 +1354,14 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
           '"Hiragino Sans", "Noto Sans JP", "Avenir Next", "Helvetica Neue", sans-serif',
       }}
     >
-      {/* Subtle studio dim backdrop during dynamic `point_board` zoom-in focus */}
+      {/* Center-stage studio dim scrim during dynamic `point_board` zoom-in focus */}
       {zoomProgress > 0.01 ? (
         <div
           style={{
             position: "absolute",
             inset: 0,
             backgroundColor: "#040810",
-            opacity: zoomProgress * 0.4,
+            opacity: zoomProgress * 0.52,
           }}
         />
       ) : null}
@@ -1373,7 +1378,7 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
           border: "2.5px solid #2ee8a5",
           boxShadow:
             zoomProgress > 0.05
-              ? `0 0 0 6px #182128, 0 0 ${Math.round(32 * zoomProgress)}px rgba(46, 232, 165, ${(0.35 * zoomProgress).toFixed(2)}), 0 28px 68px rgba(0, 0, 0, 0.72)`
+              ? `0 0 0 6px #182128, 0 0 ${Math.round(44 * zoomProgress)}px rgba(46, 232, 165, ${(0.44 * zoomProgress).toFixed(2)}), 0 32px 76px rgba(0, 0, 0, 0.78)`
               : "0 0 0 6px #182128, 0 22px 52px rgba(0, 0, 0, 0.55)",
           padding: "28px 32px",
           boxSizing: "border-box",

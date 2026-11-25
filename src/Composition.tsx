@@ -12,7 +12,7 @@ import { PresentationBoard } from "./components/PresentationBoard";
 import { Studio3D } from "./components/Studio3D";
 import { Subtitles } from "./components/Subtitles";
 import currentEpisodeJson from "./data/currentEpisode.json";
-import type { EpisodeData } from "./data/demoEpisode";
+import type { EpisodeData, StudioMode } from "./data/demoEpisode";
 import { PodcastAudioProvider } from "./utils/audio";
 
 const ACTIVE_EPISODE = currentEpisodeJson as EpisodeData;
@@ -24,6 +24,8 @@ export type JungGoPodcastProps = {
    * When empty, uses the deterministic speech-cadence fallback safely.
    */
   readonly audioSrc: string;
+  /** Optional runtime override for solo vs dual studio preview/render checks */
+  readonly studioModeOverride?: StudioMode;
 };
 
 const resolveAudioUrl = (audioSrc: string): string | undefined => {
@@ -40,11 +42,12 @@ const resolveAudioUrl = (audioSrc: string): string | undefined => {
 export const JungGoPodcastStudio: React.FC<JungGoPodcastProps> = ({
   episodeTitle,
   audioSrc,
+  studioModeOverride,
 }) => {
   const { width, height } = useVideoConfig();
   const { isRendering } = useRemotionEnvironment();
   const resolvedAudio = resolveAudioUrl(audioSrc);
-  const studioMode = ACTIVE_EPISODE.studioMode ?? "solo";
+  const studioMode = studioModeOverride ?? ACTIVE_EPISODE.studioMode ?? "solo";
 
   return (
     <PodcastAudioProvider
@@ -59,7 +62,11 @@ export const JungGoPodcastStudio: React.FC<JungGoPodcastProps> = ({
           height={height}
           shadows={isRendering}
           dpr={isRendering ? 1.25 : 1}
-          gl={{ antialias: true, powerPreference: "high-performance" }}
+          gl={{
+            antialias: true,
+            preserveDrawingBuffer: true,
+            powerPreference: "high-performance",
+          }}
           onCreated={({ gl }) => {
             gl.toneMappingExposure = 1.12;
           }}
