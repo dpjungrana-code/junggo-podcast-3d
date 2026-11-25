@@ -2,7 +2,7 @@
   "episodeNumber": "EP. 01",
   "title": "Morning Coffee in Tokyo",
   "jlptLevel": "JLPT N5",
-  "durationSec": 28.608,
+  "durationSec": 31.704,
   "audioSrc": "audio/current_episode.mp3",
   "sections": [
     {
@@ -10,14 +10,14 @@
       "type": "intro",
       "label": "INTRO",
       "startSec": 0.0,
-      "endSec": 5.724
+      "endSec": 6.396
     },
     {
       "id": "sec-vocab",
       "type": "vocabulary",
       "label": "VOCABULARY",
-      "startSec": 5.724,
-      "endSec": 12.78,
+      "startSec": 6.396,
+      "endSec": 14.22,
       "vocab": {
         "word": "おいしい",
         "reading": "美味しい",
@@ -34,15 +34,15 @@
       "id": "sec-dialogue",
       "type": "dialogue",
       "label": "DIALOGUE",
-      "startSec": 12.78,
-      "endSec": 20.172
+      "startSec": 14.22,
+      "endSec": 22.14
     },
     {
       "id": "sec-quiz",
       "type": "quiz",
       "label": "QUICK QUIZ",
-      "startSec": 20.172,
-      "endSec": 28.608,
+      "startSec": 22.14,
+      "endSec": 31.704,
       "quiz": {
         "title": "JLPT N5 LISTENING CHECK",
         "questionJp": "「おいしい」の意味はどれ？",
@@ -70,9 +70,9 @@
             "isCorrect": false
           }
         ],
-        "countdownStartSec": 21.859,
-        "countdownDurationSec": 4.049,
-        "revealSec": 25.908
+        "countdownStartSec": 24.053,
+        "countdownDurationSec": 4.591,
+        "revealSec": 28.644
       }
     }
   ],
@@ -80,7 +80,7 @@
     {
       "id": "sub-1",
       "startSec": 0.36,
-      "endSec": 5.496,
+      "endSec": 6.168,
       "speaker": "Sensei",
       "japanese": "みなさん、こんばんは！JungGoポッドキャストへようこそ。",
       "romaji": "Minasan, konbanwa! JungGo Poddokyasuto e youkoso.",
@@ -88,8 +88,8 @@
     },
     {
       "id": "sub-2",
-      "startSec": 5.952,
-      "endSec": 12.504,
+      "startSec": 6.624,
+      "endSec": 13.944,
       "speaker": "Sensei",
       "japanese": "今日のN5キーワードは「おいしい」です。このコーヒーはとてもおいしいです。",
       "romaji": "Kyou no N5 kiiwaado wa \"oishii\" desu. Kono koohii wa totemo oishii desu.",
@@ -97,8 +97,8 @@
     },
     {
       "id": "sub-3",
-      "startSec": 13.056,
-      "endSec": 19.896,
+      "startSec": 14.496,
+      "endSec": 21.864,
       "speaker": "Maria",
       "japanese": "すみません、ホットコーヒーをひとつください。わあ、とてもおいしいですね！",
       "romaji": "Sumimasen, hotto koohii o hitotsu kudasai. Waa, totemo oishii desu ne!",
@@ -106,8 +106,8 @@
     },
     {
       "id": "sub-4",
-      "startSec": 20.448,
-      "endSec": 27.888,
+      "startSec": 22.416,
+      "endSec": 30.984,
       "speaker": "Sensei",
       "japanese": "さあ、クイズです！「おいしい」の意味はどれでしょう？正解はBのDeliciousでした！",
       "romaji": "Saa, kuizu desu! \"Oishii\" no imi wa dore deshou? Seikai wa B no Delicious deshita!",

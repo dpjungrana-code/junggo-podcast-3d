@@ -3,10 +3,11 @@
 Free Japanese TTS + Timestamp Generator for JungGo Podcast Studio.
 
 Reads `scripts/episode_script.json`, synthesizes each line via `edge-tts`
-(`ja-JP-KeitaNeural` for Sensei, `ja-JP-NanamiNeural` for Maria), parses exact
-MPEG audio frame durations in pure Python (no external ffmpeg required), writes
-combined MP3 audio to `public/audio/current_episode.mp3`, and outputs synced
-timestamps + section ranges to `src/data/currentEpisode.json`.
+(`ja-JP-KeitaNeural` with warm, measured Sensei delivery `rate="-6%", pitch="-2Hz"`
+and `ja-JP-NanamiNeural` for Maria), inserts natural human micro-pauses between
+sentences, parses exact MPEG audio frame durations in pure Python (no ffmpeg
+required), writes combined MP3 audio to `public/audio/current_episode.mp3`, and
+outputs synced timestamps + section ranges to `src/data/currentEpisode.json`.
 """
 
 from __future__ import annotations
@@ -14,17 +15,18 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import edge_tts
 
-VOICE_MAP: dict[str, str] = {
-    "sensei": "ja-JP-KeitaNeural",
-    "junggo": "ja-JP-KeitaNeural",
-    "maria": "ja-JP-NanamiNeural",
-    "yuki": "ja-JP-NanamiNeural",
+VOICE_PROFILE_MAP: dict[str, tuple[str, str, str]] = {
+    "sensei": ("ja-JP-KeitaNeural", "-6%", "-2Hz"),
+    "junggo": ("ja-JP-KeitaNeural", "-6%", "-2Hz"),
+    "maria": ("ja-JP-NanamiNeural", "-3%", "+0Hz"),
+    "yuki": ("ja-JP-NanamiNeural", "-3%", "+0Hz"),
 }
 
 # MPEG Layer III lookup tables
@@ -35,6 +37,8 @@ _SAMPLE_RATES: dict[int, tuple[int, int, int]] = {
     2: (22050, 24000, 16000),  # MPEG 2
     0: (11025, 12000, 8000),   # MPEG 2.5
 }
+
+SENTENCE_SPLIT_RE = re.compile(r"(?<=[。！？!?])")
 
 
 @dataclass(frozen=True)
@@ -115,14 +119,12 @@ def _parse_mp3_frames(raw_data: bytes) -> Mp3StreamInfo:
         frame_bytes = data[pos : pos + frame_len]
         frame_dur = samples_per_frame / sample_rate
 
-        # Skip any leading Xing/Info VBR metadata header frame so concatenated audio stays clean
+        # Skip any leading Xing/Info VBR metadata header frame
         if not out and (b"Xing" in frame_bytes[:48] or b"Info" in frame_bytes[:48]):
             pos += frame_len
             continue
 
         if template_header is None:
-            # Build a clean silent-frame template: keep MPEG/bitrate/sample_rate,
-            # set protection_bit=1 (no CRC) and clear padding_bit=0.
             hdr = bytearray(frame_bytes[:4])
             hdr[1] = hdr[1] | 0x01
             hdr[2] = hdr[2] & 0xFD
@@ -156,7 +158,7 @@ def _synthesize_silence(
     frame_duration_sec: float,
     frame_size_bytes: int,
 ) -> tuple[bytes, float]:
-    """Generates exact-format silent MP3 frames for clean inter-line pauses."""
+    """Generates exact-format silent MP3 frames for clean natural pauses."""
     if duration_sec <= 0:
         return b"", 0.0
     frame_count = max(1, round(duration_sec / frame_duration_sec))
@@ -164,9 +166,15 @@ def _synthesize_silence(
     return silent_frame * frame_count, frame_count * frame_duration_sec
 
 
-async def _tts_line(text: str, voice: str, rate: str) -> Mp3StreamInfo:
-    """Synthesizes one Japanese utterance via edge-tts and returns parsed MP3 frames."""
-    communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate)
+def _split_japanese_sentences(text: str) -> list[str]:
+    """Splits a Japanese cue into natural sentences while keeping punctuation attached."""
+    parts = [part.strip() for part in SENTENCE_SPLIT_RE.split(text) if part.strip()]
+    return parts if parts else [text.strip()]
+
+
+async def _tts_clause(text: str, voice: str, rate: str, pitch: str) -> Mp3StreamInfo:
+    """Synthesizes one Japanese clause via edge-tts with tuned rate and pitch."""
+    communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate, pitch=pitch)
     audio_buffer = bytearray()
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
@@ -176,11 +184,48 @@ async def _tts_line(text: str, voice: str, rate: str) -> Mp3StreamInfo:
     return _parse_mp3_frames(bytes(audio_buffer))
 
 
-def _resolve_voice(speaker: str) -> str:
+async def _tts_line_with_micro_pauses(
+    text: str,
+    voice: str,
+    rate: str,
+    pitch: str,
+    micro_pause_sec: float = 0.22,
+) -> Mp3StreamInfo:
+    """Synthesizes a line sentence-by-sentence with natural human breath micro-pauses."""
+    sentences = _split_japanese_sentences(text)
+    clauses = await asyncio.gather(
+        *[_tts_clause(sentence, voice=voice, rate=rate, pitch=pitch) for sentence in sentences]
+    )
+
+    ref = clauses[0]
+    combined = bytearray()
+    total_dur = 0.0
+
+    for idx, clause in enumerate(clauses):
+        combined.extend(clause.frames_bytes)
+        total_dur += clause.duration_sec
+        if idx < len(clauses) - 1 and micro_pause_sec > 0:
+            pause_bytes, pause_dur = _synthesize_silence(
+                micro_pause_sec,
+                ref.template_header,
+                ref.frame_duration_sec,
+                ref.frame_size_bytes,
+            )
+            combined.extend(pause_bytes)
+            total_dur += pause_dur
+
+    return Mp3StreamInfo(
+        frames_bytes=bytes(combined),
+        duration_sec=total_dur,
+        template_header=ref.template_header,
+        frame_duration_sec=ref.frame_duration_sec,
+        frame_size_bytes=ref.frame_size_bytes,
+    )
+
+
+def _resolve_voice_profile(speaker: str) -> tuple[str, str, str]:
     key = speaker.strip().lower()
-    if key in VOICE_MAP:
-        return VOICE_MAP[key]
-    return VOICE_MAP["sensei"]
+    return VOICE_PROFILE_MAP.get(key, VOICE_PROFILE_MAP["sensei"])
 
 
 async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: Path) -> dict[str, Any]:
@@ -189,27 +234,31 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
     episode_number: str = raw_script.get("episodeNumber", "EP. 01")
     title: str = raw_script.get("title", "JungGo Podcast Episode")
     jlpt_level: str = raw_script.get("jlptLevel", "JLPT N5")
-    rate: str = raw_script.get("speechRate", "+0%")
-    lead_in_target: float = float(raw_script.get("leadInSec", 0.36))
+    lead_in_target: float = float(raw_script.get("leadInSec", 0.40))
     outro_target: float = float(raw_script.get("outroSec", 0.72))
+    micro_pause_sec: float = float(raw_script.get("sentenceMicroPauseSec", 0.22))
     raw_sections: list[dict[str, Any]] = list(raw_script.get("sections", []))
     raw_lines: list[dict[str, Any]] = list(raw_script.get("lines", []))
 
     if not raw_lines:
         raise ValueError("episode_script.json must contain at least one entry in 'lines'.")
 
-    # Synthesize all lines concurrently for speed while keeping deterministic ordering
-    tasks = [
-        _tts_line(
-            text=line["japanese"],
-            voice=line.get("voice") or _resolve_voice(line.get("speaker", "Sensei")),
-            rate=line.get("rate", rate),
+    tasks = []
+    for line in raw_lines:
+        default_voice, default_rate, default_pitch = _resolve_voice_profile(
+            line.get("speaker", "Sensei")
         )
-        for line in raw_lines
-    ]
+        tasks.append(
+            _tts_line_with_micro_pauses(
+                text=line["japanese"],
+                voice=line.get("voice") or default_voice,
+                rate=line.get("rate") or raw_script.get("speechRate") or default_rate,
+                pitch=line.get("pitch") or default_pitch,
+                micro_pause_sec=float(line.get("microPauseSec", micro_pause_sec)),
+            )
+        )
     synthesized: list[Mp3StreamInfo] = await asyncio.gather(*tasks)
 
-    # Use first stream's MPEG format for clean silent frame synthesis
     ref = synthesized[0]
     combined_audio = bytearray()
     cursor_sec = 0.0
@@ -248,9 +297,8 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
             else:
                 section_spans[sec_id][1] = end_sec
 
-        # Append inter-line pause (except after last line, which gets outro silence)
         if idx < len(raw_lines) - 1:
-            pause_target = float(line.get("pauseSec", 0.45))
+            pause_target = float(line.get("pauseSec", 0.50))
             pause_bytes, pause_dur = _synthesize_silence(
                 pause_target,
                 ref.template_header,
@@ -268,7 +316,6 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
 
     total_duration_sec = round(cursor_sec, 3)
 
-    # Build contiguous non-overlapping sections covering [0, total_duration_sec]
     sections: list[dict[str, Any]] = []
     if not raw_sections:
         sections.append(
@@ -287,7 +334,6 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
             if s_idx == 0:
                 sec_start = 0.0
             elif span is not None:
-                # Start smoothly right at midpoint of previous pause
                 prev_end = sections[-1]["endSec"]
                 sec_start = round((prev_end + span[0]) / 2.0, 3) if span[0] > prev_end else prev_end
             else:

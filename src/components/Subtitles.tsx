@@ -9,10 +9,8 @@ import {
 import {
   EpisodeSection,
   SubtitleCue,
-  getActiveSection,
   isGuestSpeaker,
 } from "../data/demoEpisode";
-import { usePodcastAudioMetrics } from "../utils/audio";
 
 type SubtitlesProps = {
   readonly episodeNumber: string;
@@ -22,36 +20,38 @@ type SubtitlesProps = {
   readonly subtitles: readonly SubtitleCue[];
 };
 
-const SECTION_ACCENTS: Record<EpisodeSection["type"], string> = {
-  intro: "#38f6b5",
-  story: "#60a5fa",
-  vocabulary: "#34d399",
-  grammar: "#38bdf8",
-  dialogue: "#fbbf24",
-  quiz: "#a78bfa",
-};
+const SpeakerAudioIcon: React.FC<{ readonly strokeColor: string }> = ({
+  strokeColor,
+}) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M4 9.5V14.5H7.8L12.5 18.5V5.5L7.8 9.5H4Z"
+      fill={strokeColor}
+    />
+    <path
+      d="M15.8 8.8C16.8 9.8 17.3 10.9 17.3 12C17.3 13.1 16.8 14.2 15.8 15.2"
+      stroke={strokeColor}
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M18.3 6.5C19.9 8.1 20.7 10 20.7 12C20.7 14 19.9 15.9 18.3 17.5"
+      stroke={strokeColor}
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+  </svg>
+);
 
 /**
- * Clean non-overlapping bottom subtitle bar (Japanese + Romaji + English),
- * reactive mint audio waveform strip, and subtle broadcast section pill.
- * Uses strict frame intervals so previous subtitles always unmount cleanly.
+ * Sleek bottom subtitle bar matching `public/images/studio-reference.jpg` with
+ * circular speaker badge, crisp Japanese + luminous mint Romaji + English translation.
+ * Strictly mounts only ONE active cue per integer frame range.
  */
-export const Subtitles: React.FC<SubtitlesProps> = ({
-  episodeNumber,
-  episodeTitle,
-  jlptLevel,
-  sections,
-  subtitles,
-}) => {
+export const Subtitles: React.FC<SubtitlesProps> = ({ subtitles }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const timeSec = frame / fps;
-  const audio = usePodcastAudioMetrics();
 
-  const activeSection = getActiveSection(sections, timeSec);
-  const accentColor = SECTION_ACCENTS[activeSection.type];
-
-  // Strict integer frame interval matching so cues NEVER overlap
   let activeCue: SubtitleCue | null = null;
   let cueStartFrame = 0;
   let cueEndFrame = 0;
@@ -87,7 +87,7 @@ export const Subtitles: React.FC<SubtitlesProps> = ({
     ? interpolate(
         frame,
         [cueStartFrame, cueStartFrame + fadeFrames],
-        [10, 0],
+        [8, 0],
         {
           extrapolateLeft: "clamp",
           extrapolateRight: "clamp",
@@ -95,6 +95,12 @@ export const Subtitles: React.FC<SubtitlesProps> = ({
         },
       )
     : 0;
+
+  if (activeCue === null) {
+    return null;
+  }
+
+  const guest = isGuestSpeaker(activeCue.speaker);
 
   return (
     <AbsoluteFill
@@ -104,206 +110,112 @@ export const Subtitles: React.FC<SubtitlesProps> = ({
           '"Hiragino Sans", "Noto Sans JP", "Avenir Next", "Helvetica Neue", sans-serif',
       }}
     >
-      {/* Top-Left Studio Broadcast Header Pill */}
-      <div
-        style={{
-          position: "absolute",
-          top: 34,
-          left: 42,
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "10px 20px",
-          borderRadius: 999,
-          backgroundColor: "rgba(10, 16, 26, 0.72)",
-          border: "1px solid rgba(255, 255, 255, 0.14)",
-          backdropFilter: "blur(12px)",
-          boxShadow: "0 8px 28px rgba(0, 0, 0, 0.35)",
-        }}
-      >
-        <div
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: "50%",
-            backgroundColor: accentColor,
-            boxShadow: `0 0 12px ${accentColor}`,
-          }}
-        />
-        <span
-          style={{
-            fontSize: 16,
-            fontWeight: 800,
-            letterSpacing: "0.08em",
-            color: accentColor,
-          }}
-        >
-          {activeSection.label}
-        </span>
-        <span style={{ color: "rgba(255, 255, 255, 0.28)", fontSize: 16 }}>
-          |
-        </span>
-        <span
-          style={{
-            fontSize: 16,
-            fontWeight: 700,
-            color: "#f1f5f9",
-          }}
-        >
-          {episodeNumber} · {episodeTitle}
-        </span>
-        <span
-          style={{
-            fontSize: 14,
-            fontWeight: 800,
-            color: "#092117",
-            backgroundColor: "#38f6b5",
-            padding: "3px 10px",
-            borderRadius: 999,
-          }}
-        >
-          {jlptLevel}
-        </span>
-      </div>
-
-      {/* Bottom Audio Waveform + Strict Single-Cue Subtitle Container */}
       <div
         style={{
           position: "absolute",
           left: 0,
           right: 0,
-          bottom: 34,
+          bottom: 32,
           display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 12,
+          justifyContent: "center",
           paddingLeft: 80,
           paddingRight: 80,
         }}
       >
-        {/* Subtle Centered Audio Waveform Strip */}
         <div
+          key={activeCue.id}
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            gap: 4,
-            height: 36,
+            gap: 20,
+            maxWidth: 1320,
+            minWidth: 740,
+            padding: "16px 32px 18px 26px",
+            borderRadius: 18,
+            backgroundColor: "rgba(11, 15, 21, 0.92)",
+            border: `1.5px solid ${
+              guest ? "rgba(251, 191, 36, 0.55)" : "rgba(56, 235, 172, 0.48)"
+            }`,
+            boxShadow: "0 14px 36px rgba(0, 0, 0, 0.56)",
+            opacity: subtitleOpacity,
+            translate: `0px ${subtitleLiftY}px`,
           }}
         >
-          {audio.spectrum.map((val, idx) => {
-            const centerFactor = 1 - Math.abs(idx - 11.5) / 14;
-            const barHeight = Math.max(
-              4,
-              Math.round((6 + val * 30) * (0.4 + centerFactor * 0.65)),
-            );
-            const barColor =
-              activeSection.type === "quiz" ? "#c084fc" : "#5be8be";
-            return (
-              <div
-                key={idx}
-                style={{
-                  width: 4,
-                  height: barHeight,
-                  borderRadius: 999,
-                  backgroundColor: barColor,
-                  opacity: 0.4 + val * 0.55,
-                  boxShadow: `0 0 8px ${barColor}`,
-                }}
-              />
-            );
-          })}
-        </div>
-
-        {/* Strict Single-Active Subtitle Overlay (Unmounts cleanly between cues) */}
-        {activeCue !== null && (
+          {/* Circular Speaker Audio Badge */}
           <div
-            key={activeCue.id}
             style={{
-              maxWidth: 1260,
-              minWidth: 740,
-              padding: "16px 32px 18px 32px",
-              borderRadius: 18,
-              backgroundColor: "rgba(12, 16, 22, 0.90)",
-              border: `1px solid ${
-                isGuestSpeaker(activeCue.speaker)
-                  ? "rgba(251, 191, 36, 0.42)"
-                  : "rgba(72, 224, 170, 0.34)"
-              }`,
-              boxShadow: "0 14px 36px rgba(0, 0, 0, 0.52)",
-              textAlign: "center",
-              opacity: subtitleOpacity,
-              translate: `0px ${subtitleLiftY}px`,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 4,
+              flexShrink: 0,
             }}
           >
-            {/* Speaker Badge + Japanese Line */}
             <div
               style={{
+                width: 46,
+                height: 46,
+                borderRadius: "50%",
+                backgroundColor: guest ? "#f59e0b" : "#148c53",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 12,
-                marginBottom: 6,
+                boxShadow: guest
+                  ? "0 0 14px rgba(245, 158, 11, 0.4)"
+                  : "0 0 14px rgba(20, 140, 83, 0.45)",
               }}
             >
-              <span
-                style={{
-                  fontSize: 15,
-                  fontWeight: 800,
-                  letterSpacing: "0.03em",
-                  color: isGuestSpeaker(activeCue.speaker)
-                    ? "#261804"
-                    : "#ffffff",
-                  backgroundColor: isGuestSpeaker(activeCue.speaker)
-                    ? "#fbbf24"
-                    : "#1e8e5a",
-                  padding: "4px 12px",
-                  borderRadius: 7,
-                }}
-              >
-                {activeCue.speaker}
-              </span>
-              <span
-                style={{
-                  fontSize: 31,
-                  fontWeight: 800,
-                  color: "#ffffff",
-                  letterSpacing: "0.02em",
-                  lineHeight: 1.25,
-                }}
-              >
-                {activeCue.japanese}
-              </span>
+              <SpeakerAudioIcon strokeColor={guest ? "#1f1402" : "#ffffff"} />
             </div>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: "0.04em",
+                color: guest ? "#fde68a" : "#6ff7c6",
+              }}
+            >
+              {activeCue.speaker}
+            </span>
+          </div>
 
-            {/* Romaji Pronunciation Line */}
+          {/* Subtitle Text Stack */}
+          <div style={{ flex: 1, textAlign: "center" }}>
+            <div
+              style={{
+                fontSize: activeCue.japanese.length > 30 ? 27 : 31,
+                fontWeight: 800,
+                color: "#ffffff",
+                letterSpacing: "0.02em",
+                lineHeight: 1.25,
+                marginBottom: 4,
+              }}
+            >
+              {activeCue.japanese}
+            </div>
             <div
               style={{
                 fontSize: 19,
                 fontWeight: 600,
-                color: isGuestSpeaker(activeCue.speaker)
-                  ? "#fde68a"
-                  : "#70e6be",
+                color: guest ? "#fde68a" : "#36f2ae",
                 letterSpacing: "0.015em",
                 marginBottom: 3,
               }}
             >
               {activeCue.romaji}
             </div>
-
-            {/* English Translation Line */}
             <div
               style={{
                 fontSize: 20,
                 fontWeight: 500,
-                color: "#d4dde7",
+                color: "#e2e8f0",
                 lineHeight: 1.3,
               }}
             >
               {activeCue.english}
             </div>
           </div>
-        )}
+        </div>
       </div>
     </AbsoluteFill>
   );

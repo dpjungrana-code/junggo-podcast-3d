@@ -55,16 +55,16 @@ const drawRoundedRect = (
 };
 
 /**
- * Warm Japanese oak wood plank texture for the podcast desk and bookshelf.
+ * Warm golden-oak / teak wood plank texture matching the reference desk & shelves.
  */
 export const createWoodTexture = (): THREE.CanvasTexture => {
   const [canvas, ctx] = makeCanvas(1024, 512);
 
-  // Warm oak base gradient
+  // Warm golden-amber oak base gradient
   const grad = ctx.createLinearGradient(0, 0, 1024, 512);
-  grad.addColorStop(0, "#9b6a42");
-  grad.addColorStop(0.5, "#ab784d");
-  grad.addColorStop(1, "#8d5d38");
+  grad.addColorStop(0, "#a96d38");
+  grad.addColorStop(0.5, "#bc7e43");
+  grad.addColorStop(1, "#985e2e");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 1024, 512);
 
@@ -95,12 +95,11 @@ export const createWoodTexture = (): THREE.CanvasTexture => {
         ctx.lineTo(x, gy + dy);
       }
       ctx.strokeStyle =
-        i % 3 === 0 ? "rgba(62, 34, 16, 0.18)" : "rgba(235, 194, 148, 0.09)";
+        i % 3 === 0 ? "rgba(62, 34, 16, 0.2)" : "rgba(245, 200, 145, 0.1)";
       ctx.lineWidth = i % 4 === 0 ? 1.8 : 1.0;
       ctx.stroke();
     }
 
-    // Subtle plank groove line
     ctx.fillStyle = "rgba(48, 25, 12, 0.25)";
     ctx.fillRect(0, y0, 1024, 1.5);
   }
@@ -109,25 +108,24 @@ export const createWoodTexture = (): THREE.CanvasTexture => {
 };
 
 /**
- * Rich warm dark-walnut studio wall texture behind the wooden accent slats.
+ * Warm dark-walnut studio wall texture behind the wooden accent slats.
  */
 export const createStudioWallTexture = (): THREE.CanvasTexture => {
   const [canvas, ctx] = makeCanvas(1024, 512);
 
   const grad = ctx.createLinearGradient(0, 0, 1024, 512);
-  grad.addColorStop(0, "#1b1614");
-  grad.addColorStop(0.55, "#241d19");
-  grad.addColorStop(1, "#171210");
+  grad.addColorStop(0, "#24130a");
+  grad.addColorStop(0.55, "#331b0e");
+  grad.addColorStop(1, "#1a0e07");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 1024, 512);
 
-  // Subtle vertical wood/plaster micro-grain
   for (let i = 0; i < 1800; i++) {
     const x = (i * 197) % 1024;
     const y = (i * 311) % 512;
     const r = 1 + (i % 3);
     ctx.fillStyle =
-      i % 2 === 0 ? "rgba(255, 224, 190, 0.022)" : "rgba(8, 6, 5, 0.045)";
+      i % 2 === 0 ? "rgba(255, 204, 150, 0.025)" : "rgba(8, 4, 2, 0.05)";
     ctx.fillRect(x, y, r * 2, r * 4);
   }
 
@@ -136,95 +134,95 @@ export const createStudioWallTexture = (): THREE.CanvasTexture => {
 
 /**
  * Transparent glowing "JungGo PODCAST STUDIO" neon wall sign texture
- * with balanced luminance so it reads cleanly over dark wood slats without blooming.
+ * matching the reference image ("Learn • Grow • Speak Japanese").
  */
 export const createNeonSignTexture = (): THREE.CanvasTexture => {
   const [canvas, ctx] = makeCanvas(1024, 512);
   ctx.clearRect(0, 0, 1024, 512);
 
-  // Subtle ambient warm-mint & crimson halo behind lettering
-  const halo = ctx.createRadialGradient(512, 238, 25, 512, 238, 380);
-  halo.addColorStop(0, "rgba(62, 235, 165, 0.16)");
+  // Subtle ambient warm-mint & crimson halo
+  const halo = ctx.createRadialGradient(512, 232, 24, 512, 232, 370);
+  halo.addColorStop(0, "rgba(56, 235, 165, 0.14)");
   halo.addColorStop(0.5, "rgba(235, 65, 72, 0.08)");
   halo.addColorStop(1, "rgba(0, 0, 0, 0)");
   ctx.fillStyle = halo;
   ctx.fillRect(0, 0, 1024, 512);
 
-  // Rising Sun + Mt. Fuji emblem at top center
+  // Bright Red Rising Sun + Emerald Mt. Fuji emblem at top center
   ctx.save();
   ctx.beginPath();
-  ctx.arc(512, 114, 48, 0, Math.PI * 2);
-  ctx.fillStyle = "#e83b44";
-  ctx.shadowColor = "rgba(232, 59, 68, 0.72)";
-  ctx.shadowBlur = 16;
+  ctx.arc(512, 108, 52, 0, Math.PI * 2);
+  ctx.fillStyle = "#f02e3a";
+  ctx.shadowColor = "rgba(240, 46, 58, 0.72)";
+  ctx.shadowBlur = 14;
   ctx.fill();
 
   // Mt. Fuji silhouette
   ctx.beginPath();
-  ctx.moveTo(418, 152);
-  ctx.lineTo(492, 92);
-  ctx.lineTo(532, 92);
-  ctx.lineTo(606, 152);
+  ctx.moveTo(412, 150);
+  ctx.lineTo(490, 86);
+  ctx.lineTo(534, 86);
+  ctx.lineTo(612, 150);
   ctx.closePath();
-  ctx.fillStyle = "#166e46";
-  ctx.shadowColor = "rgba(38, 210, 138, 0.45)";
-  ctx.shadowBlur = 10;
+  ctx.fillStyle = "#0e6b43";
+  ctx.shadowColor = "rgba(26, 175, 110, 0.45)";
+  ctx.shadowBlur = 8;
   ctx.fill();
 
   // Crisp snow cap
   ctx.beginPath();
-  ctx.moveTo(492, 92);
-  ctx.lineTo(532, 92);
-  ctx.lineTo(552, 116);
-  ctx.lineTo(532, 110);
-  ctx.lineTo(512, 122);
-  ctx.lineTo(493, 110);
-  ctx.lineTo(472, 116);
+  ctx.moveTo(490, 86);
+  ctx.lineTo(534, 86);
+  ctx.lineTo(554, 112);
+  ctx.lineTo(533, 105);
+  ctx.lineTo(512, 118);
+  ctx.lineTo(492, 105);
+  ctx.lineTo(470, 112);
   ctx.closePath();
-  ctx.fillStyle = "#f4f8f6";
-  ctx.shadowBlur = 6;
+  ctx.fillStyle = "#f7faf8";
+  ctx.shadowBlur = 5;
   ctx.fill();
   ctx.restore();
 
-  // Main "JungGo" neon lettering (balanced glow)
+  // Main "JungGo" neon lettering
   ctx.save();
   ctx.font =
-    '900 144px "Hiragino Sans", "Avenir Next", "Helvetica Neue", sans-serif';
+    '900 150px "Hiragino Sans", "Avenir Next", "Helvetica Neue", sans-serif';
   ctx.textBaseline = "middle";
   ctx.textAlign = "right";
-  ctx.shadowColor = "rgba(180, 255, 224, 0.75)";
-  ctx.shadowBlur = 16;
-  ctx.fillStyle = "#f2fff8";
-  ctx.fillText("Jung", 542, 248);
+  ctx.shadowColor = "rgba(255, 255, 255, 0.65)";
+  ctx.shadowBlur = 14;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText("Jung", 538, 244);
 
   ctx.textAlign = "left";
-  ctx.shadowColor = "rgba(44, 232, 162, 0.85)";
+  ctx.shadowColor = "rgba(44, 240, 168, 0.8)";
   ctx.shadowBlur = 18;
-  ctx.fillStyle = "#48f0b2";
-  ctx.fillText("Go", 548, 248);
+  ctx.fillStyle = "#36f2ae";
+  ctx.fillText("Go", 544, 244);
   ctx.restore();
 
-  // Warm amber-white "PODCAST STUDIO" subtitle
+  // Crisp white "PODCAST STUDIO" subtitle
   ctx.save();
   ctx.font =
-    '800 46px "Avenir Next", "Helvetica Neue", "Hiragino Sans", sans-serif';
+    '800 44px "Avenir Next", "Helvetica Neue", "Hiragino Sans", sans-serif';
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.shadowColor = "rgba(255, 195, 118, 0.68)";
-  ctx.shadowBlur = 12;
-  ctx.fillStyle = "#ffe5bc";
-  ctx.fillText("P O D C A S T   S T U D I O", 512, 352);
+  ctx.shadowColor = "rgba(255, 245, 225, 0.55)";
+  ctx.shadowBlur = 8;
+  ctx.fillStyle = "#fff8ee";
+  ctx.fillText("P O D C A S T   S T U D I O", 512, 344);
   ctx.restore();
 
-  // Subtle Japanese tagline
+  // Reference tagline: "Learn • Grow • Speak Japanese"
   ctx.save();
   ctx.font =
-    '600 24px "Hiragino Sans", "Avenir Next", "Helvetica Neue", sans-serif';
+    '600 26px "Avenir Next", "Helvetica Neue", "Hiragino Sans", sans-serif';
   ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(220, 245, 232, 0.86)";
-  ctx.shadowColor = "rgba(72, 240, 178, 0.45)";
-  ctx.shadowBlur = 6;
-  ctx.fillText("学んで、もっと先へ   •   Listen · Learn · Grow", 512, 412);
+  ctx.fillStyle = "#f5efe6";
+  ctx.shadowColor = "rgba(255, 235, 200, 0.35)";
+  ctx.shadowBlur = 5;
+  ctx.fillText("Learn  •  Grow  •  Speak Japanese", 512, 402);
   ctx.restore();
 
   return finalizeTexture(canvas);
@@ -543,31 +541,208 @@ export const createLaptopScreenTexture = (): THREE.CanvasTexture => {
 };
 
 /**
- * Twilight dusk/night sky backdrop texture behind Tokyo Tower.
+ * Deep royal-blue Tokyo night sky backdrop texture matching the reference studio window.
  */
 export const createTokyoSkyTexture = (): THREE.CanvasTexture => {
   const [canvas, ctx] = makeCanvas(1024, 1024);
 
   const grad = ctx.createLinearGradient(0, 0, 0, 1024);
-  grad.addColorStop(0.0, "#0b1026");
-  grad.addColorStop(0.32, "#191c42");
-  grad.addColorStop(0.62, "#3a2559");
-  grad.addColorStop(0.82, "#873e62");
-  grad.addColorStop(0.95, "#e07b58");
-  grad.addColorStop(1.0, "#f5a962");
+  grad.addColorStop(0.0, "#071338");
+  grad.addColorStop(0.35, "#0d2563");
+  grad.addColorStop(0.7, "#183e91");
+  grad.addColorStop(1.0, "#2c5bb5");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 1024, 1024);
 
-  // Subtle stars in upper night sky
-  for (let i = 0; i < 90; i++) {
+  // Crisp subtle stars in upper night sky
+  for (let i = 0; i < 85; i++) {
     const x = (i * 173 + 47) % 1024;
-    const y = (i * 89 + 23) % 420;
-    const r = i % 5 === 0 ? 2.1 : 1.1;
-    ctx.fillStyle = `rgba(255, 250, 240, ${0.35 + (i % 6) * 0.1})`;
+    const y = (i * 89 + 23) % 440;
+    const r = i % 5 === 0 ? 2.0 : 1.0;
+    ctx.fillStyle = `rgba(235, 245, 255, ${0.32 + (i % 6) * 0.1})`;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  return finalizeTexture(canvas);
+};
+
+/**
+ * Horizontal stack of labeled JLPT / Japanese study books for the left shelf.
+ */
+export const createStudyBookStackTexture = (): THREE.CanvasTexture => {
+  const [canvas, ctx] = makeCanvas(512, 512);
+  ctx.fillStyle = "#161a22";
+  ctx.fillRect(0, 0, 512, 512);
+
+  const spines = [
+    { label: "JLPT", bg: "#1c4a8a", fg: "#ffffff", trim: "#58b0ff" },
+    { label: "Japanese Grammar", bg: "#1b2434", fg: "#f4f6f8", trim: "#48f0b2" },
+    { label: "Vocabulary", bg: "#1d3d78", fg: "#ffffff", trim: "#93c5fd" },
+    { label: "Kanji", bg: "#272936", fg: "#f8fafc", trim: "#f59e0b" },
+    { label: "Conversation", bg: "#141a24", fg: "#e2e8f0", trim: "#38bdf8" },
+  ];
+
+  const rowH = 512 / spines.length;
+  spines.forEach((book, idx) => {
+    const y = idx * rowH;
+    ctx.fillStyle = book.bg;
+    ctx.fillRect(0, y + 3, 512, rowH - 6);
+    ctx.fillStyle = book.trim;
+    ctx.fillRect(18, y + 10, 12, rowH - 20);
+    ctx.fillStyle = book.fg;
+    ctx.font = '800 38px "Avenir Next", "Helvetica Neue", sans-serif';
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "left";
+    ctx.fillText(book.label, 52, y + rowH / 2);
+  });
+
+  return finalizeTexture(canvas);
+};
+
+/**
+ * Brushed silver YouTube Creator Play Button award plaque for the top-left shelf.
+ */
+export const createYouTubePlaqueTexture = (): THREE.CanvasTexture => {
+  const [canvas, ctx] = makeCanvas(512, 640);
+
+  const metalGrad = ctx.createLinearGradient(0, 0, 512, 640);
+  metalGrad.addColorStop(0, "#eef1f4");
+  metalGrad.addColorStop(0.5, "#cfd6de");
+  metalGrad.addColorStop(1, "#aeb7c2");
+  ctx.fillStyle = metalGrad;
+  ctx.fillRect(0, 0, 512, 640);
+
+  // Subtle silver border
+  ctx.strokeStyle = "#8a94a0";
+  ctx.lineWidth = 10;
+  ctx.strokeRect(16, 16, 480, 608);
+
+  // Play button rounded badge
+  drawRoundedRect(ctx, 136, 160, 240, 168, 38);
+  ctx.fillStyle = "#262b33";
+  ctx.fill();
+
+  // White play triangle
+  ctx.beginPath();
+  ctx.moveTo(228, 206);
+  ctx.lineTo(228, 282);
+  ctx.lineTo(300, 244);
+  ctx.closePath();
+  ctx.fillStyle = "#f4f6f8";
+  ctx.fill();
+
+  // Plaque caption lines
+  ctx.fillStyle = "#3a4048";
+  ctx.font = '800 28px "Avenir Next", "Helvetica Neue", sans-serif';
+  ctx.textAlign = "center";
+  ctx.fillText("JungGo", 256, 415);
+  ctx.fillStyle = "#525b66";
+  ctx.font = '700 22px "Avenir Next", sans-serif';
+  ctx.fillText("YouTube", 256, 470);
+
+  return finalizeTexture(canvas);
+};
+
+/**
+ * Space-gray laptop lid emblem texture with JungGo Mt. Fuji & Rising Sun logo.
+ */
+export const createLaptopLidLogoTexture = (): THREE.CanvasTexture => {
+  const [canvas, ctx] = makeCanvas(512, 320);
+
+  const metalGrad = ctx.createLinearGradient(0, 0, 512, 320);
+  metalGrad.addColorStop(0, "#505660");
+  metalGrad.addColorStop(0.5, "#606773");
+  metalGrad.addColorStop(1, "#454a54");
+  ctx.fillStyle = metalGrad;
+  ctx.fillRect(0, 0, 512, 320);
+
+  // Red sun
+  ctx.beginPath();
+  ctx.arc(256, 114, 34, 0, Math.PI * 2);
+  ctx.fillStyle = "#e83440";
+  ctx.fill();
+
+  // Green Mt. Fuji
+  ctx.beginPath();
+  ctx.moveTo(192, 144);
+  ctx.lineTo(242, 98);
+  ctx.lineTo(270, 98);
+  ctx.lineTo(320, 144);
+  ctx.closePath();
+  ctx.fillStyle = "#147247";
+  ctx.fill();
+
+  // Snow cap
+  ctx.beginPath();
+  ctx.moveTo(242, 98);
+  ctx.lineTo(270, 98);
+  ctx.lineTo(284, 116);
+  ctx.lineTo(268, 111);
+  ctx.lineTo(256, 121);
+  ctx.lineTo(243, 111);
+  ctx.lineTo(228, 116);
+  ctx.closePath();
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+
+  // Wordmark
+  ctx.font = '800 50px "Avenir Next", "Helvetica Neue", sans-serif';
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText("Jung", 268, 196);
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#62f2bd";
+  ctx.fillText("Go", 271, 196);
+
+  return finalizeTexture(canvas);
+};
+
+/**
+ * Warm glowing Japanese Mt. Fuji shoji lantern panel texture for the bottom-right desk lamp.
+ */
+export const createFujiLampTexture = (): THREE.CanvasTexture => {
+  const [canvas, ctx] = makeCanvas(256, 320);
+
+  const glow = ctx.createRadialGradient(128, 128, 12, 128, 140, 190);
+  glow.addColorStop(0, "#fff5d2");
+  glow.addColorStop(0.55, "#ffd06b");
+  glow.addColorStop(1, "#e88b32");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, 256, 320);
+
+  // Glowing golden sun
+  ctx.beginPath();
+  ctx.arc(128, 122, 42, 0, Math.PI * 2);
+  ctx.fillStyle = "#fff8df";
+  ctx.fill();
+
+  // Dark Mt. Fuji silhouette
+  ctx.beginPath();
+  ctx.moveTo(0, 320);
+  ctx.lineTo(0, 255);
+  ctx.lineTo(106, 142);
+  ctx.lineTo(150, 142);
+  ctx.lineTo(256, 255);
+  ctx.lineTo(256, 320);
+  ctx.closePath();
+  ctx.fillStyle = "#2d2420";
+  ctx.fill();
+
+  // Subtle snow highlight
+  ctx.beginPath();
+  ctx.moveTo(106, 142);
+  ctx.lineTo(150, 142);
+  ctx.lineTo(166, 162);
+  ctx.lineTo(145, 156);
+  ctx.lineTo(128, 168);
+  ctx.lineTo(110, 156);
+  ctx.lineTo(90, 162);
+  ctx.closePath();
+  ctx.fillStyle = "#ffebc2";
+  ctx.fill();
 
   return finalizeTexture(canvas);
 };

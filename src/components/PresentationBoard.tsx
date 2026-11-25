@@ -37,13 +37,90 @@ const resolveImageSrc = (src: string): string => {
   return staticFile(src);
 };
 
+/**
+ * Crisp inline vector bowl of steaming Japanese ramen for the "おいしい" vocab spotlight.
+ */
+const RamenBowlIllustration: React.FC = () => (
+  <svg
+    width="156"
+    height="156"
+    viewBox="0 0 160 160"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style={{ flexShrink: 0 }}
+  >
+    {/* Steam wisps */}
+    <path
+      d="M54 38 C48 26, 62 20, 56 10"
+      stroke="rgba(255,255,255,0.45)"
+      strokeWidth="3.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M78 34 C72 22, 86 16, 80 6"
+      stroke="rgba(255,255,255,0.55)"
+      strokeWidth="3.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M102 38 C96 26, 110 20, 104 10"
+      stroke="rgba(255,255,255,0.45)"
+      strokeWidth="3.5"
+      strokeLinecap="round"
+    />
+    {/* Accent sparkle ticks */}
+    <path
+      d="M126 30 L138 20 M132 42 L146 38"
+      stroke="#fbbf24"
+      strokeWidth="3.5"
+      strokeLinecap="round"
+    />
+    {/* Bowl outer & broth */}
+    <path d="M22 86 C22 126, 138 126, 138 86 Z" fill="#e5e9ef" />
+    <rect x="52" y="122" width="56" height="10" rx="4" fill="#cbd5e1" />
+    <ellipse cx="80" cy="84" rx="58" ry="22" fill="#f8fafc" />
+    <ellipse cx="80" cy="85" rx="51" ry="17" fill="#c97a33" />
+    {/* Noodles wave */}
+    <path
+      d="M42 87 Q56 76 70 87 T98 87 T118 85"
+      stroke="#f6d57a"
+      strokeWidth="5"
+      strokeLinecap="round"
+    />
+    {/* Boiled egg half */}
+    <ellipse cx="102" cy="76" rx="14" ry="10" fill="#ffffff" />
+    <ellipse cx="102" cy="76" rx="7" ry="5.5" fill="#f59e0b" />
+    {/* Narutomaki fishcake */}
+    <circle cx="62" cy="77" r="9.5" fill="#fff5f5" />
+    <path
+      d="M62 77 C64 74, 67 77, 64 80 C60 82, 57 77, 61 73"
+      stroke="#f43f5e"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+    />
+    {/* Green nori / scallion garnish */}
+    <circle cx="80" cy="88" r="3.5" fill="#22c55e" />
+    <circle cx="89" cy="89" r="3" fill="#16a34a" />
+  </svg>
+);
+
+const AudioWaveIcon: React.FC = () => (
+  <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
+    <rect x="1" y="6" width="2.4" height="4" rx="1.2" fill="#36f2ae" />
+    <rect x="5" y="3" width="2.4" height="10" rx="1.2" fill="#36f2ae" />
+    <rect x="9" y="1" width="2.4" height="14" rx="1.2" fill="#36f2ae" />
+    <rect x="13" y="4" width="2.4" height="8" rx="1.2" fill="#36f2ae" />
+    <rect x="17" y="6" width="2.4" height="4" rx="1.2" fill="#36f2ae" />
+  </svg>
+);
+
 const VocabBoardContent: React.FC<{
   readonly vocab: VocabCardData;
   readonly sectionLabel: string;
 }> = ({ vocab, sectionLabel }) => {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Header Row: Badges + Spotlight Tag */}
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Header Row */}
       <div
         style={{
           display: "flex",
@@ -57,9 +134,9 @@ const VocabBoardContent: React.FC<{
               fontSize: 15,
               fontWeight: 800,
               letterSpacing: "0.04em",
-              color: "#e6faf0",
-              backgroundColor: "#1d6f4b",
-              padding: "6px 15px",
+              color: "#ffffff",
+              backgroundColor: "#148c53",
+              padding: "6px 16px",
               borderRadius: 999,
             }}
           >
@@ -67,64 +144,61 @@ const VocabBoardContent: React.FC<{
           </span>
           <span
             style={{
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 600,
-              color: "#a5c9ba",
+              color: "#98c8b6",
               backgroundColor: "rgba(255, 255, 255, 0.08)",
-              padding: "6px 15px",
+              padding: "5px 13px",
               borderRadius: 999,
             }}
           >
             {vocab.partOfSpeech}
           </span>
         </div>
-        <span
-          style={{
-            fontSize: 14,
-            fontWeight: 700,
-            letterSpacing: "0.09em",
-            color: "#8ab8a6",
-            textTransform: "uppercase",
-          }}
-        >
-          {sectionLabel} SPOTLIGHT
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <AudioWaveIcon />
+          <span
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: "#e2f5ec",
+            }}
+          >
+            {sectionLabel === "VOCABULARY"
+              ? "Vocabulary Spotlight"
+              : `${sectionLabel} Spotlight`}
+          </span>
+        </div>
       </div>
 
-      {/* Main Word + Optional Image Layout */}
+      {/* Main Word + Illustration */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 24,
+          gap: 18,
         }}
       >
         <div style={{ flex: 1 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "baseline",
-              justifyContent: "space-between",
-              gap: 16,
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
             <div
               style={{
-                fontSize: 78,
+                fontSize: 66,
                 fontWeight: 900,
                 color: "#ffffff",
                 lineHeight: 1.05,
                 letterSpacing: "0.01em",
+                whiteSpace: "nowrap",
               }}
             >
               {vocab.word}
             </div>
             <div
               style={{
-                fontSize: 32,
+                fontSize: 24,
                 fontWeight: 600,
-                color: "rgba(255, 255, 255, 0.52)",
+                color: "rgba(255, 255, 255, 0.5)",
                 whiteSpace: "nowrap",
               }}
             >
@@ -132,16 +206,14 @@ const VocabBoardContent: React.FC<{
             </div>
           </div>
 
-          {/* Romaji Pill */}
-          <div style={{ marginTop: 14, marginBottom: 14 }}>
+          <div style={{ marginTop: 12, marginBottom: 12 }}>
             <span
               style={{
                 display: "inline-block",
-                fontSize: 23,
-                fontWeight: 700,
-                color: "#6ff7c6",
-                backgroundColor: "rgba(44, 175, 124, 0.14)",
-                border: "1.5px solid rgba(82, 240, 180, 0.55)",
+                fontSize: 21,
+                fontWeight: 800,
+                color: "#ffffff",
+                backgroundColor: "#179658",
                 padding: "5px 20px",
                 borderRadius: 999,
               }}
@@ -150,12 +222,11 @@ const VocabBoardContent: React.FC<{
             </span>
           </div>
 
-          {/* English Meaning */}
           <div
             style={{
-              fontSize: 38,
+              fontSize: 36,
               fontWeight: 800,
-              color: "#f8efe2",
+              color: "#ffffff",
               lineHeight: 1.15,
             }}
           >
@@ -166,59 +237,46 @@ const VocabBoardContent: React.FC<{
         {vocab.imageSrc ? (
           <div
             style={{
-              width: 170,
+              width: 162,
               flexShrink: 0,
               borderRadius: 14,
               overflow: "hidden",
               border: "1px solid rgba(255, 255, 255, 0.14)",
-              backgroundColor: "#101419",
+              backgroundColor: "#0e151b",
             }}
           >
             <Img
               src={resolveImageSrc(vocab.imageSrc)}
-              style={{ width: 170, height: 140, objectFit: "cover" }}
+              style={{ width: 162, height: 138, objectFit: "cover" }}
             />
-            {vocab.imageCaption ? (
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#a8b8c4",
-                  padding: "6px 8px",
-                  textAlign: "center",
-                }}
-              >
-                {vocab.imageCaption}
-              </div>
-            ) : null}
           </div>
-        ) : null}
+        ) : (
+          <RamenBowlIllustration />
+        )}
       </div>
 
-      {/* Divider */}
       <div
         style={{
           height: 1,
-          backgroundColor: "rgba(92, 224, 172, 0.22)",
-          marginTop: 2,
+          backgroundColor: "rgba(54, 242, 174, 0.24)",
         }}
       />
 
       {/* Example Sentence Box */}
       <div
         style={{
-          backgroundColor: "#11161b",
+          backgroundColor: "#0d141a",
           border: "1px solid rgba(255, 255, 255, 0.08)",
           borderRadius: 14,
-          padding: "16px 20px",
+          padding: "14px 18px",
           display: "flex",
           flexDirection: "column",
-          gap: 5,
+          gap: 4,
         }}
       >
         <div
           style={{
-            fontSize: 24,
+            fontSize: 23,
             fontWeight: 700,
             color: "#ffffff",
             lineHeight: 1.3,
@@ -230,7 +288,7 @@ const VocabBoardContent: React.FC<{
           style={{
             fontSize: 17,
             fontWeight: 600,
-            color: "#6ff7c6",
+            color: "#36f2ae",
           }}
         >
           {vocab.exampleRomaji}
@@ -239,7 +297,7 @@ const VocabBoardContent: React.FC<{
           style={{
             fontSize: 18,
             fontWeight: 500,
-            color: "#c6d2dd",
+            color: "#d1dce6",
           }}
         >
           {vocab.exampleEn}
@@ -269,16 +327,15 @@ const QuizBoardContent: React.FC<{
 
   const barFraction = revealed ? 1 : remainingFraction;
   const barColor = revealed
-    ? "#38f6b5"
+    ? "#36f2ae"
     : remainingFraction > 0.5
-      ? "#38f6b5"
+      ? "#36f2ae"
       : remainingFraction > 0.25
         ? "#fbbf24"
         : "#fb7185";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -290,32 +347,27 @@ const QuizBoardContent: React.FC<{
           style={{
             fontSize: 14,
             fontWeight: 800,
-            letterSpacing: "0.06em",
+            letterSpacing: "0.05em",
             color: "#ffffff",
-            backgroundColor: revealed ? "#167a50" : "#5b21b6",
+            backgroundColor: revealed ? "#148c53" : "#5b21b6",
             padding: "6px 16px",
             borderRadius: 999,
           }}
         >
           {revealed ? "CORRECT ANSWER!" : quiz.title}
         </span>
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: "0.08em",
-            color: "#a9b7c6",
-          }}
-        >
-          LISTENING CHECK
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <AudioWaveIcon />
+          <span style={{ fontSize: 14, fontWeight: 700, color: "#b6d8cb" }}>
+            Listening Check
+          </span>
+        </div>
       </div>
 
-      {/* Question */}
       <div>
         <div
           style={{
-            fontSize: 34,
+            fontSize: 33,
             fontWeight: 800,
             color: "#ffffff",
             lineHeight: 1.2,
@@ -325,7 +377,7 @@ const QuizBoardContent: React.FC<{
         </div>
         <div
           style={{
-            fontSize: 20,
+            fontSize: 19,
             fontWeight: 600,
             color: "#c4b5fd",
             marginTop: 4,
@@ -335,8 +387,7 @@ const QuizBoardContent: React.FC<{
         </div>
       </div>
 
-      {/* Options */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
         {quiz.options.map((opt) => {
           const isHit = revealed && opt.isCorrect;
           const isDimmed = revealed && !opt.isCorrect;
@@ -347,15 +398,15 @@ const QuizBoardContent: React.FC<{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                padding: "11px 16px",
+                padding: "10px 16px",
                 borderRadius: 12,
                 backgroundColor: isHit
-                  ? "rgba(22, 138, 90, 0.36)"
+                  ? "rgba(20, 140, 83, 0.36)"
                   : isDimmed
                     ? "rgba(255, 255, 255, 0.03)"
                     : "rgba(255, 255, 255, 0.07)",
                 border: isHit
-                  ? "2px solid #38f6b5"
+                  ? "2px solid #36f2ae"
                   : isDimmed
                     ? "1px solid rgba(255, 255, 255, 0.08)"
                     : "1px solid rgba(196, 181, 253, 0.25)",
@@ -365,33 +416,27 @@ const QuizBoardContent: React.FC<{
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                 <span
                   style={{
-                    width: 32,
-                    height: 32,
+                    width: 30,
+                    height: 30,
                     borderRadius: 8,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: 900,
-                    backgroundColor: isHit ? "#38f6b5" : "#4c2c96",
+                    backgroundColor: isHit ? "#36f2ae" : "#4c2c96",
                     color: isHit ? "#082419" : "#ffffff",
                   }}
                 >
                   {opt.label}
                 </span>
-                <span
-                  style={{
-                    fontSize: 24,
-                    fontWeight: 800,
-                    color: "#ffffff",
-                  }}
-                >
+                <span style={{ fontSize: 23, fontWeight: 800, color: "#ffffff" }}>
                   {opt.english}
                 </span>
               </div>
               <span
                 style={{
-                  fontSize: 19,
+                  fontSize: 18,
                   fontWeight: 600,
                   color: isHit ? "#7cf5c4" : "#cbd5e1",
                 }}
@@ -403,28 +448,23 @@ const QuizBoardContent: React.FC<{
         })}
       </div>
 
-      {/* Countdown Progress Bar */}
-      <div style={{ marginTop: 4 }}>
+      <div style={{ marginTop: 2 }}>
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
             fontSize: 13,
             fontWeight: 700,
-            color: revealed ? "#6ff7c6" : "#f5cf93",
+            color: revealed ? "#36f2ae" : "#f5cf93",
             marginBottom: 6,
           }}
         >
-          <span>
-            {revealed ? "B — おいしい (oishii) = Delicious!" : "TIME REMAINING"}
-          </span>
+          {revealed ? "B — おいしい (oishii) = Delicious!" : "TIME REMAINING"}
         </div>
         <div
           style={{
             width: "100%",
-            height: 10,
+            height: 9,
             borderRadius: 999,
-            backgroundColor: "#0e1218",
+            backgroundColor: "#0c1116",
             overflow: "hidden",
           }}
         >
@@ -460,8 +500,7 @@ const OverviewBoardContent: React.FC<{
   const isDialogue = activeSection.type === "dialogue";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      {/* Badges */}
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div
         style={{
           display: "flex",
@@ -474,9 +513,9 @@ const OverviewBoardContent: React.FC<{
             style={{
               fontSize: 15,
               fontWeight: 800,
-              color: "#e6faf0",
-              backgroundColor: "#1d6f4b",
-              padding: "6px 15px",
+              color: "#ffffff",
+              backgroundColor: "#148c53",
+              padding: "6px 16px",
               borderRadius: 999,
             }}
           >
@@ -484,37 +523,32 @@ const OverviewBoardContent: React.FC<{
           </span>
           <span
             style={{
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 600,
               color: "#a5c9ba",
               backgroundColor: "rgba(255, 255, 255, 0.08)",
-              padding: "6px 15px",
+              padding: "5px 14px",
               borderRadius: 999,
             }}
           >
             {episodeNumber}
           </span>
         </div>
-        <span
-          style={{
-            fontSize: 14,
-            fontWeight: 700,
-            letterSpacing: "0.09em",
-            color: isDialogue ? "#fbbf24" : "#8ab8a6",
-          }}
-        >
-          {isDialogue ? "CAFE DIALOGUE PRACTICE" : "TODAY'S LESSON"}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <AudioWaveIcon />
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#e2f5ec" }}>
+            {isDialogue ? "Cafe Dialogue" : "Today's Lesson"}
+          </span>
+        </div>
       </div>
 
-      {/* Main Title or Dialogue Spotlight */}
       {isDialogue && activeCue ? (
         <div
           style={{
-            backgroundColor: "#11161b",
-            border: "1px solid rgba(251, 191, 36, 0.25)",
-            borderRadius: 16,
-            padding: "22px 24px",
+            backgroundColor: "#0d141a",
+            border: "1px solid rgba(251, 191, 36, 0.28)",
+            borderRadius: 14,
+            padding: "20px 22px",
             display: "flex",
             flexDirection: "column",
             gap: 10,
@@ -529,7 +563,7 @@ const OverviewBoardContent: React.FC<{
                 borderRadius: 6,
                 backgroundColor: isGuestSpeaker(activeCue.speaker)
                   ? "#f59e0b"
-                  : "#1e8e5a",
+                  : "#148c53",
                 color: isGuestSpeaker(activeCue.speaker) ? "#1f1402" : "#ffffff",
               }}
             >
@@ -541,7 +575,7 @@ const OverviewBoardContent: React.FC<{
           </div>
           <div
             style={{
-              fontSize: 34,
+              fontSize: 32,
               fontWeight: 800,
               color: "#ffffff",
               lineHeight: 1.3,
@@ -549,32 +583,31 @@ const OverviewBoardContent: React.FC<{
           >
             {activeCue.japanese}
           </div>
-          <div style={{ fontSize: 19, fontWeight: 600, color: "#fde68a" }}>
+          <div style={{ fontSize: 18, fontWeight: 600, color: "#fde68a" }}>
             {activeCue.romaji}
           </div>
-          <div style={{ fontSize: 20, fontWeight: 500, color: "#cbd5e1" }}>
+          <div style={{ fontSize: 19, fontWeight: 500, color: "#cbd5e1" }}>
             {activeCue.english}
           </div>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div
             style={{
               fontSize: 42,
               fontWeight: 900,
               color: "#ffffff",
-              lineHeight: 1.15,
+              lineHeight: 1.12,
             }}
           >
             {episodeTitle}
           </div>
-          <div style={{ fontSize: 20, fontWeight: 500, color: "#b6c5d4" }}>
-            Learn practical everyday Japanese phrases you can use right away.
+          <div style={{ fontSize: 19, fontWeight: 500, color: "#b6c5d4" }}>
+            Warm, clear JLPT N5 Japanese you can use in real Tokyo cafes.
           </div>
         </div>
       )}
 
-      {/* Optional Custom Lesson Image or Featured Keyword Preview */}
       {activeSection.imageSrc ? (
         <div
           style={{
@@ -585,14 +618,14 @@ const OverviewBoardContent: React.FC<{
         >
           <Img
             src={resolveImageSrc(activeSection.imageSrc)}
-            style={{ width: "100%", height: 150, objectFit: "cover" }}
+            style={{ width: "100%", height: 148, objectFit: "cover" }}
           />
         </div>
       ) : featuredVocab ? (
         <div
           style={{
-            backgroundColor: "#11161b",
-            border: "1px solid rgba(92, 224, 172, 0.22)",
+            backgroundColor: "#0d141a",
+            border: "1px solid rgba(54, 242, 174, 0.25)",
             borderRadius: 14,
             padding: "16px 20px",
             display: "flex",
@@ -603,10 +636,10 @@ const OverviewBoardContent: React.FC<{
           <div>
             <div
               style={{
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 700,
                 letterSpacing: "0.08em",
-                color: "#7ddbb4",
+                color: "#36f2ae",
                 marginBottom: 4,
               }}
             >
@@ -616,7 +649,7 @@ const OverviewBoardContent: React.FC<{
               {featuredVocab.word}{" "}
               <span
                 style={{
-                  fontSize: 22,
+                  fontSize: 21,
                   fontWeight: 600,
                   color: "rgba(255, 255, 255, 0.55)",
                 }}
@@ -626,10 +659,10 @@ const OverviewBoardContent: React.FC<{
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "#6ff7c6" }}>
+            <div style={{ fontSize: 19, fontWeight: 700, color: "#36f2ae" }}>
               {featuredVocab.romaji}
             </div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "#f8efe2" }}>
+            <div style={{ fontSize: 19, fontWeight: 700, color: "#ffffff" }}>
               {featuredVocab.meaning}
             </div>
           </div>
@@ -640,9 +673,8 @@ const OverviewBoardContent: React.FC<{
 };
 
 /**
- * Straight, flat, front-facing 2D matte-black presentation blackboard
- * mounted on the right side of the 16:9 widescreen studio frame.
- * Zero 3D tilt, zero skew, zero background glare.
+ * Straight, flat, front-facing 2D matte-dark presentation board with crisp
+ * emerald-mint border matching `public/images/studio-reference.jpg`.
  */
 export const PresentationBoard: React.FC<PresentationBoardProps> = ({
   episodeNumber,
@@ -659,7 +691,6 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
   const activeCue = getActiveSubtitle(subtitles, timeSec);
   const featuredVocab = sections.find((s) => s.vocab)?.vocab;
 
-  // Smooth deterministic entrance fade at each section transition
   const fadeFrames = Math.max(6, Math.round(0.32 * fps));
   const sectionStartFrame = Math.round(activeSection.startSec * fps);
   const sectionEndFrame = Math.round(activeSection.endSec * fps);
@@ -696,19 +727,18 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
           '"Hiragino Sans", "Noto Sans JP", "Avenir Next", "Helvetica Neue", sans-serif',
       }}
     >
-      {/* Flat, Front-Facing Matte-Black Monitor Frame on Right Side */}
       <div
         style={{
           position: "absolute",
-          top: 154,
-          right: 238,
-          width: 656,
-          minHeight: 422,
-          backgroundColor: "#171c22",
-          borderRadius: 12,
-          border: "2px solid rgba(140, 165, 180, 0.28)",
-          boxShadow: "0 0 0 8px #232a32, 0 24px 56px rgba(0, 0, 0, 0.58)",
-          padding: "26px 30px",
+          top: 136,
+          right: 175,
+          width: 650,
+          minHeight: 440,
+          backgroundColor: "#121b22",
+          borderRadius: 16,
+          border: "2.5px solid #2ee8a5",
+          boxShadow: "0 0 0 6px #182128, 0 22px 52px rgba(0, 0, 0, 0.55)",
+          padding: "28px 32px",
           boxSizing: "border-box",
           display: "flex",
           flexDirection: "column",

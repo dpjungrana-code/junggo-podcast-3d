@@ -37,9 +37,9 @@ const lerpPose = (a: CameraPose, b: CameraPose, t: number): CameraPose => ({
 });
 
 /**
- * Computes deterministic widescreen camera framing driven strictly by `useCurrentFrame()`.
- * Keeps the Ninja Host & Studio Desk cleanly framed in the left third so the right half
- * remains open for the flat 2D PresentationBoard and distant Tokyo Tower skyline.
+ * Deterministic widescreen camera rig matched to `public/images/studio-reference.jpg`.
+ * Keeps the Ninja Host on the left third behind the desk, the JungGo neon wall sign
+ * centered above, and the right half open for PresentationBoard + Tokyo Tower + Fuji Lamp.
  */
 const getSectionPose = (
   section: EpisodeSection,
@@ -52,8 +52,8 @@ const getSectionPose = (
     Math.min(1, (timeSec - section.startSec) / duration),
   );
 
-  const microX = Math.sin(timeSec * 0.55) * 0.018;
-  const microY = Math.cos(timeSec * 0.45) * 0.01;
+  const microX = Math.sin(timeSec * 0.55) * 0.014;
+  const microY = Math.cos(timeSec * 0.45) * 0.008;
 
   switch (section.type) {
     case "intro":
@@ -61,12 +61,12 @@ const getSectionPose = (
       const dolly = Easing.inOut(Easing.sin)(localProgress);
       return {
         pos: [
-          lerp(0.08, -0.06, dolly) + microX,
-          lerp(1.54, 1.48, dolly) + microY,
-          lerp(3.48, 3.22, dolly),
+          lerp(-0.02, -0.1, dolly) + microX,
+          lerp(1.5, 1.46, dolly) + microY,
+          lerp(3.32, 3.12, dolly),
         ],
-        lookAt: [lerp(0.22, 0.16, dolly), 1.32, -0.45],
-        fov: lerp(42, 40.5, dolly),
+        lookAt: [lerp(0.18, 0.14, dolly), 1.32, -0.45],
+        fov: lerp(41.5, 40, dolly),
       };
     }
 
@@ -75,12 +75,12 @@ const getSectionPose = (
       const orbit = Easing.inOut(Easing.sin)(localProgress);
       return {
         pos: [
-          lerp(-0.1, -0.18, orbit) + microX,
-          1.48 + microY,
-          lerp(3.26, 3.16, orbit),
+          lerp(-0.1, -0.16, orbit) + microX,
+          1.46 + microY,
+          lerp(3.16, 3.08, orbit),
         ],
-        lookAt: [lerp(0.2, 0.24, orbit), 1.32, -0.42],
-        fov: 40.5,
+        lookAt: [lerp(0.14, 0.18, orbit), 1.32, -0.45],
+        fov: 40,
       };
     }
 
@@ -108,15 +108,15 @@ const getSectionPose = (
       );
 
       const hostAngle: CameraPose = {
-        pos: [0.06 + microX, 1.46 + microY, 3.18],
-        lookAt: [0.14, 1.32, -0.45],
-        fov: 40,
+        pos: [-0.02 + microX, 1.46 + microY, 3.12],
+        lookAt: [0.12, 1.32, -0.45],
+        fov: 39.8,
       };
 
       const guestAngle: CameraPose = {
-        pos: [-0.14 + microX, 1.48 + microY, 3.24],
-        lookAt: [0.24, 1.32, -0.42],
-        fov: 40.5,
+        pos: [-0.14 + microX, 1.47 + microY, 3.18],
+        lookAt: [0.2, 1.32, -0.44],
+        fov: 40.2,
       };
 
       const blend = isGuestSpeaking ? Math.max(guestBlend, 0.5) : guestBlend;
@@ -128,19 +128,18 @@ const getSectionPose = (
       return {
         pos: [
           lerp(-0.08, -0.14, tensionPush) + microX,
-          lerp(1.44, 1.48, tensionPush) + microY,
-          lerp(3.32, 3.18, tensionPush),
+          lerp(1.44, 1.47, tensionPush) + microY,
+          lerp(3.22, 3.1, tensionPush),
         ],
-        lookAt: [0.22, 1.33, -0.42],
-        fov: 41,
+        lookAt: [0.18, 1.33, -0.44],
+        fov: 40.5,
       };
     }
   }
 };
 
 /**
- * Dynamic 3D Camera Rig choreographer.
- * Computes smooth cross-faded camera trajectories purely from `useCurrentFrame()`.
+ * Dynamic 3D Camera Rig choreographer driven purely by `useCurrentFrame()`.
  */
 export const CameraRig: React.FC<CameraRigProps> = ({
   sections,

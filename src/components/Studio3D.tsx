@@ -9,13 +9,16 @@ import {
 import { usePodcastAudioMetrics } from "../utils/audio";
 import {
   createBookCoverTexture,
+  createFujiLampTexture,
+  createLaptopLidLogoTexture,
   createLaptopScreenTexture,
   createMugTexture,
   createNeonSignTexture,
-  createScriptNotesTexture,
   createStudioWallTexture,
+  createStudyBookStackTexture,
   createTokyoSkyTexture,
   createWoodTexture,
+  createYouTubePlaqueTexture,
 } from "../utils/textures";
 import { NinjaHost3D } from "./NinjaHost3D";
 
@@ -31,19 +34,14 @@ const BOKEH_LIGHTS: readonly {
   readonly phase: number;
 }[] = [
   { pos: [1.75, 1.12, -5.2], radius: 0.08, color: "#ffbe6b", phase: 0.2 },
-  { pos: [2.35, 0.9, -5.8], radius: 0.11, color: "#ff8c5a", phase: 1.1 },
+  { pos: [2.35, 0.9, -5.8], radius: 0.11, color: "#93c5fd", phase: 1.1 },
   { pos: [3.1, 1.24, -6.2], radius: 0.09, color: "#ffd88a", phase: 2.3 },
-  { pos: [3.8, 0.98, -5.5], radius: 0.12, color: "#ff7262", phase: 0.8 },
+  { pos: [3.8, 0.98, -5.5], radius: 0.12, color: "#ff8c5a", phase: 0.8 },
   { pos: [2.05, 1.56, -6.9], radius: 0.07, color: "#9ee7ff", phase: 3.1 },
   { pos: [2.72, 0.85, -5.0], radius: 0.1, color: "#ffcb77", phase: 1.7 },
-  { pos: [3.4, 1.48, -6.8], radius: 0.08, color: "#ffaa64", phase: 4.0 },
-  { pos: [4.1, 1.12, -6.1], radius: 0.11, color: "#ff9e7d", phase: 2.8 },
-  { pos: [1.62, 0.88, -6.4], radius: 0.09, color: "#ffae52", phase: 5.2 },
-  { pos: [2.55, 1.72, -7.4], radius: 0.06, color: "#b6a6ff", phase: 0.6 },
   { pos: [4.2, 1.82, -7.2], radius: 0.07, color: "#ffd29d", phase: 3.6 },
-  { pos: [2.25, 1.32, -6.3], radius: 0.075, color: "#52f7c1", phase: 4.5 },
-  { pos: [3.25, 0.78, -5.3], radius: 0.1, color: "#ff944d", phase: 1.9 },
-  { pos: [4.4, 1.38, -6.6], radius: 0.09, color: "#ffd384", phase: 2.5 },
+  { pos: [4.85, 1.25, -6.2], radius: 0.095, color: "#ffbe6b", phase: 2.4 },
+  { pos: [5.75, 1.05, -6.4], radius: 0.085, color: "#93c5fd", phase: 4.1 },
 ];
 
 const SKYLINE_BUILDINGS: readonly {
@@ -53,48 +51,38 @@ const SKYLINE_BUILDINGS: readonly {
   readonly windowColor: string;
 }[] = [
   {
-    pos: [1.55, 0.68, -8.4],
-    size: [0.64, 1.7, 0.55],
-    color: "#14182d",
-    windowColor: "#ffd28a",
+    pos: [1.65, 0.7, -8.4],
+    size: [0.64, 1.75, 0.55],
+    color: "#112452",
+    windowColor: "#a5d8ff",
   },
   {
-    pos: [2.18, 0.86, -8.9],
-    size: [0.58, 2.05, 0.5],
-    color: "#181d37",
-    windowColor: "#ffbe73",
-  },
-  {
-    pos: [2.72, 0.58, -8.6],
-    size: [0.48, 1.45, 0.48],
-    color: "#12162b",
-    windowColor: "#8ed8ff",
-  },
-  {
-    pos: [4.18, 0.92, -8.8],
-    size: [0.68, 2.25, 0.52],
-    color: "#171c33",
+    pos: [2.32, 0.88, -8.9],
+    size: [0.58, 2.1, 0.5],
+    color: "#142a5e",
     windowColor: "#ffd596",
   },
   {
-    pos: [4.85, 0.72, -7.8],
-    size: [0.64, 1.85, 0.52],
-    color: "#13182e",
-    windowColor: "#ffa96b",
+    pos: [2.95, 0.62, -8.6],
+    size: [0.52, 1.5, 0.48],
+    color: "#0e204a",
+    windowColor: "#93c5fd",
   },
   {
-    pos: [1.82, 0.5, -7.2],
-    size: [0.48, 1.15, 0.45],
-    color: "#101426",
-    windowColor: "#ffcb77",
+    pos: [4.75, 0.78, -7.9],
+    size: [0.64, 1.9, 0.52],
+    color: "#122657",
+    windowColor: "#ffbe73",
   },
   {
-    pos: [5.85, 0.68, -7.6],
-    size: [0.62, 1.65, 0.48],
-    color: "#111529",
-    windowColor: "#a2d2ff",
+    pos: [5.95, 0.72, -7.7],
+    size: [0.62, 1.7, 0.48],
+    color: "#10224e",
+    windowColor: "#a5d8ff",
   },
 ];
+
+const PLANT_LEAF_ANGLES = [0, 0.85, 1.7, 2.55, 3.4, 4.25, 5.1, 5.8];
 
 const computeQuizFactor = (
   sections: readonly EpisodeSection[],
@@ -128,8 +116,6 @@ const computeQuizFactor = (
   return Math.min(enter, exit);
 };
 
-const PLANT_LEAF_ANGLES = [0, 0.85, 1.7, 2.55, 3.4, 4.25, 5.1, 5.8];
-
 /**
  * Stylized 3D potted indoor plant sharing geometry/material instances across placements.
  */
@@ -143,10 +129,10 @@ const PottedPlant: React.FC<{
       potGeo: new THREE.CylinderGeometry(0.115, 0.088, 0.22, 16),
       soilGeo: new THREE.CylinderGeometry(0.105, 0.105, 0.02, 12),
       leafGeo: new THREE.SphereGeometry(0.075, 8, 6),
-      potMat: new THREE.MeshStandardMaterial({ color: potColor, roughness: 0.55 }),
+      potMat: new THREE.MeshStandardMaterial({ color: potColor, roughness: 0.5 }),
       soilMat: new THREE.MeshStandardMaterial({ color: "#3c281b", roughness: 0.95 }),
-      leafDarkMat: new THREE.MeshStandardMaterial({ color: "#286439", roughness: 0.62 }),
-      leafLightMat: new THREE.MeshStandardMaterial({ color: "#357e47", roughness: 0.62 }),
+      leafDarkMat: new THREE.MeshStandardMaterial({ color: "#226b36", roughness: 0.6 }),
+      leafLightMat: new THREE.MeshStandardMaterial({ color: "#308746", roughness: 0.6 }),
     }),
     [potColor],
   );
@@ -204,53 +190,105 @@ const PottedPlant: React.FC<{
 };
 
 /**
- * Sculpted 3D Japanese Bonsai Tree in a shallow ceramic tray.
+ * Sculpted 3D Japanese Bonsai Tree (supports rectangular dark tray or round white ceramic pot).
  */
 const BonsaiTree3D: React.FC<{
   readonly position: [number, number, number];
   readonly scale?: number;
-}> = ({ position, scale = 1 }) => {
+  readonly potStyle?: "tray" | "whiteRound";
+}> = ({ position, scale = 1, potStyle = "tray" }) => {
   return (
     <group position={position} scale={scale}>
-      {/* Shallow rectangular bonsai tray */}
-      <mesh position={[0, 0.028, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.32, 0.055, 0.2]} />
-        <meshStandardMaterial color="#232830" roughness={0.5} />
-      </mesh>
-      <mesh position={[0, 0.058, 0]}>
-        <boxGeometry args={[0.28, 0.012, 0.16]} />
-        <meshStandardMaterial color="#342318" roughness={0.95} />
-      </mesh>
+      {potStyle === "whiteRound" ? (
+        <group>
+          <mesh position={[0, 0.065, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.125, 0.095, 0.13, 18]} />
+            <meshStandardMaterial color="#eeece6" roughness={0.35} />
+          </mesh>
+          <mesh position={[0, 0.125, 0]}>
+            <cylinderGeometry args={[0.115, 0.115, 0.015, 16]} />
+            <meshStandardMaterial color="#362419" roughness={0.95} />
+          </mesh>
+        </group>
+      ) : (
+        <group>
+          <mesh position={[0, 0.028, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.32, 0.055, 0.2]} />
+            <meshStandardMaterial color="#232830" roughness={0.5} />
+          </mesh>
+          <mesh position={[0, 0.058, 0]}>
+            <boxGeometry args={[0.28, 0.012, 0.16]} />
+            <meshStandardMaterial color="#342318" roughness={0.95} />
+          </mesh>
+        </group>
+      )}
+
       {/* Curved organic bonsai trunk */}
-      <mesh position={[-0.03, 0.11, 0]} rotation={[0, 0, -0.24]} castShadow>
-        <cylinderGeometry args={[0.018, 0.028, 0.12, 8]} />
-        <meshStandardMaterial color="#4f3524" roughness={0.85} />
+      <group position={[0, potStyle === "whiteRound" ? 0.075 : 0, 0]}>
+        <mesh position={[-0.025, 0.11, 0]} rotation={[0, 0, -0.24]} castShadow>
+          <cylinderGeometry args={[0.018, 0.028, 0.12, 8]} />
+          <meshStandardMaterial color="#583a26" roughness={0.84} />
+        </mesh>
+        <mesh position={[0.012, 0.19, 0.01]} rotation={[0.08, 0, 0.35]} castShadow>
+          <cylinderGeometry args={[0.012, 0.018, 0.11, 8]} />
+          <meshStandardMaterial color="#583a26" roughness={0.84} />
+        </mesh>
+        <mesh position={[-0.055, 0.17, -0.01]} rotation={[0, 0, 0.55]} castShadow>
+          <cylinderGeometry args={[0.009, 0.014, 0.085, 7]} />
+          <meshStandardMaterial color="#583a26" roughness={0.84} />
+        </mesh>
+        {[
+          [-0.085, 0.21, 0.01, 0.076],
+          [0.055, 0.25, 0.02, 0.09],
+          [-0.01, 0.28, -0.01, 0.074],
+          [0.11, 0.2, -0.01, 0.064],
+        ].map(([fx, fy, fz, r], idx) => (
+          <mesh
+            key={idx}
+            position={[fx, fy, fz]}
+            scale={[1.38, 0.56, 1.05]}
+            castShadow
+          >
+            <sphereGeometry args={[r, 10, 8]} />
+            <meshStandardMaterial
+              color={idx % 2 === 0 ? "#246636" : "#328246"}
+              roughness={0.7}
+            />
+          </mesh>
+        ))}
+      </group>
+    </group>
+  );
+};
+
+/**
+ * Trailing green ivy plant cascading down from the top-left shelf edge.
+ */
+const HangingIvy3D: React.FC<{
+  readonly position: [number, number, number];
+}> = ({ position }) => {
+  const vineDrops = [
+    [0, 0, 0, 0.045],
+    [0.05, -0.04, 0.03, 0.042],
+    [0.08, -0.11, 0.05, 0.04],
+    [0.06, -0.19, 0.06, 0.038],
+    [0.09, -0.27, 0.06, 0.035],
+    [0.07, -0.35, 0.05, 0.03],
+    [-0.04, -0.08, 0.04, 0.04],
+    [-0.02, -0.17, 0.05, 0.036],
+  ];
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.04, 0]}>
+        <cylinderGeometry args={[0.065, 0.052, 0.09, 12]} />
+        <meshStandardMaterial color="#272b33" roughness={0.6} />
       </mesh>
-      <mesh position={[0.01, 0.19, 0.01]} rotation={[0.08, 0, 0.35]} castShadow>
-        <cylinderGeometry args={[0.012, 0.018, 0.11, 8]} />
-        <meshStandardMaterial color="#4f3524" roughness={0.85} />
-      </mesh>
-      <mesh position={[-0.06, 0.17, -0.01]} rotation={[0, 0, 0.55]} castShadow>
-        <cylinderGeometry args={[0.009, 0.014, 0.085, 7]} />
-        <meshStandardMaterial color="#4f3524" roughness={0.85} />
-      </mesh>
-      {/* Layered bonsai foliage pads */}
-      {[
-        [-0.09, 0.21, 0.01, 0.075],
-        [0.05, 0.25, 0.02, 0.088],
-        [-0.01, 0.28, -0.01, 0.072],
-        [0.11, 0.2, -0.01, 0.062],
-      ].map(([fx, fy, fz, r], idx) => (
-        <mesh
-          key={idx}
-          position={[fx, fy, fz]}
-          scale={[1.35, 0.58, 1.05]}
-          castShadow
-        >
-          <sphereGeometry args={[r, 12, 10]} />
+      {vineDrops.map(([vx, vy, vz, r], idx) => (
+        <mesh key={idx} position={[vx, vy, vz]} scale={[1.2, 0.85, 0.9]}>
+          <sphereGeometry args={[r, 8, 6]} />
           <meshStandardMaterial
-            color={idx % 2 === 0 ? "#245c34" : "#2f7541"}
-            roughness={0.72}
+            color={idx % 2 === 0 ? "#266e3a" : "#358c4b"}
+            roughness={0.65}
           />
         </mesh>
       ))}
@@ -259,102 +297,61 @@ const BonsaiTree3D: React.FC<{
 };
 
 /**
- * Japanese porcelain sake flasks & ceramic teapot shelf display.
+ * Warm glowing Japanese Mt. Fuji shoji desk lantern on the bottom-right of the desk.
  */
-const JapaneseCeramics3D: React.FC<{
+const FujiShojiLamp3D: React.FC<{
   readonly position: [number, number, number];
-}> = ({ position }) => {
+  readonly texture: THREE.CanvasTexture;
+}> = ({ position, texture }) => {
   return (
-    <group position={position}>
-      {/* Tall white porcelain sake flask */}
-      <group position={[-0.12, 0, 0]}>
-        <mesh position={[0, 0.07, 0]} castShadow>
-          <cylinderGeometry args={[0.032, 0.044, 0.14, 14]} />
-          <meshStandardMaterial color="#e8e4dc" roughness={0.28} />
+    <group position={position} rotation={[0, -0.28, 0]}>
+      {/* Dark wood base */}
+      <mesh position={[0, 0.015, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.25, 0.03, 0.25]} />
+        <meshStandardMaterial color="#21150e" roughness={0.68} />
+      </mesh>
+      {/* Glowing Shoji core */}
+      <mesh position={[0, 0.165, 0]}>
+        <boxGeometry args={[0.21, 0.27, 0.21]} />
+        <meshStandardMaterial
+          map={texture}
+          emissiveMap={texture}
+          emissive="#ffca6b"
+          emissiveIntensity={1.2}
+          roughness={0.45}
+        />
+      </mesh>
+      {/* Four dark wood corner frame pillars */}
+      {[
+        [-0.105, -0.105],
+        [0.105, -0.105],
+        [-0.105, 0.105],
+        [0.105, 0.105],
+      ].map(([cx, cz], idx) => (
+        <mesh key={idx} position={[cx, 0.165, cz]} castShadow>
+          <boxGeometry args={[0.02, 0.29, 0.02]} />
+          <meshStandardMaterial color="#1c110b" roughness={0.7} />
         </mesh>
-        <mesh position={[0, 0.155, 0]} castShadow>
-          <cylinderGeometry args={[0.018, 0.028, 0.04, 12]} />
-          <meshStandardMaterial color="#e8e4dc" roughness={0.28} />
-        </mesh>
-        <mesh position={[0, 0.095, 0]}>
-          <cylinderGeometry args={[0.038, 0.04, 0.02, 14]} />
-          <meshStandardMaterial color="#2c4a6e" roughness={0.35} />
-        </mesh>
-      </group>
-      {/* Secondary flask + cup */}
-      <group position={[0.02, 0, 0.02]}>
-        <mesh position={[0, 0.055, 0]} castShadow>
-          <cylinderGeometry args={[0.026, 0.036, 0.11, 14]} />
-          <meshStandardMaterial color="#dfd9cf" roughness={0.32} />
-        </mesh>
-        <mesh position={[0.08, 0.022, 0.02]} castShadow>
-          <cylinderGeometry args={[0.022, 0.017, 0.044, 12]} />
-          <meshStandardMaterial color="#ebe7df" roughness={0.28} />
-        </mesh>
-      </group>
-      {/* Dark iron/ceramic kyusu teapot */}
-      <group position={[0.2, 0, -0.01]}>
-        <mesh position={[0, 0.042, 0]} scale={[1.15, 0.82, 1.15]} castShadow>
-          <sphereGeometry args={[0.048, 14, 10]} />
-          <meshStandardMaterial color="#2a2422" roughness={0.55} />
-        </mesh>
-        <mesh
-          position={[-0.055, 0.05, 0]}
-          rotation={[0, 0, 0.72]}
-          castShadow
-        >
-          <cylinderGeometry args={[0.008, 0.012, 0.045, 8]} />
-          <meshStandardMaterial color="#2a2422" roughness={0.55} />
-        </mesh>
-      </group>
-    </group>
-  );
-};
-
-/**
- * Pair of stylized mini chibi collectible figures on the right shelf.
- */
-const MiniFigures3D: React.FC<{
-  readonly position: [number, number, number];
-}> = ({ position }) => {
-  const figures = [
-    { x: -0.1, bodyColor: "#c93838", hairColor: "#1b1f28" },
-    { x: 0.12, bodyColor: "#2e5c8a", hairColor: "#4a3222" },
-  ];
-  return (
-    <group position={position}>
-      {figures.map((fig, idx) => (
-        <group key={idx} position={[fig.x, 0, 0]}>
-          {/* Display base */}
-          <mesh position={[0, 0.008, 0]} castShadow>
-            <cylinderGeometry args={[0.05, 0.054, 0.016, 14]} />
-            <meshStandardMaterial color="#1a1e26" roughness={0.5} />
-          </mesh>
-          {/* Body */}
-          <mesh position={[0, 0.065, 0]} castShadow>
-            <cylinderGeometry args={[0.032, 0.04, 0.095, 12]} />
-            <meshStandardMaterial color={fig.bodyColor} roughness={0.62} />
-          </mesh>
-          {/* Head */}
-          <mesh position={[0, 0.145, 0]} castShadow>
-            <sphereGeometry args={[0.044, 14, 12]} />
-            <meshStandardMaterial color="#f5c9a6" roughness={0.55} />
-          </mesh>
-          {/* Hair cap */}
-          <mesh position={[0, 0.16, -0.005]} castShadow>
-            <sphereGeometry
-              args={[0.046, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.58]}
-            />
-            <meshStandardMaterial color={fig.hairColor} roughness={0.65} />
-          </mesh>
-        </group>
       ))}
+      {/* Top wooden rim */}
+      <mesh position={[0, 0.305, 0]} castShadow>
+        <boxGeometry args={[0.24, 0.024, 0.24]} />
+        <meshStandardMaterial color="#21150e" roughness={0.68} />
+      </mesh>
+      {/* Soft warm local glow */}
+      <pointLight
+        position={[0, 0.18, 0.16]}
+        color="#ffbd59"
+        intensity={0.55}
+        distance={1.6}
+        decay={2}
+      />
     </group>
   );
 };
 
 /**
- * Stylized 3D Tokyo Tower + Glowing Night Tokyo Skyline outside the right window.
+ * Stylized 3D Tokyo Tower + Royal-Blue Night Tokyo Skyline outside the right window.
  */
 const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
   timeSec,
@@ -378,23 +375,23 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
 
   return (
     <group>
-      <mesh position={[2.9, 2.2, -11.2]}>
-        <planeGeometry args={[11.2, 7.8]} />
+      <mesh position={[3.2, 2.2, -11.2]}>
+        <planeGeometry args={[12.0, 8.0]} />
         <meshBasicMaterial map={skyAssets.skyTexture} />
       </mesh>
 
-      {/* Distant warm horizon glow */}
-      <mesh position={[2.8, 0.45, -10.5]}>
-        <planeGeometry args={[9.0, 1.4]} />
+      {/* Distant cool-blue horizon glow */}
+      <mesh position={[3.1, 0.5, -10.5]}>
+        <planeGeometry args={[10.0, 1.6]} />
         <meshBasicMaterial
-          color="#ff8c52"
+          color="#3b6be0"
           transparent
-          opacity={0.26}
+          opacity={0.28}
           depthWrite={false}
         />
       </mesh>
 
-      {/* Layered 3D Tokyo Skyline Buildings */}
+      {/* Layered Royal-Blue Tokyo Skyline Buildings */}
       {SKYLINE_BUILDINGS.map((b, idx) => (
         <group key={idx} position={[b.pos[0], b.pos[1], b.pos[2]]}>
           <mesh>
@@ -417,8 +414,8 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
         </group>
       ))}
 
-      {/* Prominent Illuminated Tokyo Tower on Far Right (visible beside PresentationBoard) */}
-      <group position={[5.42, 0.32, -5.4]} scale={0.94}>
+      {/* Prominent Illuminated Tokyo Tower on Far Right */}
+      <group position={[5.55, 0.38, -5.05]} scale={0.92}>
         {[
           [-0.22, -0.22, 0.16, -0.16],
           [0.22, -0.22, 0.16, 0.16],
@@ -432,9 +429,9 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
           >
             <cylinderGeometry args={[0.032, 0.058, 0.92, 6]} />
             <meshStandardMaterial
-              color="#ff5733"
-              emissive="#ff4518"
-              emissiveIntensity={1.0}
+              color="#ff6238"
+              emissive="#ff4c1f"
+              emissiveIntensity={1.08}
               roughness={0.45}
             />
           </mesh>
@@ -443,9 +440,9 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
         <mesh position={[0, 0.88, 0]}>
           <cylinderGeometry args={[0.14, 0.29, 0.75, 4]} />
           <meshStandardMaterial
-            color="#ff552e"
-            emissive="#ff441a"
-            emissiveIntensity={0.9}
+            color="#ff5a30"
+            emissive="#ff4a1e"
+            emissiveIntensity={0.95}
             wireframe
           />
         </mesh>
@@ -453,9 +450,9 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
         <mesh position={[0, 1.28, 0]}>
           <boxGeometry args={[0.38, 0.14, 0.38]} />
           <meshStandardMaterial
-            color="#ffebd2"
-            emissive="#ffae42"
-            emissiveIntensity={1.35}
+            color="#ffefd6"
+            emissive="#ffb854"
+            emissiveIntensity={1.45}
             roughness={0.3}
           />
         </mesh>
@@ -464,7 +461,7 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
           <meshStandardMaterial
             color="#ff5a36"
             emissive="#ff4721"
-            emissiveIntensity={0.9}
+            emissiveIntensity={0.95}
           />
         </mesh>
 
@@ -473,16 +470,16 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
           <meshStandardMaterial
             color="#fff3e6"
             emissive="#ffd29d"
-            emissiveIntensity={0.75}
+            emissiveIntensity={0.8}
           />
         </mesh>
 
         <mesh position={[0, 2.08, 0]}>
           <cylinderGeometry args={[0.058, 0.088, 0.38, 4]} />
           <meshStandardMaterial
-            color="#ff552e"
-            emissive="#ff441a"
-            emissiveIntensity={1.1}
+            color="#ff5a30"
+            emissive="#ff4a1e"
+            emissiveIntensity={1.15}
           />
         </mesh>
 
@@ -490,8 +487,8 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
           <boxGeometry args={[0.19, 0.1, 0.19]} />
           <meshStandardMaterial
             color="#fff6e0"
-            emissive="#ffb84d"
-            emissiveIntensity={1.6}
+            emissive="#ffc25c"
+            emissiveIntensity={1.65}
           />
         </mesh>
 
@@ -513,7 +510,7 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
         </mesh>
 
         <mesh position={[0, 3.12, 0]}>
-          <sphereGeometry args={[0.032, 12, 12]} />
+          <sphereGeometry args={[0.032, 10, 10]} />
           <meshStandardMaterial
             color="#ff3b30"
             emissive="#ff2a1f"
@@ -546,93 +543,61 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
 };
 
 /**
- * Boom-arm Condenser Microphone clamped on the far-left desk edge,
- * sweeping inward so it sits cleanly below the host's mouth without blocking lip-sync.
+ * Matte-black SM7B broadcast condenser mic on far-left dual-tube boom arm,
+ * routing across lower-left so lip-sync mouth and chest logo remain clear.
  */
 const StudioMicrophone3D: React.FC<{
   readonly audioVolume: number;
   readonly isQuiz: boolean;
 }> = ({ audioVolume, isQuiz }) => {
   const ledColor = isQuiz ? "#a78bfa" : "#34f5b5";
-  const ledIntensity = 0.9 + audioVolume * 2.2;
+  const ledIntensity = 0.8 + audioVolume * 1.8;
 
   return (
-    <group position={[-1.92, 0.78, -0.02]}>
-      {/* Far-left heavy desk clamp base */}
+    <group position={[-2.08, 0.78, 0.14]}>
+      {/* Desk clamp */}
       <mesh position={[0, 0.03, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.14, 0.06, 0.14]} />
-        <meshStandardMaterial
-          color="#171b22"
-          metalness={0.65}
-          roughness={0.35}
-        />
+        <boxGeometry args={[0.13, 0.06, 0.13]} />
+        <meshStandardMaterial color="#14171d" metalness={0.6} roughness={0.38} />
       </mesh>
-      {/* Lower boom arm staying low on left */}
-      <mesh
-        position={[0.38, 0.14, 0.02]}
-        rotation={[0.04, 0, -1.28]}
-        castShadow
-      >
-        <cylinderGeometry args={[0.015, 0.017, 0.82, 10]} />
-        <meshStandardMaterial
-          color="#20252f"
-          metalness={0.6}
-          roughness={0.38}
-        />
+      {/* Lower boom arm */}
+      <mesh position={[0.42, 0.14, -0.02]} rotation={[0.04, 0, -1.26]} castShadow>
+        <cylinderGeometry args={[0.015, 0.017, 0.86, 10]} />
+        <meshStandardMaterial color="#1b1f27" metalness={0.6} roughness={0.38} />
       </mesh>
-      {/* Articulated elbow joint */}
-      <mesh position={[0.76, 0.24, 0.04]} castShadow>
+      {/* Elbow joint */}
+      <mesh position={[0.82, 0.24, -0.04]} castShadow>
         <sphereGeometry args={[0.026, 12, 12]} />
-        <meshStandardMaterial
-          color="#38404f"
-          metalness={0.75}
-          roughness={0.3}
-        />
+        <meshStandardMaterial color="#303642" metalness={0.75} roughness={0.3} />
       </mesh>
-      {/* Upper boom arm angling upward from below so chest logo stays readable */}
-      <mesh
-        position={[1.08, 0.27, -0.08]}
-        rotation={[0.35, 0, -1.44]}
-        castShadow
-      >
-        <cylinderGeometry args={[0.013, 0.014, 0.66, 10]} />
-        <meshStandardMaterial
-          color="#20252f"
-          metalness={0.6}
-          roughness={0.38}
-        />
+      {/* Upper boom arm */}
+      <mesh position={[1.18, 0.27, -0.14]} rotation={[0.3, 0, -1.44]} castShadow>
+        <cylinderGeometry args={[0.013, 0.014, 0.72, 10]} />
+        <meshStandardMaterial color="#1b1f27" metalness={0.6} roughness={0.38} />
       </mesh>
 
-      {/* Broadcast Condenser Mic Capsule positioned safely below host's mouth */}
-      <group position={[1.41, 0.31, -0.2]} rotation={[0.28, 0.45, -0.35]}>
+      {/* SM7B Broadcast Mic Capsule */}
+      <group position={[1.54, 0.29, -0.24]} rotation={[0.3, 0.45, -0.35]}>
         <mesh position={[0, -0.02, 0]} castShadow>
           <torusGeometry args={[0.064, 0.009, 10, 18, Math.PI]} />
-          <meshStandardMaterial
-            color="#2b313d"
-            metalness={0.75}
-            roughness={0.32}
-          />
+          <meshStandardMaterial color="#252b36" metalness={0.75} roughness={0.32} />
         </mesh>
         <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
           <cylinderGeometry args={[0.046, 0.044, 0.17, 20]} />
-          <meshStandardMaterial
-            color="#1c2028"
-            metalness={0.65}
-            roughness={0.36}
-          />
+          <meshStandardMaterial color="#181b22" metalness={0.65} roughness={0.36} />
         </mesh>
         <mesh position={[0, 0, 0.05]}>
-          <torusGeometry args={[0.049, 0.006, 10, 24]} />
+          <torusGeometry args={[0.049, 0.0055, 8, 22]} />
           <meshStandardMaterial
             color={ledColor}
             emissive={ledColor}
             emissiveIntensity={ledIntensity}
-            roughness={0.2}
+            roughness={0.25}
           />
         </mesh>
         <mesh position={[0, 0, 0.13]} rotation={[Math.PI / 2, 0, 0]} castShadow>
           <capsuleGeometry args={[0.048, 0.068, 10, 18]} />
-          <meshStandardMaterial color="#14171d" roughness={0.92} />
+          <meshStandardMaterial color="#12151a" roughness={0.92} />
         </mesh>
       </group>
     </group>
@@ -640,10 +605,8 @@ const StudioMicrophone3D: React.FC<{
 };
 
 /**
- * Main True 3D JungGo Podcast Studio Scene.
- * Framed with the host and desk props on the left third, warm dark-wood slatted wall,
- * recessed LED shelves with bonsai/ceramics/figures, balanced neon wall sign,
- * and Tokyo Tower skyline through the right window.
+ * Main True 3D JungGo Podcast Studio Scene matching `public/images/studio-reference.jpg` A-to-Z.
+ * Uses 512x512 shadows and memoized shared geometries/materials for fast T4 GPU rendering.
  * Strictly driven by useCurrentFrame() — ZERO useFrame().
  */
 export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
@@ -663,27 +626,30 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
       neon: createNeonSignTexture(),
       mug: createMugTexture(),
       book: createBookCoverTexture(),
+      studyBooks: createStudyBookStackTexture(),
+      youtubePlaque: createYouTubePlaqueTexture(),
       laptop: createLaptopScreenTexture(),
-      scriptNotes: createScriptNotesTexture(),
+      laptopLidLogo: createLaptopLidLogoTexture(),
+      fujiLamp: createFujiLampTexture(),
     }),
     [],
   );
 
   const sharedScene = useMemo(
     () => ({
-      slatGeo: new THREE.BoxGeometry(0.075, 3.6, 0.055),
+      slatGeo: new THREE.BoxGeometry(0.088, 3.6, 0.06),
       deskLegGeo: new THREE.BoxGeometry(0.08, 0.7, 0.08),
-      slatMat: new THREE.MeshStandardMaterial({ color: "#462e1e", roughness: 0.72 }),
+      slatMat: new THREE.MeshStandardMaterial({ color: "#744222", roughness: 0.68 }),
       wallMat: new THREE.MeshStandardMaterial({ map: textures.wall, roughness: 0.84 }),
-      woodMat: new THREE.MeshStandardMaterial({ map: textures.wood, roughness: 0.6 }),
-      shelfBackMat: new THREE.MeshStandardMaterial({ color: "#382417", roughness: 0.8 }),
+      woodMat: new THREE.MeshStandardMaterial({ map: textures.wood, roughness: 0.56 }),
+      shelfBackMat: new THREE.MeshStandardMaterial({ color: "#3d2211", roughness: 0.78 }),
       windowFrameMat: new THREE.MeshStandardMaterial({
-        color: "#181c24",
+        color: "#151a24",
         metalness: 0.55,
         roughness: 0.42,
       }),
       windowMullionMat: new THREE.MeshStandardMaterial({
-        color: "#1a1f2a",
+        color: "#181e2b",
         metalness: 0.5,
         roughness: 0.45,
       }),
@@ -703,29 +669,29 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
     };
   }, [sharedScene, textures]);
 
-  const keyIntensity = interpolate(quizFactor, [0, 1], [1.75, 0.95]);
-  const rimIntensity = interpolate(quizFactor, [0, 1], [1.35, 2.35]);
-  const ambientIntensity = interpolate(quizFactor, [0, 1], [0.46, 0.28]);
+  const keyIntensity = interpolate(quizFactor, [0, 1], [1.85, 1.05]);
+  const rimIntensity = interpolate(quizFactor, [0, 1], [1.45, 2.35]);
+  const ambientIntensity = interpolate(quizFactor, [0, 1], [0.48, 0.3]);
   const neonGlowIntensity =
-    0.85 + audio.volume * 0.28 + Math.sin(timeSec * 4.5) * 0.03;
+    0.92 + audio.volume * 0.24 + Math.sin(timeSec * 4.5) * 0.03;
 
   return (
     <group>
-      {/* ================= 3-POINT STUDIO LIGHTING ================= */}
-      <ambientLight intensity={ambientIntensity} color="#d4dcf7" />
+      {/* ================= WARM COZY 3-POINT STUDIO LIGHTING ================= */}
+      <ambientLight intensity={ambientIntensity} color="#ffd9b3" />
       <hemisphereLight
         args={[
-          "#7a96d4",
-          "#402b1c",
-          interpolate(quizFactor, [0, 1], [0.48, 0.28]),
+          "#6b8ee8",
+          "#4a2b16",
+          interpolate(quizFactor, [0, 1], [0.48, 0.3]),
         ]}
       />
 
-      {/* 1. Warm Studio Key Light (512 shadow map for fast T4 GPU rendering) */}
+      {/* 1. Warm Amber Key Light (512x512 shadows for fast T4 GPU rendering) */}
       <directionalLight
         position={[-2.2, 3.6, 2.8]}
         intensity={keyIntensity}
-        color="#ffe2bf"
+        color="#ffd7a3"
         castShadow
         shadow-mapSize-width={512}
         shadow-mapSize-height={512}
@@ -738,69 +704,61 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
         shadow-bias={-0.0005}
       />
 
-      {/* 2. Cool Night Blue Rim Light from Tokyo Window */}
+      {/* 2. Cool Royal-Blue Night Rim Light from Tokyo Window */}
       <directionalLight
-        position={[4.5, 2.5, -1.5]}
+        position={[4.6, 2.5, -1.5]}
         intensity={rimIntensity}
-        color={quizFactor > 0.35 ? "#9c6bff" : "#7ca8ff"}
+        color={quizFactor > 0.35 ? "#9c6bff" : "#5e8eff"}
       />
       <pointLight
-        position={[2.4, 2.1, -1.4]}
-        intensity={1.0 + quizFactor * 0.8}
-        color={quizFactor > 0.35 ? "#8b5cf6" : "#6c8cff"}
+        position={[2.6, 2.1, -1.4]}
+        intensity={1.15 + quizFactor * 0.7}
+        color={quizFactor > 0.35 ? "#8b5cf6" : "#5e8eff"}
         distance={7.5}
         decay={2}
       />
 
-      {/* 3. Warm Shelf & Host Rim Accent Lights */}
+      {/* 3. Warm Amber Shelf & Host Rim Lights */}
       <pointLight
-        position={[-2.25, 1.85, -1.25]}
-        intensity={interpolate(quizFactor, [0, 1], [1.4, 0.7])}
-        color="#ffb96e"
-        distance={5.0}
+        position={[-2.2, 1.85, -1.25]}
+        intensity={interpolate(quizFactor, [0, 1], [1.75, 0.9])}
+        color="#ffb454"
+        distance={5.2}
         decay={2}
       />
       <pointLight
-        position={[0.45, 1.85, -1.25]}
-        intensity={interpolate(quizFactor, [0, 1], [1.15, 0.6])}
-        color="#ffb96e"
+        position={[-0.4, 2.2, -1.2]}
+        intensity={1.25}
+        color="#ffbd6b"
         distance={4.5}
-        decay={2}
-      />
-      <pointLight
-        position={[-0.65, 2.32, -1.25]}
-        intensity={0.85}
-        color="#e6efff"
-        distance={3.2}
         decay={2}
       />
 
       {/* ================= STUDIO ROOM ARCHITECTURE ================= */}
-      {/* Studio Floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[14, 12]} />
-        <meshStandardMaterial color="#18151a" roughness={0.85} />
+        <meshStandardMaterial color="#18120e" roughness={0.85} />
       </mesh>
 
-      {/* Dark-Wood Back Studio Wall (Left/Center) + Window Framing Strips */}
-      <mesh position={[-1.4, 1.95, -2.15]} material={sharedScene.wallMat} receiveShadow>
-        <boxGeometry args={[5.8, 4.1, 0.16]} />
+      {/* Warm Golden-Walnut Back Wall & Window Framing */}
+      <mesh position={[-0.75, 1.95, -2.15]} material={sharedScene.wallMat} receiveShadow>
+        <boxGeometry args={[7.1, 4.1, 0.16]} />
       </mesh>
-      <mesh position={[3.05, 3.62, -2.15]} material={sharedScene.wallMat} receiveShadow>
-        <boxGeometry args={[3.5, 0.76, 0.16]} />
+      <mesh position={[3.85, 3.62, -2.15]} material={sharedScene.wallMat} receiveShadow>
+        <boxGeometry args={[4.2, 0.76, 0.16]} />
       </mesh>
-      <mesh position={[3.05, 0.32, -2.15]} material={sharedScene.wallMat} receiveShadow>
-        <boxGeometry args={[3.5, 0.68, 0.16]} />
+      <mesh position={[3.85, 0.32, -2.15]} material={sharedScene.wallMat} receiveShadow>
+        <boxGeometry args={[4.2, 0.68, 0.16]} />
       </mesh>
-      <mesh position={[5.05, 1.95, -2.15]} material={sharedScene.wallMat} receiveShadow>
+      <mesh position={[6.15, 1.95, -2.15]} material={sharedScene.wallMat} receiveShadow>
         <boxGeometry args={[0.6, 4.1, 0.16]} />
       </mesh>
 
-      {/* Dark-Wood Vertical Acoustic Slats behind Host & Neon Sign */}
-      {Array.from({ length: 20 }, (_, idx) => (
+      {/* Warm Golden-Walnut Vertical Slats behind Host & Neon Sign */}
+      {Array.from({ length: 22 }, (_, idx) => (
         <mesh
           key={idx}
-          position={[-2.18 + idx * 0.155, 1.95, -2.04]}
+          position={[-1.78 + idx * 0.165, 1.95, -2.04]}
           geometry={sharedScene.slatGeo}
           material={sharedScene.slatMat}
           castShadow
@@ -808,41 +766,39 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
         />
       ))}
 
-      {/* Warm Ceiling Downlight Pucks */}
-      {[-1.55, -0.75, 0.15].map((lx, idx) => (
-        <mesh key={idx} position={[lx, 3.24, -1.9]}>
-          <cylinderGeometry args={[0.06, 0.06, 0.02, 12]} />
-          <meshStandardMaterial
-            color="#fff2d6"
-            emissive="#ffcf87"
-            emissiveIntensity={1.5}
-          />
-        </mesh>
-      ))}
+      {/* Warm Ambient Top Ceiling Strip Glow */}
+      <mesh position={[-0.45, 3.25, -1.96]}>
+        <boxGeometry args={[3.4, 0.03, 0.04]} />
+        <meshStandardMaterial
+          color="#ffe3b3"
+          emissive="#ffba5c"
+          emissiveIntensity={1.5}
+        />
+      </mesh>
 
-      {/* ================= LEFT RECESSED WARM LED SHELVES ================= */}
-      <group position={[-2.42, 1.52, -1.86]}>
+      {/* ================= LEFT WARM-LED BOOKSHELF (BONSAI, YOUTUBE PLAQUE, BOOKS) ================= */}
+      <group position={[-2.38, 1.52, -1.84]}>
         <mesh position={[0, 0, -0.14]} material={sharedScene.shelfBackMat} receiveShadow>
-          <boxGeometry args={[1.05, 2.3, 0.05]} />
+          <boxGeometry args={[1.22, 2.32, 0.05]} />
         </mesh>
-        {[-0.85, -0.18, 0.48, 1.08].map((sy, idx) => (
+        {[-0.86, -0.18, 0.48, 1.1].map((sy, idx) => (
           <group key={idx} position={[0, sy, 0]}>
             <mesh material={sharedScene.woodMat} castShadow receiveShadow>
-              <boxGeometry args={[1.04, 0.05, 0.34]} />
+              <boxGeometry args={[1.2, 0.05, 0.36]} />
             </mesh>
             {idx > 0 && (
               <mesh position={[0, -0.028, 0.08]}>
-                <boxGeometry args={[0.94, 0.012, 0.016]} />
+                <boxGeometry args={[1.08, 0.014, 0.018]} />
                 <meshStandardMaterial
-                  color="#ffd599"
-                  emissive="#ffba68"
-                  emissiveIntensity={1.45 - quizFactor * 0.55}
+                  color="#ffd99e"
+                  emissive="#ffbe5c"
+                  emissiveIntensity={1.65 - quizFactor * 0.5}
                 />
               </mesh>
             )}
           </group>
         ))}
-        {[-0.5, 0.5].map((sx, idx) => (
+        {[-0.58, 0.58].map((sx, idx) => (
           <mesh
             key={idx}
             position={[sx, 0.12, 0]}
@@ -850,93 +806,71 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
             castShadow
             receiveShadow
           >
-            <boxGeometry args={[0.05, 2.05, 0.34]} />
+            <boxGeometry args={[0.05, 2.08, 0.36]} />
           </mesh>
         ))}
 
-        {/* Top Shelf: 3D Bonsai Tree */}
-        <BonsaiTree3D position={[0.02, 0.505, 0.02]} scale={1.18} />
+        {/* Top Shelf Left: Sculpted 3D Bonsai Tree */}
+        <BonsaiTree3D position={[-0.24, 0.505, 0.02]} scale={1.15} potStyle="tray" />
 
-        {/* Middle Shelf: Japanese Ceramics & Teapot */}
-        <JapaneseCeramics3D position={[0, -0.155, 0.02]} />
+        {/* Top Shelf Right: Silver YouTube Play Button Award Plaque */}
+        <group position={[0.28, 0.72, -0.02]} rotation={[-0.08, -0.18, 0]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.3, 0.38, 0.026]} />
+            <meshStandardMaterial
+              color="#c8cfd8"
+              metalness={0.65}
+              roughness={0.28}
+            />
+          </mesh>
+          <mesh position={[0, 0, 0.015]}>
+            <planeGeometry args={[0.28, 0.36]} />
+            <meshStandardMaterial
+              map={textures.youtubePlaque}
+              metalness={0.45}
+              roughness={0.32}
+            />
+          </mesh>
+        </group>
 
-        {/* Bottom Shelf: Japanese Books + Hero Book */}
-        <mesh position={[0.2, -0.58, 0.02]} rotation={[0, 0.15, 0]} castShadow>
-          <boxGeometry args={[0.22, 0.46, 0.1]} />
-          <meshStandardMaterial map={textures.book} roughness={0.65} />
+        {/* Top-Right Cascading Hanging Ivy */}
+        <HangingIvy3D position={[0.56, 1.02, 0.14]} />
+
+        {/* Middle Shelf: Labeled JLPT / Japanese Grammar / Vocabulary / Kanji / Conversation Stack */}
+        <mesh position={[0.14, 0.03, 0.02]} castShadow receiveShadow>
+          <boxGeometry args={[0.54, 0.37, 0.24]} />
+          <meshStandardMaterial map={textures.studyBooks} roughness={0.65} />
         </mesh>
-        <mesh position={[-0.24, -0.61, 0.01]} castShadow>
-          <boxGeometry args={[0.075, 0.42, 0.22]} />
-          <meshStandardMaterial color="#b83535" roughness={0.7} />
+        {/* Two vertical colorful books on left of middle shelf */}
+        <mesh position={[-0.42, 0.05, 0.02]} castShadow>
+          <boxGeometry args={[0.075, 0.41, 0.22]} />
+          <meshStandardMaterial color="#e04836" roughness={0.68} />
         </mesh>
-        <mesh position={[-0.15, -0.63, 0.01]} castShadow>
-          <boxGeometry args={[0.065, 0.38, 0.22]} />
-          <meshStandardMaterial color="#ebe2cf" roughness={0.75} />
+        <mesh position={[-0.33, 0.03, 0.02]} castShadow>
+          <boxGeometry args={[0.07, 0.38, 0.22]} />
+          <meshStandardMaterial color="#f59e0b" roughness={0.68} />
         </mesh>
-        <mesh position={[-0.06, -0.62, 0.01]} castShadow>
+        <mesh position={[-0.24, 0.04, 0.02]} castShadow>
           <boxGeometry args={[0.07, 0.4, 0.22]} />
-          <meshStandardMaterial color="#254c73" roughness={0.72} />
+          <meshStandardMaterial color="#1d5b9c" roughness={0.68} />
         </mesh>
-      </group>
 
-      {/* ================= RIGHT RECESSED WARM LED SHELVES ================= */}
-      <group position={[0.42, 1.52, -1.86]}>
-        <mesh position={[0, 0, -0.14]} material={sharedScene.shelfBackMat} receiveShadow>
-          <boxGeometry args={[0.78, 2.15, 0.05]} />
-        </mesh>
-        {[-0.78, -0.12, 0.52, 1.05].map((sy, idx) => (
-          <group key={idx} position={[0, sy, 0]}>
-            <mesh material={sharedScene.woodMat} castShadow receiveShadow>
-              <boxGeometry args={[0.76, 0.048, 0.3]} />
-            </mesh>
-            {idx > 0 && (
-              <mesh position={[0, -0.026, 0.07]}>
-                <boxGeometry args={[0.68, 0.012, 0.015]} />
-                <meshStandardMaterial
-                  color="#ffd599"
-                  emissive="#ffba68"
-                  emissiveIntensity={1.4 - quizFactor * 0.55}
-                />
-              </mesh>
-            )}
-          </group>
-        ))}
-        {[-0.36, 0.36].map((sx, idx) => (
-          <mesh
-            key={idx}
-            position={[sx, 0.14, 0]}
-            material={sharedScene.woodMat}
-            castShadow
-            receiveShadow
-          >
-            <boxGeometry args={[0.045, 1.9, 0.3]} />
+        {/* Bottom Shelf: Matte-black Studio Camera Prop */}
+        <group position={[-0.22, -0.72, 0.04]} rotation={[0, 0.35, 0]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.18, 0.12, 0.11]} />
+            <meshStandardMaterial color="#161920" roughness={0.45} />
           </mesh>
-        ))}
-
-        {/* Top Shelf: Cute Collectible Mini Figures */}
-        <MiniFigures3D position={[0, 0.545, 0.02]} />
-
-        {/* Middle Shelf: Japanese Reference Books */}
-        <mesh position={[-0.14, 0.09, 0.01]} castShadow>
-          <boxGeometry args={[0.07, 0.38, 0.2]} />
-          <meshStandardMaterial color="#1f6642" roughness={0.7} />
-        </mesh>
-        <mesh position={[-0.05, 0.07, 0.01]} castShadow>
-          <boxGeometry args={[0.06, 0.34, 0.2]} />
-          <meshStandardMaterial color="#e5dac6" roughness={0.75} />
-        </mesh>
-        <mesh position={[0.04, 0.08, 0.01]} rotation={[0, 0, -0.06]} castShadow>
-          <boxGeometry args={[0.065, 0.36, 0.2]} />
-          <meshStandardMaterial color="#a63434" roughness={0.72} />
-        </mesh>
-
-        {/* Bottom Shelf: Potted Mini Plant */}
-        <PottedPlant position={[0.05, -0.095, 0.02]} scale={0.75} />
+          <mesh position={[0, 0, 0.08]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.045, 0.048, 0.08, 16]} />
+            <meshStandardMaterial color="#12151a" metalness={0.65} roughness={0.3} />
+          </mesh>
+        </group>
       </group>
 
-      {/* ================= BALANCED "JungGo PODCAST STUDIO" NEON SIGN ================= */}
-      <mesh position={[-0.82, 2.2, -1.96]}>
-        <planeGeometry args={[1.95, 0.98]} />
+      {/* ================= CENTERED "JungGo PODCAST STUDIO" NEON SIGN ================= */}
+      <mesh position={[-0.45, 2.26, -1.96]}>
+        <planeGeometry args={[2.12, 1.06]} />
         <meshStandardMaterial
           map={textures.neon}
           emissiveMap={textures.neon}
@@ -949,37 +883,39 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
         />
       </mesh>
 
-      {/* ================= FLOOR-TO-CEILING WINDOW & TOKYO SKYLINE ================= */}
-      <group position={[3.15, 1.92, -2.14]}>
+      {/* Back-Center Indoor Plant tucked beside the window */}
+      <PottedPlant position={[0.52, 0.85, -1.62]} scale={1.15} potColor="#24272e" />
+
+      {/* ================= RIGHT STUDIO WINDOW & TOKYO NIGHT SKYLINE ================= */}
+      <group position={[3.35, 1.92, -2.14]}>
         <mesh position={[0, 1.34, 0]} material={sharedScene.windowFrameMat}>
-          <boxGeometry args={[4.35, 0.085, 0.22]} />
+          <boxGeometry args={[4.55, 0.085, 0.22]} />
         </mesh>
         <mesh position={[0, -1.34, 0]} material={sharedScene.woodMat}>
-          <boxGeometry args={[4.35, 0.095, 0.28]} />
+          <boxGeometry args={[4.55, 0.095, 0.28]} />
         </mesh>
-        <mesh position={[-2.12, 0, 0]} material={sharedScene.windowFrameMat}>
+        <mesh position={[-2.22, 0, 0]} material={sharedScene.windowFrameMat}>
           <boxGeometry args={[0.09, 2.75, 0.22]} />
         </mesh>
-        <mesh position={[2.12, 0, 0]} material={sharedScene.windowFrameMat}>
+        <mesh position={[2.22, 0, 0]} material={sharedScene.windowFrameMat}>
           <boxGeometry args={[0.09, 2.75, 0.22]} />
         </mesh>
-        {/* Window mullions */}
         <mesh position={[-0.75, 0, 0]} material={sharedScene.windowMullionMat}>
           <boxGeometry args={[0.045, 2.66, 0.12]} />
         </mesh>
-        <mesh position={[0.62, 0, 0]} material={sharedScene.windowMullionMat}>
+        <mesh position={[0.68, 0, 0]} material={sharedScene.windowMullionMat}>
           <boxGeometry args={[0.045, 2.66, 0.12]} />
         </mesh>
         <mesh position={[0, 0.45, 0]} material={sharedScene.windowMullionMat}>
-          <boxGeometry args={[4.22, 0.04, 0.12]} />
+          <boxGeometry args={[4.42, 0.04, 0.12]} />
         </mesh>
-        {/* Lightweight Subtle Glass Pane */}
+        {/* Lightweight glass pane */}
         <mesh position={[0, 0, 0]}>
-          <planeGeometry args={[4.2, 2.62]} />
+          <planeGeometry args={[4.4, 2.62]} />
           <meshStandardMaterial
-            color="#a8c8ff"
+            color="#98bfff"
             transparent
-            opacity={0.05}
+            opacity={0.045}
             roughness={0.12}
             metalness={0.15}
             depthWrite={false}
@@ -987,25 +923,24 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
         </mesh>
       </group>
 
-      {/* Night Tokyo Skyline + Prominent Tokyo Tower Outside */}
       <TokyoSkylineBackdrop timeSec={timeSec} />
 
-      {/* ================= FOREGROUND WOODEN PODCAST DESK & PROPS ================= */}
+      {/* ================= FOREGROUND GOLDEN-OAK DESK & PROPS ================= */}
       <group>
-        {/* Main Textured Walnut/Oak Desk Tabletop */}
+        {/* Main Golden-Oak Desk Tabletop */}
         <mesh position={[0, 0.735, 0.16]} castShadow receiveShadow>
-          <boxGeometry args={[4.85, 0.09, 1.48]} />
+          <boxGeometry args={[5.15, 0.09, 1.5]} />
           <meshStandardMaterial
             map={textures.wood}
-            roughness={0.54}
+            roughness={0.5}
             metalness={0.05}
           />
         </mesh>
         {[
-          [-2.08, 0.35, -0.35],
-          [2.08, 0.35, -0.35],
-          [-2.08, 0.35, 0.65],
-          [2.08, 0.35, 0.65],
+          [-2.18, 0.35, -0.35],
+          [2.18, 0.35, -0.35],
+          [-2.18, 0.35, 0.65],
+          [2.18, 0.35, 0.65],
         ].map(([lx, ly, lz], idx) => (
           <mesh
             key={idx}
@@ -1016,53 +951,50 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
           />
         ))}
 
-        {/* Far-Left Clamped Boom-Arm Condenser Microphone */}
-        <StudioMicrophone3D audioVolume={audio.volume} isQuiz={isQuiz} />
+        {/* Dark Charcoal Leather Desk Mat under Laptop & Host Hands */}
+        <mesh position={[-0.18, 0.784, 0.14]} receiveShadow>
+          <boxGeometry args={[2.28, 0.008, 0.82]} />
+          <meshStandardMaterial color="#1c1f26" roughness={0.78} />
+        </mesh>
 
-        {/* JungGo Branded Ceramic Mug on Left of Desk */}
-        <group position={[-1.48, 0.78, 0.22]} rotation={[0, -0.25, 0]}>
-          <mesh position={[0, 0.092, 0]} castShadow receiveShadow>
+        {/* Far-Left White Ceramic Potted Leafy Plant */}
+        <PottedPlant position={[-1.88, 0.78, 0.46]} scale={1.18} potColor="#eceae4" />
+
+        {/* White Ceramic "JungGo" Mug on Coaster (emblem facing camera) */}
+        <group position={[-1.44, 0.78, 0.4]} rotation={[0, Math.PI - 0.18, 0]}>
+          <mesh position={[0, 0.004, 0]} receiveShadow>
+            <cylinderGeometry args={[0.095, 0.095, 0.008, 20]} />
+            <meshStandardMaterial color="#181b22" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 0.095, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[0.076, 0.07, 0.185, 24]} />
             <meshStandardMaterial map={textures.mug} roughness={0.22} />
           </mesh>
-          <mesh position={[0, 0.172, 0]}>
+          <mesh position={[0, 0.175, 0]}>
             <cylinderGeometry args={[0.068, 0.068, 0.015, 20]} />
             <meshStandardMaterial color="#361c0f" roughness={0.2} />
           </mesh>
-          <mesh position={[-0.08, 0.092, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <mesh position={[-0.08, 0.095, 0]} rotation={[0, 0, Math.PI / 2]}>
             <torusGeometry args={[0.046, 0.012, 10, 16, Math.PI]} />
             <meshStandardMaterial color="#f2efe9" roughness={0.24} />
           </mesh>
         </group>
 
-        {/* Script Notes on Desk (left-center & right-back) */}
-        <group position={[-0.92, 0.782, 0.28]} rotation={[0, 0.16, 0]}>
-          <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-            <planeGeometry args={[0.26, 0.34]} />
-            <meshStandardMaterial map={textures.scriptNotes} roughness={0.85} />
-          </mesh>
-          <mesh
-            position={[0.03, 0.003, -0.02]}
-            rotation={[-Math.PI / 2, 0, -0.14]}
-            receiveShadow
-          >
-            <planeGeometry args={[0.26, 0.34]} />
-            <meshStandardMaterial map={textures.scriptNotes} roughness={0.85} />
-          </mesh>
-        </group>
+        {/* Far-Left Clamped SM7B Boom-Arm Microphone */}
+        <StudioMicrophone3D audioVolume={audio.volume} isQuiz={isQuiz} />
 
-        {/* Open Sleek Dark-Gray Laptop angled toward Host */}
-        <group position={[0.24, 0.78, 0.16]} rotation={[0, -0.44, 0]}>
+        {/* Open Space-Gray Laptop angled toward Host, JungGo Mt. Fuji Lid facing Camera */}
+        <group position={[0.08, 0.786, 0.16]} rotation={[0, Math.PI - 0.34, 0]}>
           <mesh position={[0, 0.012, 0]} castShadow receiveShadow>
-            <boxGeometry args={[0.7, 0.022, 0.46]} />
+            <boxGeometry args={[0.72, 0.022, 0.46]} />
             <meshStandardMaterial
-              color="#636b78"
+              color="#636a76"
               metalness={0.78}
               roughness={0.28}
             />
           </mesh>
           <mesh position={[0, 0.025, -0.04]}>
-            <boxGeometry args={[0.58, 0.004, 0.21]} />
+            <boxGeometry args={[0.6, 0.004, 0.21]} />
             <meshStandardMaterial color="#181c24" roughness={0.65} />
           </mesh>
           <mesh position={[0, 0.024, 0.14]}>
@@ -1074,16 +1006,17 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
             />
           </mesh>
           <group position={[0, 0.024, -0.225]} rotation={[-0.28, 0, 0]}>
-            <mesh position={[0, 0.22, 0]} castShadow>
-              <boxGeometry args={[0.7, 0.44, 0.014]} />
+            <mesh position={[0, 0.225, 0]} castShadow>
+              <boxGeometry args={[0.72, 0.45, 0.014]} />
               <meshStandardMaterial
                 color="#6a7280"
                 metalness={0.8}
                 roughness={0.25}
               />
             </mesh>
-            <mesh position={[0, 0.22, 0.009]}>
-              <planeGeometry args={[0.65, 0.39]} />
+            {/* Inner DAW screen facing Host */}
+            <mesh position={[0, 0.225, 0.009]}>
+              <planeGeometry args={[0.67, 0.4]} />
               <meshStandardMaterial
                 map={textures.laptop}
                 emissiveMap={textures.laptop}
@@ -1091,69 +1024,33 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
                 emissiveIntensity={0.6}
               />
             </mesh>
-            <mesh position={[0, 0.23, -0.009]} rotation={[0, Math.PI, 0]}>
-              <circleGeometry args={[0.042, 22]} />
+            {/* Outer Lid JungGo Red Sun + Mt. Fuji Emblem facing Camera */}
+            <mesh position={[0, 0.225, -0.009]} rotation={[0, Math.PI, 0]}>
+              <planeGeometry args={[0.7, 0.43]} />
               <meshStandardMaterial
-                color="#48f0b2"
-                emissive="#22e3a4"
-                emissiveIntensity={0.5 + audio.volume * 0.4}
+                map={textures.laptopLidLogo}
+                metalness={0.55}
+                roughness={0.35}
               />
             </mesh>
           </group>
         </group>
 
-        {/* Mini Tabletop Camera on Tripod on Right Desk */}
-        <group position={[0.92, 0.78, 0.32]} rotation={[0, -0.45, 0]}>
-          {/* Tripod legs */}
-          {[0, 2.09, 4.18].map((ang, idx) => (
-            <mesh
-              key={idx}
-              position={[Math.cos(ang) * 0.06, 0.065, Math.sin(ang) * 0.06]}
-              rotation={[Math.sin(ang) * 0.42, 0, -Math.cos(ang) * 0.42]}
-              castShadow
-            >
-              <cylinderGeometry args={[0.008, 0.006, 0.16, 8]} />
-              <meshStandardMaterial color="#1b1f26" metalness={0.5} roughness={0.4} />
-            </mesh>
-          ))}
-          {/* Camera body */}
-          <mesh position={[0, 0.165, 0]} castShadow>
-            <boxGeometry args={[0.14, 0.09, 0.075]} />
-            <meshStandardMaterial color="#181c22" roughness={0.45} />
-          </mesh>
-          {/* Camera lens pointing toward host */}
-          <mesh
-            position={[0, 0.165, -0.05]}
-            rotation={[Math.PI / 2, 0, 0]}
-            castShadow
-          >
-            <cylinderGeometry args={[0.032, 0.035, 0.045, 16]} />
-            <meshStandardMaterial color="#101318" metalness={0.7} roughness={0.25} />
-          </mesh>
-          {/* Rear LCD preview screen facing viewer */}
-          <mesh position={[0, 0.165, 0.04]}>
-            <planeGeometry args={[0.095, 0.056]} />
-            <meshStandardMaterial
-              color="#1e2c3a"
-              emissive="#25544a"
-              emissiveIntensity={0.65}
-            />
-          </mesh>
-          {/* Tiny red REC indicator */}
-          <mesh position={[0.052, 0.195, 0.04]}>
-            <sphereGeometry args={[0.005, 8, 8]} />
-            <meshStandardMaterial color="#ff3b30" emissive="#ff3b30" emissiveIntensity={1.6} />
-          </mesh>
-        </group>
+        {/* Foreground Right Mini Bonsai Tree in White Ceramic Pot */}
+        <BonsaiTree3D
+          position={[1.42, 0.78, 0.44]}
+          scale={1.08}
+          potStyle="whiteRound"
+        />
 
-        {/* Indoor Studio Plants */}
-        <PottedPlant position={[-2.48, 0.0, -0.35]} scale={1.95} />
-        <PottedPlant position={[-2.25, 0.38, 0.78]} scale={1.45} />
-        <PottedPlant position={[1.45, 0.78, -0.52]} scale={1.25} />
-        <PottedPlant position={[2.15, 0.78, 0.42]} scale={1.35} />
+        {/* Warm Glowing Mt. Fuji Shoji Desk Lantern on Far Right */}
+        <FujiShojiLamp3D
+          position={[1.95, 0.78, 0.46]}
+          texture={textures.fujiLamp}
+        />
       </group>
 
-      {/* ================= PIXAR-INSPIRED NINJA HOST ================= */}
+      {/* ================= PIXAR-CHIBI NINJA HOST ================= */}
       <NinjaHost3D sections={sections} subtitles={subtitles} />
     </group>
   );
