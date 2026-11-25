@@ -44,6 +44,7 @@ export const JungGoPodcastStudio: React.FC<JungGoPodcastProps> = ({
   const { width, height } = useVideoConfig();
   const { isRendering } = useRemotionEnvironment();
   const resolvedAudio = resolveAudioUrl(audioSrc);
+  const studioMode = ACTIVE_EPISODE.studioMode ?? "solo";
 
   return (
     <PodcastAudioProvider
@@ -67,10 +68,12 @@ export const JungGoPodcastStudio: React.FC<JungGoPodcastProps> = ({
           <CameraRig
             sections={ACTIVE_EPISODE.sections}
             subtitles={ACTIVE_EPISODE.subtitles}
+            studioMode={studioMode}
           />
           <Studio3D
             sections={ACTIVE_EPISODE.sections}
             subtitles={ACTIVE_EPISODE.subtitles}
+            studioMode={studioMode}
           />
         </ThreeCanvas>
 
@@ -78,6 +81,7 @@ export const JungGoPodcastStudio: React.FC<JungGoPodcastProps> = ({
           episodeNumber={ACTIVE_EPISODE.episodeNumber}
           episodeTitle={episodeTitle || ACTIVE_EPISODE.title}
           jlptLevel={ACTIVE_EPISODE.jlptLevel}
+          studioMode={studioMode}
           sections={ACTIVE_EPISODE.sections}
           subtitles={ACTIVE_EPISODE.subtitles}
         />

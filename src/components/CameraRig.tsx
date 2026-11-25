@@ -4,6 +4,7 @@ import { useThree } from "@react-three/fiber";
 import { Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import {
   EpisodeSection,
+  StudioMode,
   SubtitleCue,
   getActiveSubtitle,
   isGuestSpeaker,
@@ -12,6 +13,7 @@ import {
 type CameraRigProps = {
   readonly sections: readonly EpisodeSection[];
   readonly subtitles: readonly SubtitleCue[];
+  readonly studioMode?: StudioMode;
 };
 
 type CameraPose = {
@@ -145,11 +147,13 @@ const getSectionPose = (
 export const CameraRig: React.FC<CameraRigProps> = ({
   sections,
   subtitles,
+  studioMode = "solo",
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { camera } = useThree();
   const timeSec = frame / fps;
+  const isDual = studioMode === "dual";
 
   let activeIndex = sections.length - 1;
   for (let i = 0; i < sections.length; i++) {
@@ -179,6 +183,47 @@ export const CameraRig: React.FC<CameraRigProps> = ({
       );
       pose = lerpPose(prevPose, pose, t);
     }
+  }
+
+  if (isDual) {
+    // Smooth two-shot framing keeping both Sensei and Maria visible on left/center
+    // and the right-side presentation board completely unobstructed, with gentle
+    // pan toward the active speaker.
+    let speakerBias = 0;
+    for (const cue of subtitles) {
+      const target = isGuestSpeaker(cue.speaker) ? 1 : -1;
+      const enter = interpolate(
+        timeSec,
+        [cue.startSec - 0.35, cue.startSec + 0.35],
+        [0, 1],
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) },
+      );
+      const exit = interpolate(
+        timeSec,
+        [cue.endSec - 0.2, cue.endSec + 0.45],
+        [1, 0],
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) },
+      );
+      const env = Math.min(enter, exit);
+      if (env > 0.001) {
+        speakerBias += target * env;
+      }
+    }
+    const clampedBias = Math.max(-1, Math.min(1, speakerBias));
+    const panX = clampedBias * 0.09;
+    pose = {
+      pos: [
+        pose.pos[0] + panX - 0.02,
+        pose.pos[1] + 0.03,
+        pose.pos[2] + 0.25,
+      ],
+      lookAt: [
+        pose.lookAt[0] + panX * 0.65 - 0.04,
+        pose.lookAt[1] - 0.04,
+        pose.lookAt[2],
+      ],
+      fov: Math.min(43, pose.fov + 1.4),
+    };
   }
 
   const applyCamera = (): void => {

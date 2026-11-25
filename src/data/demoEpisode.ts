@@ -1,3 +1,5 @@
+export type StudioMode = "solo" | "dual";
+
 export type PodcastSectionType =
   | "intro"
   | "story"
@@ -99,11 +101,13 @@ const THINKING_KEYWORDS = [
 export const resolveCueGesture = (
   cue: SubtitleCue,
   section?: EpisodeSection,
+  forGuest = false,
 ): HostGestureType => {
+  const cueFromGuest = isGuestSpeaker(cue.speaker);
   if (cue.gesture !== undefined) {
-    return cue.gesture;
+    return cueFromGuest === forGuest ? cue.gesture : "none";
   }
-  if (isGuestSpeaker(cue.speaker)) {
+  if (cueFromGuest !== forGuest) {
     return "none";
   }
 
@@ -122,7 +126,7 @@ export const resolveCueGesture = (
     return "thinking";
   }
 
-  return section?.gesture ?? "none";
+  return !forGuest ? (section?.gesture ?? "none") : "none";
 };
 
 export type VocabCardData = {
@@ -178,6 +182,7 @@ export type EpisodeData = {
   readonly title: string;
   readonly jlptLevel: string;
   readonly durationSec: number;
+  readonly studioMode?: StudioMode;
   readonly audioSrc?: string;
   readonly sections: readonly EpisodeSection[];
   readonly subtitles: readonly SubtitleCue[];

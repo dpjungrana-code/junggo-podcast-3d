@@ -3,8 +3,11 @@ import * as THREE from "three";
 import { Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import {
   EpisodeSection,
+  StudioMode,
   SubtitleCue,
   getActiveSection,
+  getActiveSubtitle,
+  isGuestSpeaker,
 } from "../data/demoEpisode";
 import { usePodcastAudioMetrics } from "../utils/audio";
 import {
@@ -20,11 +23,13 @@ import {
   createWoodTexture,
   createYouTubePlaqueTexture,
 } from "../utils/textures";
+import { FemaleNinjaHost3D } from "./FemaleNinjaHost3D";
 import { NinjaHost3D } from "./NinjaHost3D";
 
 type Studio3DProps = {
   readonly sections: readonly EpisodeSection[];
   readonly subtitles?: readonly SubtitleCue[];
+  readonly studioMode?: StudioMode;
 };
 
 const BOKEH_LIGHTS: readonly {
@@ -549,12 +554,17 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
 const StudioMicrophone3D: React.FC<{
   readonly audioVolume: number;
   readonly isQuiz: boolean;
-}> = ({ audioVolume, isQuiz }) => {
+  readonly studioMode?: StudioMode;
+}> = ({ audioVolume, isQuiz, studioMode = "solo" }) => {
+  const isDual = studioMode === "dual";
   const ledColor = isQuiz ? "#a78bfa" : "#34f5b5";
   const ledIntensity = 0.8 + audioVolume * 1.8;
 
   return (
-    <group position={[-2.08, 0.78, 0.14]}>
+    <group
+      position={isDual ? [-2.26, 0.78, 0.2] : [-2.08, 0.78, 0.14]}
+      scale={isDual ? [0.88, 0.98, 0.96] : [1, 1, 1]}
+    >
       {/* Desk clamp */}
       <mesh position={[0, 0.03, 0]} castShadow receiveShadow>
         <boxGeometry args={[0.13, 0.06, 0.13]} />
@@ -605,17 +615,91 @@ const StudioMicrophone3D: React.FC<{
 };
 
 /**
+ * Secondary SM7B boom-arm condenser mic clamped front-right on the desk for Female Ninja Co-Host (Maria),
+ * with a crimson-amber LED ring reactive when Maria is speaking.
+ */
+const SecondaryMicrophone3D: React.FC<{
+  readonly audioVolume: number;
+  readonly isQuiz: boolean;
+}> = ({ audioVolume, isQuiz }) => {
+  const ledColor = isQuiz ? "#a78bfa" : "#f43f5e";
+  const ledIntensity = 0.8 + audioVolume * 1.8;
+
+  return (
+    <group
+      position={[0.92, 0.78, 0.28]}
+      rotation={[0, Math.PI - 0.38, 0]}
+      scale={[0.58, 0.98, 0.92]}
+    >
+      {/* Desk clamp */}
+      <mesh position={[0, 0.03, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.14, 0.06, 0.14]} />
+        <meshStandardMaterial color="#14171d" metalness={0.6} roughness={0.38} />
+      </mesh>
+      {/* Lower boom arm */}
+      <mesh position={[0.42, 0.14, -0.02]} rotation={[0.04, 0, -1.26]} castShadow>
+        <cylinderGeometry args={[0.017, 0.019, 0.86, 10]} />
+        <meshStandardMaterial color="#1b1f27" metalness={0.6} roughness={0.38} />
+      </mesh>
+      {/* Elbow joint */}
+      <mesh position={[0.82, 0.24, -0.04]} castShadow>
+        <sphereGeometry args={[0.028, 12, 12]} />
+        <meshStandardMaterial color="#303642" metalness={0.75} roughness={0.3} />
+      </mesh>
+      {/* Upper boom arm */}
+      <mesh position={[1.18, 0.27, -0.14]} rotation={[0.3, 0, -1.44]} castShadow>
+        <cylinderGeometry args={[0.015, 0.016, 0.72, 10]} />
+        <meshStandardMaterial color="#1b1f27" metalness={0.6} roughness={0.38} />
+      </mesh>
+      {/* Secondary SM7B Broadcast Mic Capsule */}
+      <group position={[1.54, 0.29, -0.24]} rotation={[0.3, 0.35, -0.35]}>
+        <mesh position={[0, -0.02, 0]} castShadow>
+          <torusGeometry args={[0.064, 0.009, 10, 18, Math.PI]} />
+          <meshStandardMaterial color="#252b36" metalness={0.75} roughness={0.32} />
+        </mesh>
+        <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.046, 0.044, 0.17, 20]} />
+          <meshStandardMaterial color="#181b22" metalness={0.65} roughness={0.36} />
+        </mesh>
+        <mesh position={[0, 0, 0.05]}>
+          <torusGeometry args={[0.049, 0.0055, 8, 22]} />
+          <meshStandardMaterial
+            color={ledColor}
+            emissive={ledColor}
+            emissiveIntensity={ledIntensity}
+            roughness={0.25}
+          />
+        </mesh>
+        <mesh position={[0, 0, 0.13]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <capsuleGeometry args={[0.048, 0.068, 10, 18]} />
+          <meshStandardMaterial color="#12151a" roughness={0.92} />
+        </mesh>
+      </group>
+    </group>
+  );
+};
+
+/**
  * Main True 3D JungGo Podcast Studio Scene matching `public/images/studio-reference.jpg` A-to-Z.
  * Uses 512x512 shadows and memoized shared geometries/materials for fast T4 GPU rendering.
  * Strictly driven by useCurrentFrame() — ZERO useFrame().
  */
-export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
+export const Studio3D: React.FC<Studio3DProps> = ({
+  sections,
+  subtitles,
+  studioMode = "solo",
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const timeSec = frame / fps;
   const audio = usePodcastAudioMetrics();
+  const isDual = studioMode === "dual";
 
   const activeSection = getActiveSection(sections, timeSec);
+  const activeCue = subtitles ? getActiveSubtitle(subtitles, timeSec) : null;
+  const isMariaActive = activeCue !== null && isGuestSpeaker(activeCue.speaker);
+  const senseiMicVol = isDual && isMariaActive ? 0.06 : audio.volume;
+  const mariaMicVol = isMariaActive ? audio.volume : 0.06;
   const quizFactor = computeQuizFactor(sections, timeSec);
   const isQuiz = activeSection.type === "quiz";
 
@@ -875,7 +959,7 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
       </group>
 
       {/* ================= CENTERED "JungGo PODCAST STUDIO" NEON SIGN ================= */}
-      <mesh position={[-0.42, 2.64, -1.96]}>
+      <mesh position={[isDual ? -0.56 : -0.42, isDual ? 2.66 : 2.64, -1.96]}>
         <planeGeometry args={[1.88, 0.94]} />
         <meshStandardMaterial
           map={textures.neon}
@@ -890,7 +974,11 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
       </mesh>
 
       {/* Back-Center Indoor Plant tucked beside the window */}
-      <PottedPlant position={[0.52, 0.85, -1.62]} scale={1.15} potColor="#24272e" />
+      <PottedPlant
+        position={[isDual ? 0.78 : 0.52, 0.85, -1.62]}
+        scale={1.15}
+        potColor="#24272e"
+      />
 
       {/* ================= RIGHT STUDIO WINDOW & TOKYO NIGHT SKYLINE ================= */}
       <group position={[3.35, 1.92, -2.14]}>
@@ -933,9 +1021,9 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
 
       {/* ================= FOREGROUND GOLDEN-OAK DESK & PROPS ================= */}
       <group>
-        {/* Main Golden-Oak Desk Tabletop */}
+        {/* Main Golden-Oak Desk Tabletop (widened smoothly in dual co-host mode) */}
         <mesh position={[0, 0.735, 0.16]} castShadow receiveShadow>
-          <boxGeometry args={[5.15, 0.09, 1.5]} />
+          <boxGeometry args={[isDual ? 5.65 : 5.15, 0.09, 1.5]} />
           <meshStandardMaterial
             map={textures.wood}
             roughness={0.5}
@@ -943,10 +1031,10 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
           />
         </mesh>
         {[
-          [-2.18, 0.35, -0.35],
-          [2.18, 0.35, -0.35],
-          [-2.18, 0.35, 0.65],
-          [2.18, 0.35, 0.65],
+          [isDual ? -2.42 : -2.18, 0.35, -0.35],
+          [isDual ? 2.42 : 2.18, 0.35, -0.35],
+          [isDual ? -2.42 : -2.18, 0.35, 0.65],
+          [isDual ? 2.42 : 2.18, 0.35, 0.65],
         ].map(([lx, ly, lz], idx) => (
           <mesh
             key={idx}
@@ -957,17 +1045,24 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
           />
         ))}
 
-        {/* Dark Charcoal Leather Desk Mat under Laptop & Host Hands */}
-        <mesh position={[-0.18, 0.784, 0.14]} receiveShadow>
-          <boxGeometry args={[2.28, 0.008, 0.82]} />
+        {/* Dark Charcoal Leather Desk Mat under Hosts & Laptop */}
+        <mesh position={[isDual ? -0.36 : -0.18, 0.784, 0.14]} receiveShadow>
+          <boxGeometry args={[isDual ? 2.76 : 2.28, 0.008, 0.82]} />
           <meshStandardMaterial color="#1c1f26" roughness={0.78} />
         </mesh>
 
         {/* Far-Left White Ceramic Potted Leafy Plant */}
-        <PottedPlant position={[-1.88, 0.78, 0.46]} scale={1.18} potColor="#eceae4" />
+        <PottedPlant
+          position={[isDual ? -2.02 : -1.88, 0.78, 0.46]}
+          scale={1.18}
+          potColor="#eceae4"
+        />
 
         {/* White Ceramic "JungGo" Mug on Coaster (emblem centered facing camera) */}
-        <group position={[-1.44, 0.78, 0.4]} rotation={[0, Math.PI + 0.46, 0]}>
+        <group
+          position={[isDual ? -1.58 : -1.44, 0.78, 0.42]}
+          rotation={[0, Math.PI + 0.46, 0]}
+        >
           <mesh position={[0, 0.004, 0]} receiveShadow>
             <cylinderGeometry args={[0.095, 0.095, 0.008, 20]} />
             <meshStandardMaterial color="#181b22" roughness={0.8} />
@@ -986,11 +1081,24 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
           </mesh>
         </group>
 
-        {/* Far-Left Clamped SM7B Boom-Arm Microphone */}
-        <StudioMicrophone3D audioVolume={audio.volume} isQuiz={isQuiz} />
+        {/* Far-Left Clamped SM7B Boom-Arm Microphone (Sensei) */}
+        <StudioMicrophone3D
+          audioVolume={senseiMicVol}
+          isQuiz={isQuiz}
+          studioMode={studioMode}
+        />
 
-        {/* Open Space-Gray Laptop angled toward Host, JungGo Mt. Fuji Lid facing Camera */}
-        <group position={[0.08, 0.786, 0.16]} rotation={[0, Math.PI - 0.34, 0]}>
+        {/* Secondary Front-Right Clamped SM7B Boom-Arm Microphone (Maria) */}
+        {isDual ? (
+          <SecondaryMicrophone3D audioVolume={mariaMicVol} isQuiz={isQuiz} />
+        ) : null}
+
+        {/* Open Space-Gray Laptop angled cleanly, JungGo Mt. Fuji Lid facing Camera */}
+        <group
+          position={isDual ? [0.46, 0.786, 0.28] : [0.08, 0.786, 0.16]}
+          rotation={[0, isDual ? Math.PI - 0.44 : Math.PI - 0.34, 0]}
+          scale={isDual ? 0.76 : 1}
+        >
           <mesh position={[0, 0.012, 0]} castShadow receiveShadow>
             <boxGeometry args={[0.72, 0.022, 0.46]} />
             <meshStandardMaterial
@@ -1056,8 +1164,15 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
         />
       </group>
 
-      {/* ================= PIXAR-CHIBI NINJA HOST ================= */}
-      <NinjaHost3D sections={sections} subtitles={subtitles} />
+      {/* ================= PIXAR-CHIBI NINJA HOST(S) ================= */}
+      <NinjaHost3D
+        sections={sections}
+        subtitles={subtitles}
+        studioMode={studioMode}
+      />
+      {isDual ? (
+        <FemaleNinjaHost3D sections={sections} subtitles={subtitles} />
+      ) : null}
     </group>
   );
 };

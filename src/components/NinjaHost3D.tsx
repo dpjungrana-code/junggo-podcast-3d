@@ -5,6 +5,7 @@ import {
   EpisodeSection,
   HostGestureType,
   PodcastSectionType,
+  StudioMode,
   SubtitleCue,
   getActiveSection,
   getActiveSubtitle,
@@ -17,6 +18,7 @@ import { createHoodieLogoTexture } from "../utils/textures";
 export type NinjaHost3DProps = {
   readonly sections: readonly EpisodeSection[];
   readonly subtitles?: readonly SubtitleCue[];
+  readonly studioMode?: StudioMode;
 };
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
@@ -63,11 +65,14 @@ const computeDialogueGuestWeight = (
   sections: readonly EpisodeSection[],
   subtitles: readonly SubtitleCue[] | undefined,
   timeSec: number,
+  allowAllSections = false,
 ): number => {
   if (!subtitles || subtitles.length === 0) {
     return 0;
   }
-  const dialogueWeight = computeSectionWeight(sections, ["dialogue"], timeSec);
+  const dialogueWeight = allowAllSections
+    ? 1
+    : computeSectionWeight(sections, ["dialogue"], timeSec);
   if (dialogueWeight <= 0.005) {
     return 0;
   }
@@ -468,7 +473,9 @@ const ArticulatedArm3D: React.FC<ArticulatedArmProps> = ({
 export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   sections,
   subtitles,
+  studioMode = "solo",
 }) => {
+  const isDual = studioMode === "dual";
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const timeSec = frame / fps;
@@ -508,6 +515,7 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     sections,
     subtitles,
     timeSec,
+    isDual,
   );
   const quizRevealWeight = computeQuizRevealWeight(sections, timeSec);
 
@@ -610,7 +618,8 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     vocabWeight * (0.65 + 0.35 * Math.sin(timeSec * 1.15)) +
     quizWeight * 0.45 * (1 - quizRevealWeight);
   const basePupilX =
-    clamp01(baseBoardGlance + dialogueGuestWeight * 0.5) * 0.0105 +
+    clamp01(baseBoardGlance + dialogueGuestWeight * (isDual ? 0.95 : 0.5)) *
+      0.011 +
     Math.sin(timeSec * 0.85) * 0.0018;
   const pupilOffsetX = lerp(basePupilX, 0.0155, pointBoardWeight);
   const pupilOffsetY =
@@ -623,7 +632,7 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   const breathY = Math.sin(timeSec * 2.15) * 0.011;
   const baseTorsoYaw =
     vocabWeight * 0.1 +
-    dialogueGuestWeight * 0.06 +
+    dialogueGuestWeight * (isDual ? 0.12 : 0.06) +
     Math.sin(timeSec * 0.75) * 0.018;
   const torsoYaw = lerp(baseTorsoYaw, 0.16, pointBoardWeight);
   const torsoPitch = voiceEnergy * 0.024 + quizRevealWeight * -0.022;
@@ -632,7 +641,7 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   const speakBobY = isHostSpeaking ? voiceEnergy * 0.012 : 0;
   const baseHeadTurnTarget =
     vocabWeight * (0.22 + 0.08 * Math.sin(timeSec * 1.1)) +
-    dialogueGuestWeight * 0.18 +
+    dialogueGuestWeight * (isDual ? 0.3 : 0.18) +
     quizWeight * (0.08 * (1 - quizRevealWeight));
   const headTurnTarget = lerp(baseHeadTurnTarget, 0.44, pointBoardWeight);
   const headYaw =
@@ -744,11 +753,17 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     -0.2,
     1.04 + Math.sin(timeSec * 2.4) * 0.03,
   ];
-  const leftPointShoulder: [number, number, number] = [
-    -0.36 + Math.sin(timeSec * 2.8) * 0.025,
-    -0.24,
-    1.68 + Math.cos(timeSec * 2.4) * 0.03,
-  ];
+  const leftPointShoulder: [number, number, number] = isDual
+    ? [
+        -0.68 + Math.sin(timeSec * 2.8) * 0.025,
+        -0.18,
+        1.34 + Math.cos(timeSec * 2.4) * 0.03,
+      ]
+    : [
+        -0.36 + Math.sin(timeSec * 2.8) * 0.025,
+        -0.24,
+        1.68 + Math.cos(timeSec * 2.4) * 0.03,
+      ];
 
   const leftIdleElbow: [number, number, number] = [-1.08, 0, -0.22];
   const leftSpeakElbow: [number, number, number] = [
@@ -841,8 +856,15 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
 
   void activeSection;
 
+  const hostPos: [number, number, number] = isDual
+    ? [-1.14, 0.78, -0.6]
+    : [-0.78, 0.78, -0.62];
+  const hostRot: [number, number, number] = isDual
+    ? [0, 0.34, 0]
+    : [0, 0.24, 0];
+
   return (
-    <group position={[-0.78, 0.78, -0.62]} rotation={[0, 0.24, 0]}>
+    <group position={hostPos} rotation={hostRot}>
       {/* Ergonomic Matte-Black Studio Chair */}
       <group position={[0, -0.04, -0.34]}>
         <mesh position={[0, 0.42, 0]} castShadow receiveShadow>

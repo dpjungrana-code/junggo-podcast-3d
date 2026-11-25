@@ -359,6 +359,8 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
     episode_number: str = raw_script.get("episodeNumber", "EP. 01")
     title: str = raw_script.get("title", "JungGo Podcast Episode")
     jlpt_level: str = raw_script.get("jlptLevel", "JLPT N5")
+    raw_studio_mode: str = str(raw_script.get("studioMode", "solo")).strip().lower()
+    studio_mode: str = raw_studio_mode if raw_studio_mode in ("solo", "dual") else "solo"
     lead_in_target: float = float(raw_script.get("leadInSec", 0.40))
     outro_target: float = float(raw_script.get("outroSec", 0.72))
     micro_pause_sec: float = float(raw_script.get("sentenceMicroPauseSec", 0.22))
@@ -564,6 +566,7 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
         "episodeNumber": episode_number,
         "title": title,
         "jlptLevel": jlpt_level,
+        "studioMode": studio_mode,
         "durationSec": total_duration_sec,
         "audioSrc": "audio/current_episode.mp3",
         "sections": sections,

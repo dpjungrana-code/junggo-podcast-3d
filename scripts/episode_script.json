@@ -2,6 +2,7 @@
   "episodeNumber": "EP. 02",
   "title": "5 Essential JLPT N4 Kanji",
   "jlptLevel": "JLPT N4",
+  "studioMode": "dual",
   "leadInSec": 0.36,
   "outroSec": 0.72,
   "sections": [
@@ -255,9 +256,10 @@
       "id": "sub-7",
       "sectionId": "sec-kanji-2",
       "speaker": "Maria",
+      "gesture": "point_board",
       "japanese": "駅前の「駅」もこれですね！よくわかります。",
       "romaji": "Ekimae no \"eki\" mo kore desu ne! Yoku wakarimasu.",
-      "english": "So the \"eki\" in front of the station uses this too! Got it.",
+      "english": "Look — the \"eki\" in front of the station uses this too! Got it.",
       "pauseSec": 0.45
     },
     {

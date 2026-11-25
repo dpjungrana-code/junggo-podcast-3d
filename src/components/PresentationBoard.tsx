@@ -12,6 +12,7 @@ import {
   EpisodeSection,
   KanjiLessonData,
   QuizCardData,
+  StudioMode,
   SubtitleCue,
   VocabCardData,
   getActiveSection,
@@ -23,6 +24,7 @@ export type PresentationBoardProps = {
   readonly episodeNumber: string;
   readonly episodeTitle: string;
   readonly jlptLevel: string;
+  readonly studioMode?: StudioMode;
   readonly sections: readonly EpisodeSection[];
   readonly subtitles: readonly SubtitleCue[];
 };
@@ -1187,9 +1189,11 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
   episodeNumber,
   episodeTitle,
   jlptLevel,
+  studioMode = "solo",
   sections,
   subtitles,
 }) => {
+  const isDual = studioMode === "dual";
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const timeSec = frame / fps;
@@ -1253,8 +1257,8 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
         style={{
           position: "absolute",
           top: 136,
-          right: 175,
-          width: 650,
+          right: isDual ? 108 : 175,
+          width: isDual ? 632 : 650,
           minHeight: 440,
           backgroundColor: "#121b22",
           borderRadius: 16,

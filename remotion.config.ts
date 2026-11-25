@@ -18,10 +18,30 @@ const isFullQualityRender = Boolean(
     process.env.CI,
 );
 
+/**
+ * YouTube export resolution preset (`1080p` | `1440p` | `4k`).
+ * Full-quality Colab/CI renders default to `1440p` (2560x1440, scale 4/3) so YouTube
+ * automatically triggers its crisp `vp09` codec while rendering ~2x faster than 4K.
+ */
+const rawRes = (
+  process.env.RENDER_RES || (isFullQualityRender ? "1440p" : "1080p")
+)
+  .trim()
+  .toLowerCase();
+
+const RESOLUTION_SCALE_MAP: Record<string, number> = {
+  "1080p": 1,
+  "1440p": 4 / 3,
+  "4k": 2,
+};
+
+const renderScale = RESOLUTION_SCALE_MAP[rawRes] ?? (isFullQualityRender ? 4 / 3 : 1);
+
 Config.setRspack(true);
 Config.setCachingEnabled(true);
 Config.setOverwriteOutput(true);
 Config.setVideoImageFormat("jpeg");
+Config.setScale(renderScale);
 
 if (isFullQualityRender) {
   Config.setConcurrency(4);
