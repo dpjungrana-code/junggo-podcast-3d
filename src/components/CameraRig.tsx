@@ -14,6 +14,7 @@ type CameraRigProps = {
   readonly sections: readonly EpisodeSection[];
   readonly subtitles: readonly SubtitleCue[];
   readonly studioMode?: StudioMode;
+  readonly boardFocusProgress?: number;
 };
 
 type CameraPose = {
@@ -149,12 +150,14 @@ export const CameraRig: React.FC<CameraRigProps> = ({
   sections,
   subtitles,
   studioMode = "solo",
+  boardFocusProgress = 0,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { camera } = useThree();
   const timeSec = frame / fps;
   const isDual = studioMode === "dual";
+  const focusP = Math.max(0, Math.min(1, boardFocusProgress));
 
   let activeIndex = sections.length - 1;
   for (let i = 0; i < sections.length; i++) {
@@ -186,10 +189,8 @@ export const CameraRig: React.FC<CameraRigProps> = ({
     }
   }
 
+  let clampedBias = 0;
   if (isDual) {
-    // Smooth two-shot framing keeping both Sensei and Maria visible on left/center
-    // and the right-side presentation board completely unobstructed, with gentle
-    // pan toward the active speaker.
     let speakerBias = 0;
     for (const cue of subtitles) {
       const target = isGuestSpeaker(cue.speaker) ? 1 : -1;
@@ -197,20 +198,28 @@ export const CameraRig: React.FC<CameraRigProps> = ({
         timeSec,
         [cue.startSec - 0.35, cue.startSec + 0.35],
         [0, 1],
-        { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) },
+        {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+          easing: Easing.inOut(Easing.cubic),
+        },
       );
       const exit = interpolate(
         timeSec,
         [cue.endSec - 0.2, cue.endSec + 0.45],
         [1, 0],
-        { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic) },
+        {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+          easing: Easing.inOut(Easing.cubic),
+        },
       );
       const env = Math.min(enter, exit);
       if (env > 0.001) {
         speakerBias += target * env;
       }
     }
-    const clampedBias = Math.max(-1, Math.min(1, speakerBias));
+    clampedBias = Math.max(-1, Math.min(1, speakerBias));
     const panX = clampedBias * 0.09;
     pose = {
       pos: [
@@ -225,6 +234,24 @@ export const CameraRig: React.FC<CameraRigProps> = ({
       ],
       fov: Math.min(43, pose.fov + 1.4),
     };
+  }
+
+  if (focusP > 0.001) {
+    const microX = Math.sin(timeSec * 0.55) * 0.007;
+    const microY = Math.cos(timeSec * 0.45) * 0.005;
+    const circlePanX = isDual ? clampedBias * 0.14 : 0;
+    const circlePose: CameraPose = isDual
+      ? {
+          pos: [-0.61 + circlePanX + microX, 1.42 + microY, 2.38],
+          lookAt: [-0.61 + circlePanX * 0.75, 1.35, -0.62],
+          fov: 40,
+        }
+      : {
+          pos: [-0.74 + microX, 1.43 + microY, 1.46],
+          lookAt: [-0.78, 1.36, -0.62],
+          fov: 38,
+        };
+    pose = lerpPose(pose, circlePose, focusP);
   }
 
   const applyCamera = (): void => {

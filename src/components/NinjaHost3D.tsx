@@ -260,6 +260,7 @@ const computeAddressCoHostWeight = (
 
 type StylizedEyeProps = {
   readonly name: string;
+  readonly side: "left" | "right";
   readonly position: readonly [number, number, number];
   readonly rotation: readonly [number, number, number];
   readonly blinkAmount: number;
@@ -270,11 +271,12 @@ type StylizedEyeProps = {
 };
 
 /**
- * Multi-layered 3D anime-style Pixar eye matching the warm reference character,
- * with smooth 3D upper & lower eyelids for 96-frame blinking and subtle gaze shifts.
+ * Multi-layered 3D anime-style Pixar eye with warm gentle arched eyebrow,
+ * soft expressive catchlights, and smooth 3D eyelids for natural blinking.
  */
 const StylizedEye3D: React.FC<StylizedEyeProps> = ({
   name,
+  side,
   position,
   rotation,
   blinkAmount,
@@ -283,6 +285,7 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
   browRaise,
   browTilt,
 }) => {
+  void side;
   const upperLidScaleY = lerp(0.01, 1.0, blinkAmount);
   const lowerLidLift = blinkAmount * 0.015;
   const closedLineVisible = blinkAmount > 0.45;
@@ -293,14 +296,15 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
       position={[position[0], position[1], position[2]]}
       rotation={[rotation[0], rotation[1], rotation[2]]}
     >
-      {/* Expressive dark-brown eyebrow cleanly above the eye */}
+      {/* Gentle upward-arched warm espresso eyebrow cleanly between eye & headband */}
       <mesh
-        position={[0, 0.068 + browRaise, 0.018]}
-        rotation={[0, 0, Math.PI / 2 + browTilt]}
+        position={[0, 0.031 + browRaise, 0.02]}
+        rotation={[0, 0, Math.PI * 0.23 + browTilt]}
+        scale={[1.0, 0.56, 0.72]}
         castShadow
       >
-        <capsuleGeometry args={[0.007, 0.056, 4, 8]} />
-        <meshStandardMaterial color="#1f1512" roughness={0.58} />
+        <torusGeometry args={[0.05, 0.0056, 8, 16, Math.PI * 0.54]} />
+        <meshStandardMaterial color="#382218" roughness={0.58} />
       </mesh>
 
       {/* Wet-look glossy white sclera */}
@@ -314,14 +318,14 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
         />
       </mesh>
 
-      {/* Bold upper lash arch */}
+      {/* Soft upper lash arch */}
       <mesh
-        position={[0, 0.004, 0.011]}
+        position={[0, 0.005, 0.011]}
         rotation={[0, 0, 0.14]}
         scale={[1.02, 1.06, 0.7]}
       >
-        <torusGeometry args={[0.052, 0.006, 6, 16, Math.PI * 0.84]} />
-        <meshStandardMaterial color="#161113" roughness={0.38} />
+        <torusGeometry args={[0.052, 0.0055, 6, 16, Math.PI * 0.84]} />
+        <meshStandardMaterial color="#241818" roughness={0.4} />
       </mesh>
 
       {/* Movable Glossy Iris, Pupil, and Bright Cornea Catchlights */}
@@ -329,7 +333,7 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
         <mesh>
           <circleGeometry args={[0.0365, 20]} />
           <meshPhysicalMaterial
-            color="#241008"
+            color="#2b140b"
             roughness={0.12}
             clearcoat={1.0}
             clearcoatRoughness={0.05}
@@ -338,7 +342,7 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
         <mesh position={[0, 0, 0.001]}>
           <circleGeometry args={[0.033, 20]} />
           <meshPhysicalMaterial
-            color="#613118"
+            color="#6b371d"
             roughness={0.14}
             clearcoat={0.95}
             clearcoatRoughness={0.06}
@@ -347,31 +351,31 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
         <mesh position={[0, -0.009, 0.002]} scale={[0.92, 0.72, 1]}>
           <circleGeometry args={[0.022, 16]} />
           <meshStandardMaterial
-            color="#ad642d"
-            emissive="#54270a"
-            emissiveIntensity={0.35}
+            color="#bf7036"
+            emissive="#5e2d0e"
+            emissiveIntensity={0.42}
             roughness={0.2}
           />
         </mesh>
         <mesh position={[0, 0.001, 0.003]}>
-          <circleGeometry args={[0.0165, 16]} />
-          <meshStandardMaterial color="#090605" roughness={0.12} />
+          <circleGeometry args={[0.016, 16]} />
+          <meshStandardMaterial color="#0b0706" roughness={0.12} />
         </mesh>
         <mesh position={[-0.0115, 0.0125, 0.0042]}>
-          <circleGeometry args={[0.0092, 12]} />
+          <circleGeometry args={[0.0102, 12]} />
           <meshStandardMaterial
             color="#ffffff"
             emissive="#ffffff"
-            emissiveIntensity={0.6}
+            emissiveIntensity={0.68}
             roughness={0.1}
           />
         </mesh>
         <mesh position={[0.0125, -0.0115, 0.0042]}>
-          <circleGeometry args={[0.0045, 10]} />
+          <circleGeometry args={[0.005, 10]} />
           <meshStandardMaterial
             color="#ffffff"
             emissive="#ffffff"
-            emissiveIntensity={0.48}
+            emissiveIntensity={0.54}
             roughness={0.1}
           />
         </mesh>
@@ -769,12 +773,14 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     nodEncourageWeight * 0.02;
 
   const browRaise =
-    (isHostSpeaking ? voiceEnergy * 0.011 + speechPeak * 0.005 : 0) +
-    quizWeight * 0.0045 +
-    nodEncourageWeight * 0.008 +
-    thinkingWeight * 0.005;
-  const browTiltBase =
-    0.06 - nodEncourageWeight * 0.045 + thinkingWeight * 0.035;
+    0.004 +
+    (isHostSpeaking ? voiceEnergy * 0.009 + speechPeak * 0.005 : 0) +
+    quizWeight * 0.004 +
+    nodEncourageWeight * 0.007 +
+    thinkingWeight * 0.004;
+  // Positive gentle inner-brow lift keeps expressions warm, relaxed, and welcoming
+  const friendlyBrowTilt =
+    0.045 + nodEncourageWeight * 0.025 + thinkingWeight * 0.015;
 
   const tailSway = Math.sin(timeSec * 2.65) * 0.085 + voiceEnergy * 0.065;
 
@@ -1125,13 +1131,13 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
               key={side}
               position={[side * 0.112, -0.038, 0.25]}
               rotation={[0, side * 0.38, 0]}
-              scale={[1.45, 0.9, 0.4]}
+              scale={[1.48, 0.92, 0.4]}
             >
               <sphereGeometry args={[0.036, 10, 8]} />
               <meshStandardMaterial
                 color="#f49682"
                 transparent
-                opacity={0.42}
+                opacity={0.48}
                 roughness={0.62}
               />
             </mesh>
@@ -1151,7 +1157,7 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
           {/* Matte-Black Ninja Hood Wrapping Crown, Sides & Under-Chin Collar */}
           <mesh castShadow receiveShadow>
             <sphereGeometry
-              args={[0.302, 28, 12, 0, Math.PI * 2, 0, 1.18]}
+              args={[0.302, 28, 12, 0, Math.PI * 2, 0, 1.08]}
             />
             <meshStandardMaterial color="#181b22" roughness={0.72} />
           </mesh>
@@ -1188,51 +1194,57 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
             <meshStandardMaterial color="#161920" roughness={0.74} />
           </mesh>
 
-          {/* Expressive 3D Anime Eyes */}
+          {/* Expressive 3D Anime Eyes with Warm Friendly Arched Brows */}
           <StylizedEye3D
             name="rightEyeGroup"
-            position={[-0.088, 0.028, 0.278]}
+            side="right"
+            position={[-0.088, 0.022, 0.278]}
             rotation={[0, -0.3, 0]}
             blinkAmount={blinkAmount}
             pupilOffsetX={pupilOffsetX}
             pupilOffsetY={pupilOffsetY}
             browRaise={browRaise}
-            browTilt={-browTiltBase}
+            browTilt={friendlyBrowTilt}
           />
           <StylizedEye3D
             name="leftEyeGroup"
-            position={[0.088, 0.028, 0.278]}
+            side="left"
+            position={[0.088, 0.022, 0.278]}
             rotation={[0, 0.3, 0]}
             blinkAmount={blinkAmount}
             pupilOffsetX={pupilOffsetX}
             pupilOffsetY={pupilOffsetY}
             browRaise={browRaise}
-            browTilt={browTiltBase}
+            browTilt={-friendlyBrowTilt}
           />
 
-          {/* ==================== EXPRESSIVE HIGH-VISIBILITY PIXAR LIP-SYNC MOUTH ==================== */}
+          {/* ==================== WARM FRIENDLY PIXAR LIP-SYNC MOUTH ==================== */}
           <group
             name="mouthGroup"
-            position={[0, -0.094, 0.278]}
-            rotation={[0.26, 0, 0]}
+            position={[0, -0.092, 0.278]}
+            rotation={[0.24, 0, 0]}
           >
-            {mouthOpen > 0.06 ? (
+            {mouthOpen > 0.05 ? (
               <group>
-                {/* Rich dark-crimson oral cavity with pronounced jaw drop */}
+                {/* Gentle calm oral cavity calibrated for polite teacher speaking */}
                 <mesh
-                  position={[0, -mouthOpen * 0.014, 0]}
-                  scale={[mouthWidth * 1.04, 0.36 + mouthOpen * 0.86, 0.28]}
+                  position={[0, 0.001 - Math.min(0.68, mouthOpen * 0.74) * 0.02, -0.001]}
+                  scale={[
+                    mouthWidth * 0.96,
+                    0.24 + Math.min(0.68, mouthOpen * 0.74) * 0.68,
+                    0.26,
+                  ]}
                 >
-                  <sphereGeometry args={[0.064, 16, 12]} />
-                  <meshStandardMaterial color="#360912" roughness={0.72} />
+                  <sphereGeometry args={[0.06, 16, 12]} />
+                  <meshStandardMaterial color="#521220" roughness={0.7} />
                 </mesh>
 
                 {/* Crisp ivory upper teeth arch */}
                 <mesh
-                  position={[0, 0.015 + mouthOpen * 0.005, 0.011]}
-                  scale={[mouthWidth * 0.94, 1, 1]}
+                  position={[0, 0.011, 0.01]}
+                  scale={[mouthWidth * 0.9, 1, 1]}
                 >
-                  <boxGeometry args={[0.078, 0.015, 0.012]} />
+                  <boxGeometry args={[0.072, 0.013, 0.01]} />
                   <meshStandardMaterial
                     color="#ffffff"
                     emissive="#fff6ed"
@@ -1241,55 +1253,67 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
                   />
                 </mesh>
 
-                {/* Bright coral-pink curved tongue */}
+                {/* Soft coral-pink curved tongue */}
                 <mesh
-                  position={[0, -0.012 - mouthOpen * 0.025, 0.011]}
-                  scale={[mouthWidth * 0.86, 0.44, 0.44]}
+                  position={[
+                    0,
+                    -0.01 - Math.min(0.68, mouthOpen * 0.74) * 0.02,
+                    0.009,
+                  ]}
+                  scale={[mouthWidth * 0.84, 0.42, 0.42]}
                 >
-                  <sphereGeometry args={[0.039, 12, 10]} />
+                  <sphereGeometry args={[0.036, 12, 10]} />
                   <meshStandardMaterial
-                    color="#f2667a"
-                    emissive="#4a1019"
-                    emissiveIntensity={0.28}
+                    color="#f4788c"
+                    emissive="#541622"
+                    emissiveIntensity={0.25}
                     roughness={0.42}
                   />
                 </mesh>
 
-                {/* Soft upper lip rim */}
+                {/* Upward-smiling gentle upper lip contour */}
                 <mesh
-                  position={[0, 0.022, 0.01]}
-                  rotation={[0, 0, 0.2]}
-                  scale={[mouthWidth * 1.04, 0.56, 0.62]}
+                  position={[0, 0.02, 0.01]}
+                  rotation={[0, 0, Math.PI * 1.24]}
+                  scale={[mouthWidth * 1.02, 0.24, 0.56]}
                 >
-                  <torusGeometry args={[0.056, 0.0052, 6, 16, Math.PI * 0.86]} />
-                  <meshStandardMaterial color="#e8a78a" roughness={0.46} />
+                  <torusGeometry args={[0.056, 0.0046, 6, 16, Math.PI * 0.52]} />
+                  <meshStandardMaterial color="#e6a488" roughness={0.46} />
                 </mesh>
 
-                {/* Dynamic jaw-dropped lower lip rim */}
+                {/* Dynamic smiling lower lip rim */}
                 <mesh
-                  position={[0, -0.015 - mouthOpen * 0.044, 0.009]}
-                  rotation={[0, 0, Math.PI * 1.12]}
-                  scale={[mouthWidth * 0.98, 0.56 + mouthOpen * 0.44, 0.62]}
+                  position={[
+                    0,
+                    -0.01 - Math.min(0.68, mouthOpen * 0.74) * 0.036,
+                    0.009,
+                  ]}
+                  rotation={[0, 0, Math.PI * 1.11]}
+                  scale={[
+                    mouthWidth * 0.98,
+                    0.56 + Math.min(0.68, mouthOpen * 0.74) * 0.36,
+                    0.62,
+                  ]}
                 >
-                  <torusGeometry args={[0.053, 0.0052, 6, 16, Math.PI * 0.78]} />
-                  <meshStandardMaterial color="#dc9178" roughness={0.46} />
+                  <torusGeometry args={[0.054, 0.0048, 6, 16, Math.PI * 0.78]} />
+                  <meshStandardMaterial color="#dd9279" roughness={0.46} />
                 </mesh>
               </group>
             ) : (
-              /* Warm cheerful Pixar closed smile */
+              /* Warm cheerful welcoming Pixar closed smile */
               <mesh
-                position={[0, 0.006, 0.01]}
-                rotation={[0, 0, Math.PI * 1.16]}
-                scale={[mouthWidth, 0.58, 0.62]}
+                position={[0, 0.005, 0.01]}
+                rotation={[0, 0, Math.PI * 1.12]}
+                scale={[mouthWidth * 1.04, 0.62, 0.62]}
               >
-                <torusGeometry args={[0.05, 0.0055, 6, 16, Math.PI * 0.68]} />
-                <meshStandardMaterial color="#8c3f34" roughness={0.44} />
+                <torusGeometry args={[0.054, 0.0052, 8, 20, Math.PI * 0.76]} />
+                <meshStandardMaterial color="#9e443a" roughness={0.44} />
               </mesh>
             )}
           </group>
 
           {/* Vibrant Emerald-Green Ninja Headband + Flowing Ribbon Tails */}
-          <group position={[0, 0.145, 0]} rotation={[0.08, 0, 0]}>
+          <group position={[0, 0.156, 0]} rotation={[0.08, 0, 0]}>
             <mesh castShadow>
               <cylinderGeometry args={[0.28, 0.299, 0.092, 28, 1, true]} />
               <meshStandardMaterial

@@ -1,5 +1,7 @@
 export type StudioMode = "solo" | "dual";
 
+export type LayoutMode = "auto" | "studio_wide" | "board_focus";
+
 export type PodcastSectionType =
   | "intro"
   | "story"
@@ -263,6 +265,7 @@ export type EpisodeData = {
   readonly jlptLevel: string;
   readonly durationSec: number;
   readonly studioMode?: StudioMode;
+  readonly layoutMode?: LayoutMode;
   readonly audioSrc?: string;
   readonly sections: readonly EpisodeSection[];
   readonly subtitles: readonly SubtitleCue[];

@@ -320,11 +320,11 @@ export const Subtitles: React.FC<SubtitlesProps> = ({ subtitles }) => {
           position: "absolute",
           left: 0,
           right: 0,
-          bottom: 32,
+          bottom: 22,
           display: "flex",
           justifyContent: "center",
-          paddingLeft: 80,
-          paddingRight: 80,
+          paddingLeft: 44,
+          paddingRight: 44,
         }}
       >
         <div
@@ -332,16 +332,16 @@ export const Subtitles: React.FC<SubtitlesProps> = ({ subtitles }) => {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 20,
-            maxWidth: 1320,
-            minWidth: 740,
-            padding: "16px 32px 18px 26px",
+            gap: 22,
+            width: "100%",
+            maxWidth: 1832,
+            padding: "13px 30px 14px 24px",
             borderRadius: 18,
-            backgroundColor: "rgba(11, 15, 21, 0.92)",
-            border: `1.5px solid ${
-              guest ? "rgba(251, 191, 36, 0.55)" : "rgba(52, 211, 153, 0.52)"
+            backgroundColor: "rgba(11, 15, 21, 0.94)",
+            border: `1.8px solid ${
+              guest ? "rgba(251, 191, 36, 0.58)" : "rgba(52, 211, 153, 0.56)"
             }`,
-            boxShadow: "0 14px 36px rgba(0, 0, 0, 0.56)",
+            boxShadow: "0 14px 36px rgba(0, 0, 0, 0.58)",
             opacity: subtitleOpacity,
             translate: `0px ${subtitleLiftY}px`,
           }}

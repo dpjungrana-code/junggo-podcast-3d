@@ -247,14 +247,15 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
       position={[position[0], position[1], position[2]]}
       rotation={[rotation[0], rotation[1], rotation[2]]}
     >
-      {/* Arched dark eyebrow */}
+      {/* Warm gentle upward-arched dark-espresso eyebrow cleanly below headband */}
       <mesh
-        position={[0, 0.068 + browRaise, 0.018]}
-        rotation={[0, 0, Math.PI / 2 + browTilt]}
+        position={[0, 0.031 + browRaise, 0.02]}
+        rotation={[0, 0, Math.PI * 0.23 + browTilt]}
+        scale={[1.0, 0.55, 0.72]}
         castShadow
       >
-        <capsuleGeometry args={[0.0055, 0.054, 4, 8]} />
-        <meshStandardMaterial color="#1f1512" roughness={0.56} />
+        <torusGeometry args={[0.049, 0.0046, 8, 16, Math.PI * 0.54]} />
+        <meshStandardMaterial color="#382218" roughness={0.56} />
       </mesh>
 
       {/* Wet-look glossy white sclera */}
@@ -268,14 +269,14 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
         />
       </mesh>
 
-      {/* Bold upper lash arch */}
+      {/* Soft upper lash arch */}
       <mesh
-        position={[0, 0.004, 0.011]}
+        position={[0, 0.005, 0.011]}
         rotation={[0, 0, 0.14]}
         scale={[1.03, 1.08, 0.72]}
       >
-        <torusGeometry args={[0.052, 0.0066, 6, 16, Math.PI * 0.86]} />
-        <meshStandardMaterial color="#140f12" roughness={0.36} />
+        <torusGeometry args={[0.052, 0.0058, 6, 16, Math.PI * 0.86]} />
+        <meshStandardMaterial color="#211618" roughness={0.38} />
       </mesh>
 
       {/* Flared outer winged eyelashes */}
@@ -283,15 +284,15 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
         position={[outerSign * 0.051, 0.018, 0.012]}
         rotation={[0, 0, outerSign * -0.95]}
       >
-        <capsuleGeometry args={[0.0042, 0.018, 4, 6]} />
-        <meshStandardMaterial color="#140f12" roughness={0.36} />
+        <capsuleGeometry args={[0.004, 0.017, 4, 6]} />
+        <meshStandardMaterial color="#211618" roughness={0.38} />
       </mesh>
       <mesh
         position={[outerSign * 0.048, 0.032, 0.012]}
         rotation={[0, 0, outerSign * -0.68]}
       >
-        <capsuleGeometry args={[0.0036, 0.014, 4, 6]} />
-        <meshStandardMaterial color="#140f12" roughness={0.36} />
+        <capsuleGeometry args={[0.0034, 0.013, 4, 6]} />
+        <meshStandardMaterial color="#211618" roughness={0.38} />
       </mesh>
 
       {/* Movable Glossy Iris, Pupil, and Bright Cornea Catchlights */}
@@ -299,7 +300,7 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
         <mesh>
           <circleGeometry args={[0.037, 20]} />
           <meshPhysicalMaterial
-            color="#240f0c"
+            color="#2b120e"
             roughness={0.12}
             clearcoat={1.0}
             clearcoatRoughness={0.05}
@@ -308,7 +309,7 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
         <mesh position={[0, 0, 0.001]}>
           <circleGeometry args={[0.0335, 20]} />
           <meshPhysicalMaterial
-            color="#592616"
+            color="#662d1b"
             roughness={0.14}
             clearcoat={0.95}
             clearcoatRoughness={0.06}
@@ -317,31 +318,31 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
         <mesh position={[0, -0.009, 0.002]} scale={[0.92, 0.72, 1]}>
           <circleGeometry args={[0.022, 16]} />
           <meshStandardMaterial
-            color="#b85b35"
-            emissive="#5c2110"
-            emissiveIntensity={0.35}
+            color="#c7683e"
+            emissive="#632612"
+            emissiveIntensity={0.42}
             roughness={0.2}
           />
         </mesh>
         <mesh position={[0, 0.001, 0.003]}>
-          <circleGeometry args={[0.0165, 16]} />
-          <meshStandardMaterial color="#090605" roughness={0.12} />
+          <circleGeometry args={[0.016, 16]} />
+          <meshStandardMaterial color="#0b0706" roughness={0.12} />
         </mesh>
         <mesh position={[-0.0115, 0.0125, 0.0042]}>
-          <circleGeometry args={[0.0096, 12]} />
+          <circleGeometry args={[0.0104, 12]} />
           <meshStandardMaterial
             color="#ffffff"
             emissive="#ffffff"
-            emissiveIntensity={0.62}
+            emissiveIntensity={0.68}
             roughness={0.1}
           />
         </mesh>
         <mesh position={[0.0125, -0.0115, 0.0042]}>
-          <circleGeometry args={[0.0048, 10]} />
+          <circleGeometry args={[0.0052, 10]} />
           <meshStandardMaterial
             color="#ffffff"
             emissive="#ffffff"
-            emissiveIntensity={0.5}
+            emissiveIntensity={0.54}
             roughness={0.1}
           />
         </mesh>
@@ -781,10 +782,12 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
     quizWeight * -0.09;
 
   const browRaise =
-    (isMariaSpeaking ? voiceEnergy * 0.011 + speechPeak * 0.005 : 0) +
+    0.004 +
+    (isMariaSpeaking ? voiceEnergy * 0.009 + speechPeak * 0.005 : 0) +
     lookAtSenseiWeight * 0.0035 +
     quizWeight * 0.004;
-  const browTiltBase = 0.08 - quizWeight * 0.035;
+  // Positive gentle inner-brow lift keeps Maria's expression bright, warm, and welcoming
+  const friendlyBrowTilt = 0.05 + quizWeight * 0.02;
 
   const tailSway = Math.sin(timeSec * 2.5 + 1.4) * 0.08 + voiceEnergy * 0.055;
   const ponytailSwayZ = Math.sin(timeSec * 2.1 + 0.5) * 0.045 - headYaw * 0.25;
@@ -1020,13 +1023,13 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
               key={side}
               position={[side * 0.108, -0.036, 0.242]}
               rotation={[0, side * 0.38, 0]}
-              scale={[1.45, 0.9, 0.4]}
+              scale={[1.48, 0.92, 0.4]}
             >
               <sphereGeometry args={[0.036, 10, 8]} />
               <meshStandardMaterial
                 color="#f48d88"
                 transparent
-                opacity={0.46}
+                opacity={0.5}
                 roughness={0.62}
               />
             </mesh>
@@ -1046,7 +1049,7 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
           {/* Matte-Black Ninja Cowl & Lower Mask Frame */}
           <mesh castShadow receiveShadow>
             <sphereGeometry
-              args={[0.292, 28, 12, 0, Math.PI * 2, 0, 1.16]}
+              args={[0.292, 28, 12, 0, Math.PI * 2, 0, 1.08]}
             />
             <meshStandardMaterial color="#181b22" roughness={0.72} />
           </mesh>
@@ -1098,50 +1101,56 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
             </mesh>
           </group>
 
-          {/* Expressive Anime Eyes with Eyelashes */}
+          {/* Expressive Anime Eyes with Warm Friendly Arched Brows */}
           <FemaleStylizedEye3D
             name="mariaRightEyeGroup"
             side="right"
-            position={[-0.085, 0.028, 0.268]}
+            position={[-0.085, 0.022, 0.268]}
             rotation={[0, -0.3, 0]}
             blinkAmount={blinkAmount}
             pupilOffsetX={pupilOffsetX}
             pupilOffsetY={pupilOffsetY}
             browRaise={browRaise}
-            browTilt={-browTiltBase}
+            browTilt={friendlyBrowTilt}
           />
           <FemaleStylizedEye3D
             name="mariaLeftEyeGroup"
             side="left"
-            position={[0.085, 0.028, 0.268]}
+            position={[0.085, 0.022, 0.268]}
             rotation={[0, 0.3, 0]}
             blinkAmount={blinkAmount}
             pupilOffsetX={pupilOffsetX}
             pupilOffsetY={pupilOffsetY}
             browRaise={browRaise}
-            browTilt={browTiltBase}
+            browTilt={-friendlyBrowTilt}
           />
 
-          {/* ==================== EXPRESSIVE HIGH-VISIBILITY LIP-SYNC MOUTH CUTOUT ==================== */}
+          {/* ==================== WARM FRIENDLY PIXAR LIP-SYNC MOUTH CUTOUT ==================== */}
           <group
             name="mariaMouthGroup"
-            position={[0, -0.092, 0.27]}
-            rotation={[0.26, 0, 0]}
+            position={[0, -0.09, 0.27]}
+            rotation={[0.24, 0, 0]}
           >
-            {mouthOpen > 0.06 ? (
+            {mouthOpen > 0.05 ? (
               <group>
+                {/* Gentle calm oral cavity calibrated for polite speaking */}
                 <mesh
-                  position={[0, -mouthOpen * 0.014, 0]}
-                  scale={[mouthWidth * 1.02, 0.34 + mouthOpen * 0.84, 0.28]}
+                  position={[0, 0.001 - Math.min(0.68, mouthOpen * 0.74) * 0.019, -0.001]}
+                  scale={[
+                    mouthWidth * 0.95,
+                    0.23 + Math.min(0.68, mouthOpen * 0.74) * 0.66,
+                    0.26,
+                  ]}
                 >
-                  <sphereGeometry args={[0.062, 16, 12]} />
-                  <meshStandardMaterial color="#3c0914" roughness={0.7} />
+                  <sphereGeometry args={[0.058, 16, 12]} />
+                  <meshStandardMaterial color="#571322" roughness={0.7} />
                 </mesh>
+                {/* Crisp ivory upper teeth arch */}
                 <mesh
-                  position={[0, 0.015 + mouthOpen * 0.005, 0.011]}
-                  scale={[mouthWidth * 0.92, 1, 1]}
+                  position={[0, 0.011, 0.01]}
+                  scale={[mouthWidth * 0.88, 1, 1]}
                 >
-                  <boxGeometry args={[0.074, 0.014, 0.012]} />
+                  <boxGeometry args={[0.07, 0.013, 0.01]} />
                   <meshStandardMaterial
                     color="#ffffff"
                     emissive="#fff6ed"
@@ -1149,49 +1158,65 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
                     roughness={0.18}
                   />
                 </mesh>
+                {/* Soft coral-pink curved tongue */}
                 <mesh
-                  position={[0, -0.012 - mouthOpen * 0.024, 0.011]}
-                  scale={[mouthWidth * 0.86, 0.44, 0.44]}
+                  position={[
+                    0,
+                    -0.01 - Math.min(0.68, mouthOpen * 0.74) * 0.019,
+                    0.009,
+                  ]}
+                  scale={[mouthWidth * 0.84, 0.42, 0.42]}
                 >
-                  <sphereGeometry args={[0.037, 12, 10]} />
+                  <sphereGeometry args={[0.035, 12, 10]} />
                   <meshStandardMaterial
-                    color="#f4697f"
-                    emissive="#4a1019"
-                    emissiveIntensity={0.28}
+                    color="#f5788e"
+                    emissive="#541622"
+                    emissiveIntensity={0.25}
                     roughness={0.4}
                   />
                 </mesh>
+                {/* Upward-smiling gentle upper lip contour */}
                 <mesh
-                  position={[0, 0.021, 0.01]}
-                  rotation={[0, 0, 0.2]}
-                  scale={[mouthWidth * 1.02, 0.56, 0.62]}
+                  position={[0, 0.019, 0.01]}
+                  rotation={[0, 0, Math.PI * 1.24]}
+                  scale={[mouthWidth * 1.0, 0.24, 0.56]}
                 >
-                  <torusGeometry args={[0.054, 0.005, 6, 16, Math.PI * 0.86]} />
+                  <torusGeometry args={[0.054, 0.0044, 6, 16, Math.PI * 0.52]} />
                   <meshStandardMaterial color="#ea998a" roughness={0.44} />
                 </mesh>
+                {/* Dynamic smiling lower lip rim */}
                 <mesh
-                  position={[0, -0.015 - mouthOpen * 0.042, 0.009]}
-                  rotation={[0, 0, Math.PI * 1.12]}
-                  scale={[mouthWidth * 0.96, 0.56 + mouthOpen * 0.42, 0.62]}
+                  position={[
+                    0,
+                    -0.01 - Math.min(0.68, mouthOpen * 0.74) * 0.035,
+                    0.009,
+                  ]}
+                  rotation={[0, 0, Math.PI * 1.11]}
+                  scale={[
+                    mouthWidth * 0.96,
+                    0.56 + Math.min(0.68, mouthOpen * 0.74) * 0.35,
+                    0.62,
+                  ]}
                 >
-                  <torusGeometry args={[0.051, 0.005, 6, 16, Math.PI * 0.78]} />
+                  <torusGeometry args={[0.052, 0.0046, 6, 16, Math.PI * 0.78]} />
                   <meshStandardMaterial color="#e08078" roughness={0.44} />
                 </mesh>
               </group>
             ) : (
+              /* Warm welcoming Pixar closed smile */
               <mesh
-                position={[0, 0.006, 0.01]}
-                rotation={[0, 0, Math.PI * 1.16]}
-                scale={[mouthWidth, 0.58, 0.62]}
+                position={[0, 0.005, 0.01]}
+                rotation={[0, 0, Math.PI * 1.12]}
+                scale={[mouthWidth * 1.04, 0.62, 0.62]}
               >
-                <torusGeometry args={[0.048, 0.0054, 6, 16, Math.PI * 0.68]} />
-                <meshStandardMaterial color="#9e3e44" roughness={0.44} />
+                <torusGeometry args={[0.052, 0.005, 8, 20, Math.PI * 0.76]} />
+                <meshStandardMaterial color="#b3454e" roughness={0.44} />
               </mesh>
             )}
           </group>
 
           {/* Crimson Ninja Headband + Flowing Right-Side Ribbon Tails */}
-          <group position={[0, 0.14, 0]} rotation={[0.08, 0, 0]}>
+          <group position={[0, 0.152, 0]} rotation={[0.08, 0, 0]}>
             <mesh castShadow>
               <cylinderGeometry args={[0.27, 0.289, 0.088, 28, 1, true]} />
               <meshStandardMaterial
