@@ -57,7 +57,8 @@ export const JungGoPodcastStudio: React.FC<JungGoPodcastProps> = ({
           width={width}
           height={height}
           shadows={isRendering}
-          dpr={isRendering ? [1, 2] : 1}
+          dpr={isRendering ? 1.25 : 1}
+          gl={{ antialias: true, powerPreference: "high-performance" }}
           camera={{ position: [0.18, 1.58, 3.55], fov: 42, near: 0.1, far: 45 }}
         >
           <color attach="background" args={["#0b1022"]} />

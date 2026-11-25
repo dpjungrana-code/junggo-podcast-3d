@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from "react";
+import * as THREE from "three";
 import { Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import {
   EpisodeSection,
@@ -127,26 +128,56 @@ const computeQuizFactor = (
   return Math.min(enter, exit);
 };
 
+const PLANT_LEAF_ANGLES = [0, 0.85, 1.7, 2.55, 3.4, 4.25, 5.1, 5.8];
+
 /**
- * Stylized 3D potted indoor plant for desk, shelves, and floor corners.
+ * Stylized 3D potted indoor plant sharing geometry/material instances across placements.
  */
 const PottedPlant: React.FC<{
   readonly position: [number, number, number];
   readonly scale?: number;
   readonly potColor?: string;
 }> = ({ position, scale = 1, potColor = "#2a2e35" }) => {
-  const leafAngles = [0, 0.85, 1.7, 2.55, 3.4, 4.25, 5.1, 5.8];
+  const shared = useMemo(
+    () => ({
+      potGeo: new THREE.CylinderGeometry(0.115, 0.088, 0.22, 16),
+      soilGeo: new THREE.CylinderGeometry(0.105, 0.105, 0.02, 12),
+      leafGeo: new THREE.SphereGeometry(0.075, 8, 6),
+      potMat: new THREE.MeshStandardMaterial({ color: potColor, roughness: 0.55 }),
+      soilMat: new THREE.MeshStandardMaterial({ color: "#3c281b", roughness: 0.95 }),
+      leafDarkMat: new THREE.MeshStandardMaterial({ color: "#286439", roughness: 0.62 }),
+      leafLightMat: new THREE.MeshStandardMaterial({ color: "#357e47", roughness: 0.62 }),
+    }),
+    [potColor],
+  );
+
+  useEffect(() => {
+    return () => {
+      shared.potGeo.dispose();
+      shared.soilGeo.dispose();
+      shared.leafGeo.dispose();
+      shared.potMat.dispose();
+      shared.soilMat.dispose();
+      shared.leafDarkMat.dispose();
+      shared.leafLightMat.dispose();
+    };
+  }, [shared]);
+
   return (
     <group position={position} scale={scale}>
-      <mesh position={[0, 0.11, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.115, 0.088, 0.22, 18]} />
-        <meshStandardMaterial color={potColor} roughness={0.55} />
-      </mesh>
-      <mesh position={[0, 0.215, 0]}>
-        <cylinderGeometry args={[0.105, 0.105, 0.02, 14]} />
-        <meshStandardMaterial color="#3c281b" roughness={0.95} />
-      </mesh>
-      {leafAngles.map((angle, idx) => {
+      <mesh
+        position={[0, 0.11, 0]}
+        geometry={shared.potGeo}
+        material={shared.potMat}
+        castShadow
+        receiveShadow
+      />
+      <mesh
+        position={[0, 0.215, 0]}
+        geometry={shared.soilGeo}
+        material={shared.soilMat}
+      />
+      {PLANT_LEAF_ANGLES.map((angle, idx) => {
         const lift = 0.26 + (idx % 3) * 0.055;
         const spread = 0.09 + (idx % 2) * 0.04;
         return (
@@ -162,14 +193,10 @@ const PottedPlant: React.FC<{
               -angle,
               0.25 * (idx % 2 === 0 ? 1 : -1),
             ]}
+            geometry={shared.leafGeo}
+            material={idx % 2 === 0 ? shared.leafDarkMat : shared.leafLightMat}
             castShadow
-          >
-            <sphereGeometry args={[0.075, 10, 8]} />
-            <meshStandardMaterial
-              color={idx % 2 === 0 ? "#286439" : "#357e47"}
-              roughness={0.62}
-            />
-          </mesh>
+          />
         );
       })}
     </group>
@@ -332,13 +359,20 @@ const MiniFigures3D: React.FC<{
 const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
   timeSec,
 }) => {
-  const skyTexture = useMemo(() => createTokyoSkyTexture(), []);
+  const skyAssets = useMemo(
+    () => ({
+      skyTexture: createTokyoSkyTexture(),
+      bokehGeo: new THREE.SphereGeometry(1, 8, 8),
+    }),
+    [],
+  );
 
   useEffect(() => {
     return () => {
-      skyTexture.dispose();
+      skyAssets.skyTexture.dispose();
+      skyAssets.bokehGeo.dispose();
     };
-  }, [skyTexture]);
+  }, [skyAssets]);
 
   const beaconIntensity = 1.4 + 1.1 * Math.sin(timeSec * 3.8);
 
@@ -346,7 +380,7 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
     <group>
       <mesh position={[2.9, 2.2, -11.2]}>
         <planeGeometry args={[11.2, 7.8]} />
-        <meshBasicMaterial map={skyTexture} />
+        <meshBasicMaterial map={skyAssets.skyTexture} />
       </mesh>
 
       {/* Distant warm horizon glow */}
@@ -495,8 +529,9 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
           <mesh
             key={idx}
             position={[orb.pos[0], orb.pos[1] + yDrift, orb.pos[2]]}
+            scale={orb.radius}
+            geometry={skyAssets.bokehGeo}
           >
-            <sphereGeometry args={[orb.radius, 10, 10]} />
             <meshBasicMaterial
               color={orb.color}
               transparent
@@ -634,11 +669,39 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
     [],
   );
 
+  const sharedScene = useMemo(
+    () => ({
+      slatGeo: new THREE.BoxGeometry(0.075, 3.6, 0.055),
+      deskLegGeo: new THREE.BoxGeometry(0.08, 0.7, 0.08),
+      slatMat: new THREE.MeshStandardMaterial({ color: "#462e1e", roughness: 0.72 }),
+      wallMat: new THREE.MeshStandardMaterial({ map: textures.wall, roughness: 0.84 }),
+      woodMat: new THREE.MeshStandardMaterial({ map: textures.wood, roughness: 0.6 }),
+      shelfBackMat: new THREE.MeshStandardMaterial({ color: "#382417", roughness: 0.8 }),
+      windowFrameMat: new THREE.MeshStandardMaterial({
+        color: "#181c24",
+        metalness: 0.55,
+        roughness: 0.42,
+      }),
+      windowMullionMat: new THREE.MeshStandardMaterial({
+        color: "#1a1f2a",
+        metalness: 0.5,
+        roughness: 0.45,
+      }),
+      deskLegMat: new THREE.MeshStandardMaterial({
+        color: "#181b22",
+        metalness: 0.6,
+        roughness: 0.4,
+      }),
+    }),
+    [textures],
+  );
+
   useEffect(() => {
     return () => {
+      Object.values(sharedScene).forEach((resource) => resource.dispose());
       Object.values(textures).forEach((tex) => tex.dispose());
     };
-  }, [textures]);
+  }, [sharedScene, textures]);
 
   const keyIntensity = interpolate(quizFactor, [0, 1], [1.75, 0.95]);
   const rimIntensity = interpolate(quizFactor, [0, 1], [1.35, 2.35]);
@@ -658,14 +721,14 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
         ]}
       />
 
-      {/* 1. Warm Studio Key Light */}
+      {/* 1. Warm Studio Key Light (512 shadow map for fast T4 GPU rendering) */}
       <directionalLight
         position={[-2.2, 3.6, 2.8]}
         intensity={keyIntensity}
         color="#ffe2bf"
         castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        shadow-mapSize-width={512}
+        shadow-mapSize-height={512}
         shadow-camera-near={0.5}
         shadow-camera-far={12}
         shadow-camera-left={-3.5}
@@ -720,21 +783,17 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
       </mesh>
 
       {/* Dark-Wood Back Studio Wall (Left/Center) + Window Framing Strips */}
-      <mesh position={[-1.4, 1.95, -2.15]} receiveShadow>
+      <mesh position={[-1.4, 1.95, -2.15]} material={sharedScene.wallMat} receiveShadow>
         <boxGeometry args={[5.8, 4.1, 0.16]} />
-        <meshStandardMaterial map={textures.wall} roughness={0.84} />
       </mesh>
-      <mesh position={[3.05, 3.62, -2.15]} receiveShadow>
+      <mesh position={[3.05, 3.62, -2.15]} material={sharedScene.wallMat} receiveShadow>
         <boxGeometry args={[3.5, 0.76, 0.16]} />
-        <meshStandardMaterial map={textures.wall} roughness={0.84} />
       </mesh>
-      <mesh position={[3.05, 0.32, -2.15]} receiveShadow>
+      <mesh position={[3.05, 0.32, -2.15]} material={sharedScene.wallMat} receiveShadow>
         <boxGeometry args={[3.5, 0.68, 0.16]} />
-        <meshStandardMaterial map={textures.wall} roughness={0.84} />
       </mesh>
-      <mesh position={[5.05, 1.95, -2.15]} receiveShadow>
+      <mesh position={[5.05, 1.95, -2.15]} material={sharedScene.wallMat} receiveShadow>
         <boxGeometry args={[0.6, 4.1, 0.16]} />
-        <meshStandardMaterial map={textures.wall} roughness={0.84} />
       </mesh>
 
       {/* Dark-Wood Vertical Acoustic Slats behind Host & Neon Sign */}
@@ -742,12 +801,11 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
         <mesh
           key={idx}
           position={[-2.18 + idx * 0.155, 1.95, -2.04]}
+          geometry={sharedScene.slatGeo}
+          material={sharedScene.slatMat}
           castShadow
           receiveShadow
-        >
-          <boxGeometry args={[0.075, 3.6, 0.055]} />
-          <meshStandardMaterial color="#462e1e" roughness={0.72} />
-        </mesh>
+        />
       ))}
 
       {/* Warm Ceiling Downlight Pucks */}
@@ -764,15 +822,13 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
 
       {/* ================= LEFT RECESSED WARM LED SHELVES ================= */}
       <group position={[-2.42, 1.52, -1.86]}>
-        <mesh position={[0, 0, -0.14]} receiveShadow>
+        <mesh position={[0, 0, -0.14]} material={sharedScene.shelfBackMat} receiveShadow>
           <boxGeometry args={[1.05, 2.3, 0.05]} />
-          <meshStandardMaterial color="#382417" roughness={0.8} />
         </mesh>
         {[-0.85, -0.18, 0.48, 1.08].map((sy, idx) => (
           <group key={idx} position={[0, sy, 0]}>
-            <mesh castShadow receiveShadow>
+            <mesh material={sharedScene.woodMat} castShadow receiveShadow>
               <boxGeometry args={[1.04, 0.05, 0.34]} />
-              <meshStandardMaterial map={textures.wood} roughness={0.62} />
             </mesh>
             {idx > 0 && (
               <mesh position={[0, -0.028, 0.08]}>
@@ -787,9 +843,14 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
           </group>
         ))}
         {[-0.5, 0.5].map((sx, idx) => (
-          <mesh key={idx} position={[sx, 0.12, 0]} castShadow receiveShadow>
+          <mesh
+            key={idx}
+            position={[sx, 0.12, 0]}
+            material={sharedScene.woodMat}
+            castShadow
+            receiveShadow
+          >
             <boxGeometry args={[0.05, 2.05, 0.34]} />
-            <meshStandardMaterial map={textures.wood} roughness={0.62} />
           </mesh>
         ))}
 
@@ -820,15 +881,13 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
 
       {/* ================= RIGHT RECESSED WARM LED SHELVES ================= */}
       <group position={[0.42, 1.52, -1.86]}>
-        <mesh position={[0, 0, -0.14]} receiveShadow>
+        <mesh position={[0, 0, -0.14]} material={sharedScene.shelfBackMat} receiveShadow>
           <boxGeometry args={[0.78, 2.15, 0.05]} />
-          <meshStandardMaterial color="#382417" roughness={0.8} />
         </mesh>
         {[-0.78, -0.12, 0.52, 1.05].map((sy, idx) => (
           <group key={idx} position={[0, sy, 0]}>
-            <mesh castShadow receiveShadow>
+            <mesh material={sharedScene.woodMat} castShadow receiveShadow>
               <boxGeometry args={[0.76, 0.048, 0.3]} />
-              <meshStandardMaterial map={textures.wood} roughness={0.62} />
             </mesh>
             {idx > 0 && (
               <mesh position={[0, -0.026, 0.07]}>
@@ -843,9 +902,14 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
           </group>
         ))}
         {[-0.36, 0.36].map((sx, idx) => (
-          <mesh key={idx} position={[sx, 0.14, 0]} castShadow receiveShadow>
+          <mesh
+            key={idx}
+            position={[sx, 0.14, 0]}
+            material={sharedScene.woodMat}
+            castShadow
+            receiveShadow
+          >
             <boxGeometry args={[0.045, 1.9, 0.3]} />
-            <meshStandardMaterial map={textures.wood} roughness={0.62} />
           </mesh>
         ))}
 
@@ -887,43 +951,36 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
 
       {/* ================= FLOOR-TO-CEILING WINDOW & TOKYO SKYLINE ================= */}
       <group position={[3.15, 1.92, -2.14]}>
-        <mesh position={[0, 1.34, 0]}>
+        <mesh position={[0, 1.34, 0]} material={sharedScene.windowFrameMat}>
           <boxGeometry args={[4.35, 0.085, 0.22]} />
-          <meshStandardMaterial color="#181c24" metalness={0.55} roughness={0.42} />
         </mesh>
-        <mesh position={[0, -1.34, 0]}>
+        <mesh position={[0, -1.34, 0]} material={sharedScene.woodMat}>
           <boxGeometry args={[4.35, 0.095, 0.28]} />
-          <meshStandardMaterial map={textures.wood} roughness={0.55} />
         </mesh>
-        <mesh position={[-2.12, 0, 0]}>
+        <mesh position={[-2.12, 0, 0]} material={sharedScene.windowFrameMat}>
           <boxGeometry args={[0.09, 2.75, 0.22]} />
-          <meshStandardMaterial color="#181c24" metalness={0.55} roughness={0.42} />
         </mesh>
-        <mesh position={[2.12, 0, 0]}>
+        <mesh position={[2.12, 0, 0]} material={sharedScene.windowFrameMat}>
           <boxGeometry args={[0.09, 2.75, 0.22]} />
-          <meshStandardMaterial color="#181c24" metalness={0.55} roughness={0.42} />
         </mesh>
         {/* Window mullions */}
-        <mesh position={[-0.75, 0, 0]}>
+        <mesh position={[-0.75, 0, 0]} material={sharedScene.windowMullionMat}>
           <boxGeometry args={[0.045, 2.66, 0.12]} />
-          <meshStandardMaterial color="#1a1f2a" metalness={0.5} roughness={0.45} />
         </mesh>
-        <mesh position={[0.62, 0, 0]}>
+        <mesh position={[0.62, 0, 0]} material={sharedScene.windowMullionMat}>
           <boxGeometry args={[0.045, 2.66, 0.12]} />
-          <meshStandardMaterial color="#1a1f2a" metalness={0.5} roughness={0.45} />
         </mesh>
-        <mesh position={[0, 0.45, 0]}>
+        <mesh position={[0, 0.45, 0]} material={sharedScene.windowMullionMat}>
           <boxGeometry args={[4.22, 0.04, 0.12]} />
-          <meshStandardMaterial color="#1a1f2a" metalness={0.5} roughness={0.45} />
         </mesh>
-        {/* Subtle Glass Pane */}
+        {/* Lightweight Subtle Glass Pane */}
         <mesh position={[0, 0, 0]}>
           <planeGeometry args={[4.2, 2.62]} />
-          <meshPhysicalMaterial
+          <meshStandardMaterial
             color="#a8c8ff"
             transparent
-            opacity={0.055}
-            roughness={0.08}
+            opacity={0.05}
+            roughness={0.12}
             metalness={0.15}
             depthWrite={false}
           />
@@ -950,10 +1007,13 @@ export const Studio3D: React.FC<Studio3DProps> = ({ sections, subtitles }) => {
           [-2.08, 0.35, 0.65],
           [2.08, 0.35, 0.65],
         ].map(([lx, ly, lz], idx) => (
-          <mesh key={idx} position={[lx, ly, lz]} castShadow>
-            <boxGeometry args={[0.08, 0.7, 0.08]} />
-            <meshStandardMaterial color="#181b22" metalness={0.6} roughness={0.4} />
-          </mesh>
+          <mesh
+            key={idx}
+            position={[lx, ly, lz]}
+            geometry={sharedScene.deskLegGeo}
+            material={sharedScene.deskLegMat}
+            castShadow
+          />
         ))}
 
         {/* Far-Left Clamped Boom-Arm Condenser Microphone */}

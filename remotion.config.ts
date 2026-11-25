@@ -31,6 +31,11 @@ if (isFullQualityRender) {
   Config.setPixelFormat("yuv420p");
   Config.setDefaultPremountInSeconds(2);
   Config.setDelayRenderTimeoutInMilliseconds(120000);
+  Config.setChromiumOpenGlRenderer("angle-egl");
+  Config.setChromiumFlags({
+    "ignore-gpu-blocklist": true,
+    "enable-gpu": true,
+  });
 } else {
   // Lightweight Intel i5 MacBook local preview preset
   Config.setConcurrency(2);
