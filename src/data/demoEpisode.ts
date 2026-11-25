@@ -6,6 +6,7 @@ export type PodcastSectionType =
   | "vocabulary"
   | "grammar"
   | "kanji_lesson"
+  | "station_guide"
   | "dialogue"
   | "quiz";
 
@@ -28,7 +29,6 @@ export type KanjiLessonData = {
   readonly onyomi: string;
   readonly kunyomi: string;
   readonly meaningEn: string;
-  readonly meaningNp?: string;
   readonly mnemonic: string;
   readonly strokeCount?: number;
   readonly examples: readonly KanjiExampleWord[];
@@ -37,15 +37,51 @@ export type KanjiLessonData = {
   readonly imageCaption?: string;
 };
 
+export type StationTermItem = {
+  readonly jp: string;
+  readonly reading: string;
+  readonly romaji: string;
+  readonly meaningEn: string;
+  readonly badgeColor?: string;
+};
+
+export type StationGuideData = {
+  readonly jlptLevel: string;
+  readonly sceneTag: string;
+  readonly titleJp: string;
+  readonly titleEn: string;
+  readonly keyPhraseJp: string;
+  readonly keyPhraseRomaji: string;
+  readonly keyPhraseEn: string;
+  readonly terms: readonly StationTermItem[];
+  readonly tipEn: string;
+  readonly visualPrompt?: string;
+  readonly imageUrl?: string;
+  readonly imageCaption?: string;
+};
+
+export type WordTiming = {
+  readonly word: string;
+  readonly startSec: number;
+  readonly endSec: number;
+  readonly charStart?: number;
+  readonly charEnd?: number;
+  readonly romaji?: string;
+  readonly romajiStart?: number;
+  readonly romajiEnd?: number;
+};
+
 export type SubtitleCue = {
   readonly id: string;
   readonly startSec: number;
   readonly endSec: number;
   readonly speaker: string;
   readonly japanese: string;
+  readonly ttsText?: string;
   readonly romaji: string;
   readonly english: string;
   readonly gesture?: HostGestureType;
+  readonly wordTimings?: readonly WordTiming[];
   readonly imageUrl?: string;
   readonly imageCaption?: string;
 };
@@ -214,6 +250,7 @@ export type EpisodeSection = {
   readonly gesture?: HostGestureType;
   readonly vocab?: VocabCardData;
   readonly kanji?: KanjiLessonData;
+  readonly stationGuide?: StationGuideData;
   readonly quiz?: QuizCardData;
   readonly imageUrl?: string;
   readonly imageSrc?: string;

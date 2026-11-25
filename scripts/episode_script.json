@@ -1,10 +1,12 @@
 {
-  "episodeNumber": "EP. 02",
-  "title": "5 Essential JLPT N4 Kanji",
-  "jlptLevel": "JLPT N4",
+  "episodeNumber": "EP. 03",
+  "title": "Japan Train Station Survival Guide",
+  "jlptLevel": "JLPT N4–N3",
   "studioMode": "dual",
-  "leadInSec": 0.36,
-  "outroSec": 0.72,
+  "speechRate": "-16%",
+  "leadInSec": 0.45,
+  "outroSec": 0.75,
+  "sentenceMicroPauseSec": 0.45,
   "sections": [
     {
       "id": "sec-intro",
@@ -12,183 +14,293 @@
       "label": "INTRO"
     },
     {
-      "id": "sec-kanji-1",
-      "type": "kanji_lesson",
-      "label": "KANJI 1 / 5",
-      "kanji": {
-        "kanji": "朝",
-        "jlptLevel": "JLPT N4",
-        "strokeCount": 12,
-        "onyomi": "チョウ",
-        "kunyomi": "あさ",
-        "meaningEn": "Morning",
-        "meaningNp": "बिहान (Bihana)",
-        "mnemonic": "Sun rising through tall grass while the fading moon stays on the right.",
-        "visualPrompt": "morning sunrise over emerald hills with fading moon",
-        "examples": [
+      "id": "sec-station-1",
+      "type": "station_guide",
+      "label": "SCENE 1 / 5",
+      "stationGuide": {
+        "jlptLevel": "JLPT N4–N3",
+        "sceneTag": "SCENE 1 / 5",
+        "titleJp": "駅・入口・出口",
+        "titleEn": "Finding the Station & Exits",
+        "keyPhraseJp": "すみません、駅はどこですか？",
+        "keyPhraseRomaji": "Sumimasen, eki wa doko desu ka?",
+        "keyPhraseEn": "Excuse me, where is the station?",
+        "terms": [
           {
-            "word": "毎朝",
-            "reading": "まいあさ",
-            "romaji": "maiasa",
-            "meaning": "Every morning"
+            "jp": "北口",
+            "reading": "きたぐち",
+            "romaji": "kitaguchi",
+            "meaningEn": "North Exit"
           },
           {
-            "word": "朝食",
-            "reading": "ちょうしょく",
-            "romaji": "choushoku",
-            "meaning": "Breakfast"
+            "jp": "南口",
+            "reading": "みなみぐち",
+            "romaji": "minamiguchi",
+            "meaningEn": "South Exit"
+          },
+          {
+            "jp": "東口",
+            "reading": "ひがしぐち",
+            "romaji": "higashiguchi",
+            "meaningEn": "East Exit"
+          },
+          {
+            "jp": "西口",
+            "reading": "にしぐち",
+            "romaji": "nishiguchi",
+            "meaningEn": "West Exit"
           }
-        ]
+        ],
+        "tipEn": "Always check which directional exit (北・南・東・西口) matches your destination map before leaving the gate.",
+        "visualPrompt": "station_exits_map",
+        "imageCaption": "Station Map & Directional Exits (北・南・東・西口)"
       }
     },
     {
-      "id": "sec-kanji-2",
-      "type": "kanji_lesson",
-      "label": "KANJI 2 / 5",
-      "kanji": {
-        "kanji": "駅",
-        "jlptLevel": "JLPT N4",
-        "strokeCount": 14,
-        "onyomi": "エキ",
-        "kunyomi": "—",
-        "meaningEn": "Train Station",
-        "meaningNp": "रेल स्टेशन (Train Station)",
-        "mnemonic": "Long ago, fast relay horses (馬) stopped to trade messages at each station.",
-        "visualPrompt": "tokyo train station platform with glowing green sign",
-        "examples": [
+      "id": "sec-station-2",
+      "type": "station_guide",
+      "label": "SCENE 2 / 5",
+      "stationGuide": {
+        "jlptLevel": "JLPT N4–N3",
+        "sceneTag": "SCENE 2 / 5",
+        "titleJp": "券売機・切符・運賃",
+        "titleEn": "Ticket Machines & IC Cards",
+        "keyPhraseJp": "東京駅までいくらですか？",
+        "keyPhraseRomaji": "Toukyou-eki made ikura desu ka?",
+        "keyPhraseEn": "How much is the fare to Tokyo Station?",
+        "terms": [
           {
-            "word": "東京駅",
-            "reading": "とうきょうえき",
-            "romaji": "Toukyou-eki",
-            "meaning": "Tokyo Station"
+            "jp": "片道",
+            "reading": "かたみち",
+            "romaji": "katamichi",
+            "meaningEn": "One-Way Ticket"
           },
           {
-            "word": "駅前",
-            "reading": "えきまえ",
-            "romaji": "ekimae",
-            "meaning": "In front of station"
+            "jp": "往復",
+            "reading": "おうふく",
+            "romaji": "oufuku",
+            "meaningEn": "Round-Trip Ticket"
+          },
+          {
+            "jp": "チャージ",
+            "reading": "ちゃーじ",
+            "romaji": "chaaji",
+            "meaningEn": "Top Up Suica / PASMO"
+          },
+          {
+            "jp": "運賃",
+            "reading": "うんちん",
+            "romaji": "unchin",
+            "meaningEn": "Train Fare"
           }
-        ]
+        ],
+        "tipEn": "Tap the English button on any JR or Metro 券売機 (ticket machine) to buy tickets or charge Suica / PASMO.",
+        "visualPrompt": "ticket_machine_ic",
+        "imageCaption": "Ticket Machine (券売機) & IC Card Top-Up"
       }
     },
     {
-      "id": "sec-kanji-3",
-      "type": "kanji_lesson",
-      "label": "KANJI 3 / 5",
-      "kanji": {
-        "kanji": "勉",
-        "jlptLevel": "JLPT N4",
-        "strokeCount": 10,
-        "onyomi": "ベン",
-        "kunyomi": "つと.める",
-        "meaningEn": "Effort / Diligence",
-        "meaningNp": "मेहनत / प्रयास (Mehanat)",
-        "mnemonic": "Putting strong power (力) into overcoming obstacles — the spirit of study!",
-        "visualPrompt": "open japanese study notebook with sparkling stars and pencil",
-        "examples": [
+      "id": "sec-station-3",
+      "type": "station_guide",
+      "label": "SCENE 3 / 5",
+      "stationGuide": {
+        "jlptLevel": "JLPT N4–N3",
+        "sceneTag": "SCENE 3 / 5",
+        "titleJp": "改札口・精算機",
+        "titleEn": "Ticket Gates & Fare Adjustment",
+        "keyPhraseJp": "すみません、乗り過ごしてしまいました。",
+        "keyPhraseRomaji": "Sumimasen, norisugoshite shimaimashita.",
+        "keyPhraseEn": "Excuse me, I accidentally missed my stop.",
+        "terms": [
           {
-            "word": "勉強",
-            "reading": "べんきょう",
-            "romaji": "benkyou",
-            "meaning": "Study"
+            "jp": "改札口",
+            "reading": "かいさつぐち",
+            "romaji": "kaisatsuguchi",
+            "meaningEn": "Ticket Gate"
           },
           {
-            "word": "勤勉",
-            "reading": "きんべん",
-            "romaji": "kinben",
-            "meaning": "Diligent / Hardworking"
+            "jp": "精算機",
+            "reading": "せいさんき",
+            "romaji": "seisanki",
+            "meaningEn": "Fare Adjustment"
+          },
+          {
+            "jp": "残高不足",
+            "reading": "ざんだかぶそく",
+            "romaji": "zandaka busoku",
+            "meaningEn": "Low Balance"
+          },
+          {
+            "jp": "駅員",
+            "reading": "えきいん",
+            "romaji": "ekiin",
+            "meaningEn": "Station Staff"
           }
-        ]
+        ],
+        "tipEn": "If the gate beeps red or you rode past your stop, visit the yellow 精算機 (Fare Adjustment Machine) right next to the gate.",
+        "visualPrompt": "ticket_gate_fare_adjust",
+        "imageCaption": "IC Ticket Gate (改札口) & Fare Adjustment (精算機)"
       }
     },
     {
-      "id": "sec-kanji-4",
-      "type": "kanji_lesson",
-      "label": "KANJI 4 / 5",
-      "kanji": {
-        "kanji": "料",
-        "jlptLevel": "JLPT N4",
-        "strokeCount": 10,
-        "onyomi": "リョウ",
-        "kunyomi": "—",
-        "meaningEn": "Ingredients / Fee",
-        "meaningNp": "सामग्री र शुल्क (Material & Fee)",
-        "mnemonic": "Measuring rice (米) with a ladle (斗) to prepare meals or weigh exact fees.",
-        "visualPrompt": "steaming japanese cooking bowl with chopsticks",
-        "examples": [
+      "id": "sec-station-4",
+      "type": "station_guide",
+      "label": "SCENE 4 / 5",
+      "stationGuide": {
+        "jlptLevel": "JLPT N4–N3",
+        "sceneTag": "SCENE 4 / 5",
+        "titleJp": "番線・電車の種類",
+        "titleEn": "Platforms & Train Types",
+        "keyPhraseJp": "この電車は新宿に行きますか？",
+        "keyPhraseRomaji": "Kono densha wa Shinjuku ni ikimasu ka?",
+        "keyPhraseEn": "Does this train go to Shinjuku?",
+        "terms": [
           {
-            "word": "料理",
-            "reading": "りょうり",
-            "romaji": "ryouri",
-            "meaning": "Cooking / Cuisine"
+            "jp": "各駅停車",
+            "reading": "かくえきていしゃ",
+            "romaji": "kakueki teisha",
+            "meaningEn": "Local (Every Stop)",
+            "badgeColor": "#38bdf8"
           },
           {
-            "word": "無料",
-            "reading": "むりょう",
-            "romaji": "muryou",
-            "meaning": "Free of charge"
+            "jp": "快速",
+            "reading": "かいそく",
+            "romaji": "kaisoku",
+            "meaningEn": "Rapid",
+            "badgeColor": "#34d399"
+          },
+          {
+            "jp": "急行",
+            "reading": "きゅうこう",
+            "romaji": "kyuukou",
+            "meaningEn": "Express",
+            "badgeColor": "#fbbf24"
+          },
+          {
+            "jp": "特急",
+            "reading": "とっきゅう",
+            "romaji": "tokkyuu",
+            "meaningEn": "Limited Express",
+            "badgeColor": "#f43f5e"
           }
-        ]
+        ],
+        "tipEn": "Check the platform number (〇番線) and train type above the door—Limited Express (特急) often requires an extra fee!",
+        "visualPrompt": "train_types_stops",
+        "imageCaption": "Platform 3 & Local vs. Express Stop Diagram"
       }
     },
     {
-      "id": "sec-kanji-5",
-      "type": "kanji_lesson",
-      "label": "KANJI 5 / 5",
-      "kanji": {
-        "kanji": "話",
-        "jlptLevel": "JLPT N4",
-        "strokeCount": 13,
-        "onyomi": "ワ",
-        "kunyomi": "はな.す・はなし",
-        "meaningEn": "Speak / Story",
-        "meaningNp": "कुराकानी / बोल्नु (Speak / Talk)",
-        "mnemonic": "Words (言) flowing cleanly over the tongue (舌) when friends talk.",
-        "visualPrompt": "two glowing conversation speech bubbles with sound waves",
-        "examples": [
+      "id": "sec-station-5",
+      "type": "station_guide",
+      "label": "SCENE 5 / 5",
+      "stationGuide": {
+        "jlptLevel": "JLPT N4–N3",
+        "sceneTag": "SCENE 5 / 5",
+        "titleJp": "乗り換え・終電・出口案内",
+        "titleEn": "Transfers, Last Train & Yellow Exits",
+        "keyPhraseJp": "乗り換えはどこですか？",
+        "keyPhraseRomaji": "Norikae wa doko desu ka?",
+        "keyPhraseEn": "Where is the transfer?",
+        "terms": [
           {
-            "word": "会話",
-            "reading": "かいわ",
-            "romaji": "kaiwa",
-            "meaning": "Conversation"
+            "jp": "乗り換え",
+            "reading": "のりかえ",
+            "romaji": "norikae",
+            "meaningEn": "Line Transfer"
           },
           {
-            "word": "電話",
-            "reading": "でんわ",
-            "romaji": "denwa",
-            "meaning": "Telephone"
+            "jp": "終電",
+            "reading": "しゅうでん",
+            "romaji": "shuuden",
+            "meaningEn": "Last Train"
+          },
+          {
+            "jp": "出口",
+            "reading": "でぐち",
+            "romaji": "deguchi",
+            "meaningEn": "Exit (Yellow Sign)",
+            "badgeColor": "#facc15"
+          },
+          {
+            "jp": "案内",
+            "reading": "あんない",
+            "romaji": "annai",
+            "meaningEn": "Guide / Signage"
           }
-        ]
+        ],
+        "tipEn": "Across Japan, overhead EXIT (出口) signs are standardized in bright yellow with black text so you can spot them instantly.",
+        "visualPrompt": "yellow_exit_transfer",
+        "imageCaption": "Yellow Exit Sign (出口) & Line Transfer Arrows"
       }
     },
     {
-      "id": "sec-quiz",
+      "id": "sec-roleplay",
+      "type": "dialogue",
+      "label": "STATION ROLEPLAY",
+      "visualPrompt": "roleplay_shinjuku_gate",
+      "imageCaption": "Shinjuku Station Roleplay (Maria & Sensei)"
+    },
+    {
+      "id": "sec-quiz-1",
       "type": "quiz",
-      "label": "QUICK QUIZ",
+      "label": "QUIZ 1 / 2",
       "quiz": {
-        "title": "JLPT N4 KANJI CHECK",
-        "questionJp": "「駅」の意味はどれでしょう？",
-        "questionEn": "Which English meaning matches the Kanji 「駅」?",
+        "title": "JLPT N4–N3 QUIZ 1 / 2",
+        "questionJp": "「精算機」はどんな時に使いますか？",
+        "questionEn": "When do you use a 精算機 (seisanki) at a station?",
         "options": [
           {
             "label": "A",
-            "jp": "朝",
-            "romaji": "asa",
-            "english": "Morning",
+            "jp": "出口を探す",
+            "romaji": "deguchi o sagasu",
+            "english": "Finding the exit",
             "isCorrect": false
           },
           {
             "label": "B",
-            "jp": "駅",
-            "romaji": "eki",
-            "english": "Train Station",
+            "jp": "運賃を精算する",
+            "romaji": "unchin o seisan suru",
+            "english": "Paying extra fare / low balance",
             "isCorrect": true
           },
           {
             "label": "C",
-            "jp": "話",
-            "romaji": "hanasu",
-            "english": "Speak / Story",
+            "jp": "特急券を予約する",
+            "romaji": "tokkyuuken o yoyaku suru",
+            "english": "Reserving a limited express seat",
+            "isCorrect": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "sec-quiz-2",
+      "type": "quiz",
+      "label": "QUIZ 2 / 2",
+      "quiz": {
+        "title": "JLPT N4–N3 QUIZ 2 / 2",
+        "questionJp": "全ての駅に止まる電車はどれですか？",
+        "questionEn": "Which train type stops at EVERY station?",
+        "options": [
+          {
+            "label": "A",
+            "jp": "各駅停車",
+            "romaji": "kakueki teisha",
+            "english": "Local Train",
+            "isCorrect": true
+          },
+          {
+            "label": "B",
+            "jp": "急行",
+            "romaji": "kyuukou",
+            "english": "Express Train",
+            "isCorrect": false
+          },
+          {
+            "label": "C",
+            "jp": "特急",
+            "romaji": "tokkyuu",
+            "english": "Limited Express",
             "isCorrect": false
           }
         ]
@@ -200,163 +312,212 @@
       "id": "sub-1",
       "sectionId": "sec-intro",
       "speaker": "Sensei",
-      "japanese": "みなさん、こんばんは！JungGoポッドキャストへようこそ。マリアさん、今朝はちゃんと起きられましたか？",
-      "romaji": "Minasan, konbanwa! JungGo Poddokyasuto e youkoso. Maria-san, kesa wa chanto okiraremashita ka?",
-      "english": "Good evening everyone! Welcome to JungGo Podcast. Maria, did you actually wake up on time this morning?",
-      "pauseSec": 0.35
+      "japanese": "みなさん、こんにちは！JungGoポッドキャストへようこそ。",
+      "ttsText": "みなさん、こんにちは！ジュンゴポッドキャストへようこそ。",
+      "romaji": "Minasan, konnichiwa! JungGo Poddokyasuto e youkoso.",
+      "english": "Hello everyone! Welcome to the JungGo Podcast.",
+      "pauseSec": 0.5
     },
     {
       "id": "sub-2",
       "sectionId": "sec-intro",
       "speaker": "Maria",
-      "japanese": "あはは、先生！目覚ましを三回止めて、ぎりぎりでした！でも今日はN4の漢字五つ、やる気満々です！",
-      "romaji": "Ahaha, Sensei! Mezamashi o sankai tomete, girigiri deshita! Demo kyou wa N4 no kanji itsutsu, yaruki manman desu!",
-      "english": "Haha, Sensei! I hit snooze three times and barely made it! Still, I'm super pumped for today's 5 N4 Kanji!",
-      "pauseSec": 0.45
+      "japanese": "先生、日本の駅は広くて迷いそうです。今日はN4とN3の駅サバイバル日本語を教えてください！",
+      "ttsText": "先生、日本の駅は広くて迷いそうです。今日はエヌよんとエヌさんの駅サバイバル日本語を教えてください！",
+      "romaji": "Sensei, Nihon no eki wa hirokute mayoisou desu. Kyou wa N4 to N3 no eki sabaibaru Nihongo o oshiete kudasai!",
+      "english": "Sensei, Japanese train stations look huge and easy to get lost in. Teach us N4 and N3 station survival Japanese today!",
+      "pauseSec": 0.55
     },
     {
       "id": "sub-3",
-      "sectionId": "sec-kanji-1",
+      "sectionId": "sec-station-1",
       "speaker": "Sensei",
       "gesture": "point_board",
-      "japanese": "では一つ目、こちらのボードを見てください！「朝」、Morningです。太陽と月が一緒に入っていますよ。",
-      "romaji": "Dewa hitotsume, kochira no boodo o mite kudasai! \"Asa\", Morning desu. Taiyou to tsuki ga issho ni haitte imasu yo.",
-      "english": "First up, look here on the board! \"Asa\" means Morning — both the rising sun and fading moon are inside it.",
-      "pauseSec": 0.4
+      "japanese": "まずはこちらのボードを見てください！「すみません、駅はどこですか？」と聞いてみましょう。",
+      "ttsText": "まずはこちらのボードを見てください！「すみません、駅はどこですか？」と聞いてみましょう。",
+      "romaji": "Mazu wa kochira no boodo o mite kudasai! \"Sumimasen, eki wa doko desu ka?\" to kiite mimashou.",
+      "english": "First, please look at the board here! Let's ask: \"Excuse me, where is the station?\"",
+      "pauseSec": 0.5
     },
     {
       "id": "sub-4",
-      "sectionId": "sec-kanji-1",
+      "sectionId": "sec-station-1",
       "speaker": "Maria",
-      "japanese": "わあ、本当だ！私は毎朝コーヒーがないと動けないので、毎朝と朝食はすぐ覚えられそうです！",
-      "romaji": "Waa, hontou da! Watashi wa maiasa koohii ga nai to ugokenai node, maiasa to choushoku wa sugu oboeraresou desu!",
-      "english": "Whoa, you're right! I can't function every morning without coffee, so I'll remember \"maiasa\" and \"breakfast\" instantly!",
-      "pauseSec": 0.35
+      "japanese": "「まっすぐ行って、右に曲がってください。」と言われたら、入口から入ればいいんですね！",
+      "ttsText": "「まっすぐ行って、右に曲がってください。」と言われたら、いりぐちから入ればいいんですね！",
+      "romaji": "\"Massugu itte, migi ni magatte kudasai.\" to iwaretara, iriguchi kara haireba ii n desu ne!",
+      "english": "If they say \"Go straight and turn right,\" then we just go in through the entrance (iriguchi)!",
+      "pauseSec": 0.5
     },
     {
       "id": "sub-5",
-      "sectionId": "sec-kanji-1",
+      "sectionId": "sec-station-1",
       "speaker": "Sensei",
       "gesture": "nod_encourage",
-      "japanese": "いいですね！コーヒーパワーで次の漢字へ行きましょう。",
-      "romaji": "Ii desu ne! Koohii pawaa de tsugi no kanji e ikimashou.",
-      "english": "Love it! Let's ride that coffee power straight to the next Kanji.",
-      "pauseSec": 0.45
+      "japanese": "そうです！出口には北口、南口、東口、西口があるので、方角も大事ですよ。",
+      "ttsText": "そうです！でぐちにはきたぐち、みなみぐち、ひがしぐち、にしぐちがあるので、ほうがくも大事ですよ。",
+      "romaji": "Sou desu! Deguchi ni wa kitaguchi, minamiguchi, higashiguchi, nishiguchi ga aru node, hougaku mo daiji desu yo.",
+      "english": "Exactly! Stations have North, South, East, and West Exits, so checking the direction is important.",
+      "pauseSec": 0.55
     },
     {
       "id": "sub-6",
-      "sectionId": "sec-kanji-2",
+      "sectionId": "sec-station-2",
       "speaker": "Sensei",
-      "japanese": "二つ目、ボードを見てください！「駅」、Train Stationです。昔は馬が止まる場所だったので、左に馬があります。",
-      "romaji": "Futatsume, boodo o mite kudasai! \"Eki\", Train Station desu. Mukashi wa uma ga tomaru basho datta node, hidari ni uma ga arimasu.",
-      "english": "Look at the board for number two! \"Eki\" means Train Station — it has a horse on the left from old relay stations.",
-      "pauseSec": 0.4
+      "gesture": "point_board",
+      "japanese": "次は券売機を見てください。切符には片道と往復があって、運賃を払います。",
+      "ttsText": "次はけんばいきを見てください。切符にはかたみちとおうふくがあって、うんちんを払います。",
+      "romaji": "Tsugi wa kenbaiki o mite kudasai. Kippu ni wa katamichi to oufuku ga atte, unchin o haraimasu.",
+      "english": "Next, look at the ticket machine on the board. You can buy one-way or round-trip tickets to pay your fare.",
+      "pauseSec": 0.5
     },
     {
       "id": "sub-7",
-      "sectionId": "sec-kanji-2",
+      "sectionId": "sec-station-2",
       "speaker": "Maria",
-      "gesture": "point_board",
-      "japanese": "なるほど！私、東京駅でいつも迷子になるんですけど、これからは「駅」を見たら馬を思い出します！",
-      "romaji": "Naruhodo! Watashi, Toukyou-eki de itsumo maigo ni naru n desu kedo, kore kara wa \"eki\" o mitara uma o omoidashimasu!",
-      "english": "Aha! I always get lost at Tokyo Station, but from now on whenever I see \"eki\" on the board I'll picture a horse!",
-      "pauseSec": 0.45
+      "japanese": "SuicaやPASMOをチャージするのも便利ですね！「東京駅までいくらですか？」とも聞けます。",
+      "ttsText": "スイカやパスモをチャージするのも便利ですね！「とうきょうえきまでいくらですか？」とも聞けます。",
+      "romaji": "Suica ya PASMO o chaaji suru no mo benri desu ne! \"Toukyou-eki made ikura desu ka?\" to mo kikemasu.",
+      "english": "Topping up Suica or PASMO is super convenient! We can also ask, \"How much is it to Tokyo Station?\"",
+      "pauseSec": 0.55
     },
     {
       "id": "sub-8",
-      "sectionId": "sec-kanji-3",
+      "sectionId": "sec-station-3",
       "speaker": "Sensei",
       "gesture": "point_board",
-      "japanese": "三つ目はこちら！「勉」、Effortです。日本語の勉強も、毎日コツコツ力を出すイメージですね。",
-      "romaji": "Mittsume wa kochira! \"Ben\", Effort desu. Nihongo no benkyou mo, mainichi kotsukotsu chikara o dasu imeeji desu ne.",
-      "english": "Number three right here! \"Ben\" means Effort — putting steady daily power into your Japanese study.",
-      "pauseSec": 0.35
+      "japanese": "改札口ではカードをタッチします。もし乗り過ごしたら、出口の前の精算機を使いましょう。",
+      "ttsText": "かいさつぐちではカードをタッチします。もしのりすごしたら、でぐちの前のせいさんきを使いましょう。",
+      "romaji": "Kaisatsuguchi de wa kaado o tacchi shimasu. Moshi norisugoshitara, deguchi no mae no seisanki o tsukaimashou.",
+      "english": "Tap your card at the ticket gate. If you miss your stop, use the Fare Adjustment Machine before the exit.",
+      "pauseSec": 0.5
     },
     {
       "id": "sub-9",
-      "sectionId": "sec-kanji-3",
+      "sectionId": "sec-station-3",
       "speaker": "Maria",
-      "japanese": "毎日十分でも続けたら、私も漢字マスターになれますかね？",
-      "romaji": "Mainichi juppun demo tsuzuketara, watashi mo kanji masutaa ni naremasu ka ne?",
-      "english": "If I keep it up for even ten minutes a day, can I become a Kanji master too?",
-      "pauseSec": 0.35
+      "japanese": "残高不足で困った時は、駅員さんに「すみません、乗り過ごしてしまいました。」と言えば大丈夫ですね。",
+      "ttsText": "ざんだかぶそくで困った時は、えきいんさんに「すみません、のりすごしてしまいました。」と言えば大丈夫ですね。",
+      "romaji": "Zandaka busoku de komatta toki wa, ekiin-san ni \"Sumimasen, norisugoshite shimaimashita.\" to ieba daijoubu desu ne.",
+      "english": "When short on balance, saying \"Excuse me, I missed my stop\" to station staff keeps everything smooth.",
+      "pauseSec": 0.55
     },
     {
       "id": "sub-10",
-      "sectionId": "sec-kanji-3",
+      "sectionId": "sec-station-4",
       "speaker": "Sensei",
-      "gesture": "nod_encourage",
-      "japanese": "もちろんです！継続は力なり、バッチリなれますよ！",
-      "romaji": "Mochiron desu! Keizoku wa chikara nari, bacchiri naremasu yo!",
-      "english": "Of course! Consistency is power — you'll totally nail it!",
-      "pauseSec": 0.45
+      "gesture": "point_board",
+      "japanese": "ホームでは何番線かを確認して、「この電車は新宿に行きますか？」と聞くと安心です。",
+      "ttsText": "ホームではなんばんせんかを確認して、「この電車はしんじゅくに行きますか？」と聞くと安心です。",
+      "romaji": "Hoomu de wa nanbansen ka o kakunin shite, \"Kono densha wa Shinjuku ni ikimasu ka?\" to kiku to anshin desu.",
+      "english": "Check your platform number, and ask \"Does this train go to Shinjuku?\" for total peace of mind.",
+      "pauseSec": 0.5
     },
     {
       "id": "sub-11",
-      "sectionId": "sec-kanji-4",
-      "speaker": "Sensei",
+      "sectionId": "sec-station-4",
+      "speaker": "Maria",
       "gesture": "point_board",
-      "japanese": "四つ目の漢字を見てください！「料」、IngredientsやFeeです。日本料理や、みんな大好きな「無料」にも使います。",
-      "romaji": "Yottsume no kanji o mite kudasai! \"Ryou\", Ingredients ya Fee desu. Nihon-ryouri ya, minna daisuki na \"muryou\" ni mo tsukaimasu.",
-      "english": "Look at Kanji number four! \"Ryou\" means Ingredients or Fee — used in Japanese cuisine and everyone's favorite word, \"free\"!",
-      "pauseSec": 0.35
+      "japanese": "ボードの電車の種類も大事ですね！各駅停車、快速、急行、特急で止まる駅が違うんですね。",
+      "ttsText": "ボードの電車の種類も大事ですね！かくえきていしゃ、かいそく、きゅうこう、とっきゅうで止まる駅が違うんですね。",
+      "romaji": "Boodo no densha no shurui mo daiji desu ne! Kakueki teisha, kaisoku, kyuukou, tokkyuu de tomaru eki ga chigau n desu ne.",
+      "english": "The train types on the board matter too! Local, Rapid, Express, and Limited Express stop at different stations.",
+      "pauseSec": 0.55
     },
     {
       "id": "sub-12",
-      "sectionId": "sec-kanji-4",
-      "speaker": "Maria",
-      "japanese": "わあ、「無料」！おかわり無料のお店を見つけたら、テンション最高になりますね！",
-      "romaji": "Waa, \"muryou\"! Okawari muryou no omise o mitsuketara, tenshon saikou ni narimasu ne!",
-      "english": "Ooh, \"muryou\" (free)! Finding a restaurant with free refills instantly makes my whole day!",
-      "pauseSec": 0.35
+      "sectionId": "sec-station-5",
+      "speaker": "Sensei",
+      "gesture": "point_board",
+      "japanese": "別の線に乗る時は「乗り換えはどこですか？」と聞きます。夜は終電の時間もチェックしましょう。",
+      "ttsText": "別の線に乗る時は「のりかえはどこですか？」と聞きます。夜はしゅうでんの時間もチェックしましょう。",
+      "romaji": "Betsu no sen ni noru toki wa \"Norikae wa doko desu ka?\" to kikimasu. Yoru wa shuuden no jikan mo chekku shimashou.",
+      "english": "When switching lines, ask \"Where is the transfer?\" At night, always check the last train (shuuden) time.",
+      "pauseSec": 0.5
     },
     {
       "id": "sub-13",
-      "sectionId": "sec-kanji-4",
-      "speaker": "Sensei",
-      "gesture": "nod_encourage",
-      "japanese": "素晴らしいリアクションですね！まさに日本のリアルな表現です。",
-      "romaji": "Subarashii riakushon desu ne! Masa ni Nihon no riaru na hyougen desu.",
-      "english": "Awesome reaction! That's truly real everyday Japanese.",
-      "pauseSec": 0.45
+      "sectionId": "sec-station-5",
+      "speaker": "Maria",
+      "gesture": "point_board",
+      "japanese": "そして迷ったら、日本の駅にある黄色い出口案内を探せばすぐに出られますね！",
+      "ttsText": "そして迷ったら、日本の駅にある黄色いでぐちあんないを探せばすぐに出られますね！",
+      "romaji": "Soshite mayottara, Nihon no eki ni aru kiiroi deguchi annai o sagaseba sugu ni deraremasu ne!",
+      "english": "And if you ever get lost, just follow Japan's standard bright yellow EXIT signs to head right out!",
+      "pauseSec": 0.55
     },
     {
       "id": "sub-14",
-      "sectionId": "sec-kanji-5",
-      "speaker": "Sensei",
-      "gesture": "point_board",
-      "japanese": "最後は五つ目、ボードを見てください！「話」、SpeakやStoryです。会話や電話で毎日使いますよ。",
-      "romaji": "Saigo wa itsutsume, boodo o mite kudasai! \"Hanasu\", Speak ya Story desu. Kaiwa ya denwa de mainichi tsukaimasu yo.",
-      "english": "Fifth and final Kanji on the board! \"Hanasu\" means Speak or Story — used daily in conversation and phone calls.",
-      "pauseSec": 0.35
+      "sectionId": "sec-roleplay",
+      "speaker": "Maria",
+      "japanese": "では駅ロールプレイです！すみません、この電車は新宿に行きますか？乗り換えはどこですか？",
+      "ttsText": "では駅ロールプレイです！すみません、この電車はしんじゅくに行きますか？のりかえはどこですか？",
+      "romaji": "Dewa eki roorupurei desu! Sumimasen, kono densha wa Shinjuku ni ikimasu ka? Norikae wa doko desu ka?",
+      "english": "Let's do a station roleplay! Excuse me, does this train go to Shinjuku? Where is the transfer?",
+      "pauseSec": 0.5
     },
     {
       "id": "sub-15",
-      "sectionId": "sec-kanji-5",
-      "speaker": "Maria",
-      "japanese": "先生とこうして楽しく会話できるのが、私の一番の楽しみです！",
-      "romaji": "Sensei to koushite tanoshiku kaiwa dekiru no ga, watashi no ichiban no tanoshimi desu!",
-      "english": "Having fun conversations with you like this, Sensei, is my favorite part of the day!",
-      "pauseSec": 0.45
+      "sectionId": "sec-roleplay",
+      "speaker": "Sensei",
+      "japanese": "新宿でしたら、三番線の快速に乗ってください。まっすぐ行って、黄色い出口案内で南口へ出られます。",
+      "ttsText": "しんじゅくでしたら、さんばんせんのかいそくに乗ってください。まっすぐ行って、黄色いでぐちあんないでみなみぐちへ出られます。",
+      "romaji": "Shinjuku deshitara, sanbansen no kaisoku ni notte kudasai. Massugu itte, kiiroi deguchi annai de minamiguchi e deraremasu.",
+      "english": "For Shinjuku, take the Rapid train on Platform 3. Go straight and follow the yellow exit sign to the South Exit.",
+      "pauseSec": 0.5
     },
     {
       "id": "sub-16",
-      "sectionId": "sec-quiz",
-      "speaker": "Sensei",
-      "gesture": "thinking",
-      "japanese": "さあ、お楽しみクイズです！「駅」の意味はどれでしょう？東京で迷子になる前に、考えてみてくださいね！",
-      "romaji": "Saa, otanoshimi kuizu desu! \"Eki\" no imi wa dore deshou? Toukyou de maigo ni naru mae ni, kangaete mite kudasai ne!",
-      "english": "Now for our fun quiz! What does the Kanji \"eki\" mean? Think carefully before getting lost in Tokyo!",
-      "pauseSec": 2.0
+      "sectionId": "sec-roleplay",
+      "speaker": "Maria",
+      "japanese": "ありがとうございます！もし乗り過ごしたら、精算機で精算しますね。",
+      "ttsText": "ありがとうございます！もしのりすごしたら、せいさんきでせいさんしますね。",
+      "romaji": "Arigatou gozaimasu! Moshi norisugoshitara, seisanki de seisan shimasu ne.",
+      "english": "Thank you very much! And if I miss my stop, I'll adjust the fare at the Fare Adjustment Machine.",
+      "pauseSec": 0.55
     },
     {
       "id": "sub-17",
-      "sectionId": "sec-quiz",
+      "sectionId": "sec-quiz-1",
+      "speaker": "Sensei",
+      "gesture": "thinking",
+      "japanese": "では第一問のクイズです！「精算機」はどんな時に使いますか？A、B、Cから選んでください。",
+      "ttsText": "ではだいいちもんのクイズです！「せいさんき」はどんな時に使いますか？エー、ビー、シーから選んでください。",
+      "romaji": "Dewa daiichimon no kuizu desu! \"Seisanki\" wa donna toki ni tsukaimasu ka? A, B, C kara erande kudasai.",
+      "english": "Time for Quiz Question 1! When do you use a seisanki (Fare Adjustment Machine)? Choose A, B, or C.",
+      "pauseSec": 2.2
+    },
+    {
+      "id": "sub-18",
+      "sectionId": "sec-quiz-1",
       "speaker": "Sensei",
       "gesture": "nod_encourage",
-      "japanese": "正解はBのTrain Station、駅でした！よくできましたね！また次のエピソードで会いましょう。",
-      "romaji": "Seikai wa B no Train Station, eki deshita! Yoku dekimashita ne! Mata tsugi no episoodo de aimashou.",
-      "english": "The correct answer is B, Train Station! Well done! See you in the next episode.",
+      "japanese": "正解はBの、運賃を精算する、でした！乗り過ごした時にとても便利です。",
+      "ttsText": "正解はビーの、うんちんをせいさんする、でした！のりすごした時にとても便利です。",
+      "romaji": "Seikai wa B no, unchin o seisan suru, deshita! Norisugoshita toki ni totemo benri desu.",
+      "english": "The correct answer is B — paying extra fare or low balance! Super helpful when you miss your stop.",
+      "pauseSec": 0.6
+    },
+    {
+      "id": "sub-19",
+      "sectionId": "sec-quiz-2",
+      "speaker": "Maria",
+      "gesture": "thinking",
+      "japanese": "続いて第二問です！全ての駅に止まる電車はどれですか？よく考えてみてくださいね。",
+      "ttsText": "続いてだいにもんです！全ての駅に止まる電車はどれですか？よく考えてみてくださいね。",
+      "romaji": "Tsudzuite dainimon desu! Subete no eki ni tomaru densha wa dore desu ka? Yoku kangaete mite kudasai ne.",
+      "english": "Next up, Question 2! Which train type stops at EVERY station? Think carefully!",
+      "pauseSec": 2.2
+    },
+    {
+      "id": "sub-20",
+      "sectionId": "sec-quiz-2",
+      "speaker": "Sensei",
+      "gesture": "nod_encourage",
+      "japanese": "正解はAの各駅停車でした！これで日本の駅もバッチリですね。また次回お会いしましょう！",
+      "ttsText": "正解はエーのかくえきていしゃでした！これで日本の駅もバッチリですね。また次回お会いしましょう！",
+      "romaji": "Seikai wa A no kakueki teisha deshita! Kore de Nihon no eki mo bacchiri desu ne. Mata jikai oai shimashou!",
+      "english": "The correct answer is A, Kakueki Teisha (Local Train)! Now you're ready for any Japanese station — see you next time!",
       "pauseSec": 0.65
     }
   ]

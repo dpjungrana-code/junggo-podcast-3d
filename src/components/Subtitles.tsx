@@ -9,6 +9,7 @@ import {
 import {
   EpisodeSection,
   SubtitleCue,
+  WordTiming,
   isGuestSpeaker,
 } from "../data/demoEpisode";
 
@@ -43,14 +44,218 @@ const SpeakerAudioIcon: React.FC<{ readonly strokeColor: string }> = ({
   </svg>
 );
 
+type HighlightState = "active" | "passed" | "upcoming";
+
+const getTokenState = (token: WordTiming, timeSec: number): HighlightState => {
+  if (timeSec >= token.startSec && timeSec <= token.endSec) {
+    return "active";
+  }
+  if (timeSec > token.endSec) {
+    return "passed";
+  }
+  return "upcoming";
+};
+
+const KARAOKE_GREEN = "#34d399";
+
+const renderKaraokeJapanese = (
+  japanese: string,
+  wordTimings: readonly WordTiming[] | undefined,
+  timeSec: number,
+): React.ReactNode => {
+  if (!wordTimings || wordTimings.length === 0) {
+    return japanese;
+  }
+
+  const ordered = wordTimings
+    .filter(
+      (w): w is WordTiming & { charStart: number; charEnd: number } =>
+        typeof w.charStart === "number" &&
+        typeof w.charEnd === "number" &&
+        w.charEnd > w.charStart,
+    )
+    .slice()
+    .sort((a, b) => a.charStart - b.charStart);
+
+  if (ordered.length === 0) {
+    return japanese;
+  }
+
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+
+  ordered.forEach((token, idx) => {
+    const cStart = Math.max(cursor, token.charStart);
+    const cEnd = Math.min(japanese.length, token.charEnd);
+
+    if (cStart > cursor) {
+      const gapText = japanese.slice(cursor, cStart);
+      const prevPassed = idx > 0 && timeSec >= ordered[idx - 1].endSec;
+      const gapLit = prevPassed || timeSec >= token.startSec;
+      parts.push(
+        <span
+          key={`jp-gap-${idx}`}
+          style={{ color: gapLit ? KARAOKE_GREEN : "#ffffff" }}
+        >
+          {gapText}
+        </span>,
+      );
+    }
+
+    if (cEnd > cStart) {
+      const tokenText = japanese.slice(cStart, cEnd);
+      const state = getTokenState(token, timeSec);
+      parts.push(
+        <span
+          key={`jp-tok-${idx}`}
+          style={
+            state === "active"
+              ? {
+                  color: KARAOKE_GREEN,
+                  textShadow: "0 0 14px rgba(52, 211, 153, 0.65)",
+                  backgroundColor: "rgba(52, 211, 153, 0.16)",
+                  borderBottom: `2.5px solid ${KARAOKE_GREEN}`,
+                  borderRadius: 5,
+                  padding: "0 2px",
+                }
+              : state === "passed"
+                ? { color: KARAOKE_GREEN }
+                : { color: "#ffffff" }
+          }
+        >
+          {tokenText}
+        </span>,
+      );
+      cursor = cEnd;
+    }
+  });
+
+  if (cursor < japanese.length) {
+    const last = ordered[ordered.length - 1];
+    parts.push(
+      <span
+        key="jp-tail"
+        style={{
+          color: timeSec > last.endSec ? KARAOKE_GREEN : "#ffffff",
+        }}
+      >
+        {japanese.slice(cursor)}
+      </span>,
+    );
+  }
+
+  return parts;
+};
+
+const renderKaraokeRomaji = (
+  romaji: string,
+  wordTimings: readonly WordTiming[] | undefined,
+  timeSec: number,
+  guest: boolean,
+): React.ReactNode => {
+  const upcomingColor = guest
+    ? "rgba(253, 230, 138, 0.56)"
+    : "rgba(203, 213, 225, 0.58)";
+
+  if (!wordTimings || wordTimings.length === 0) {
+    return <span style={{ color: guest ? "#fde68a" : "#36f2ae" }}>{romaji}</span>;
+  }
+
+  const ordered = wordTimings
+    .filter(
+      (w): w is WordTiming & { romajiStart: number; romajiEnd: number } =>
+        typeof w.romajiStart === "number" &&
+        typeof w.romajiEnd === "number" &&
+        w.romajiEnd > w.romajiStart,
+    )
+    .slice()
+    .sort((a, b) => a.romajiStart - b.romajiStart);
+
+  if (ordered.length === 0) {
+    return <span style={{ color: guest ? "#fde68a" : "#36f2ae" }}>{romaji}</span>;
+  }
+
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+
+  ordered.forEach((token, idx) => {
+    const rStart = Math.max(cursor, token.romajiStart);
+    const rEnd = Math.min(romaji.length, token.romajiEnd);
+
+    if (rStart > cursor) {
+      const gapText = romaji.slice(cursor, rStart);
+      const prevPassed = idx > 0 && timeSec >= ordered[idx - 1].endSec;
+      const gapLit = prevPassed || timeSec >= token.startSec;
+      parts.push(
+        <span
+          key={`rom-gap-${idx}`}
+          style={{
+            color: gapLit ? KARAOKE_GREEN : upcomingColor,
+            fontWeight: gapLit ? 700 : 600,
+          }}
+        >
+          {gapText}
+        </span>,
+      );
+    }
+
+    if (rEnd > rStart) {
+      const wordText = romaji.slice(rStart, rEnd);
+      const state = getTokenState(token, timeSec);
+      parts.push(
+        <span
+          key={`rom-tok-${idx}`}
+          style={
+            state === "active"
+              ? {
+                  color: KARAOKE_GREEN,
+                  fontWeight: 800,
+                  textShadow: "0 0 10px rgba(52, 211, 153, 0.5)",
+                }
+              : state === "passed"
+                ? {
+                    color: KARAOKE_GREEN,
+                    fontWeight: 700,
+                  }
+                : {
+                    color: upcomingColor,
+                    fontWeight: 600,
+                  }
+          }
+        >
+          {wordText}
+        </span>,
+      );
+      cursor = rEnd;
+    }
+  });
+
+  if (cursor < romaji.length) {
+    const last = ordered[ordered.length - 1];
+    parts.push(
+      <span
+        key="rom-tail"
+        style={{
+          color: timeSec > last.endSec ? KARAOKE_GREEN : upcomingColor,
+          fontWeight: timeSec > last.endSec ? 700 : 600,
+        }}
+      >
+        {romaji.slice(cursor)}
+      </span>,
+    );
+  }
+
+  return parts;
+};
+
 /**
- * Sleek bottom subtitle bar matching `public/images/studio-reference.jpg` with
- * circular speaker badge, crisp Japanese + luminous mint Romaji + English translation.
- * Strictly mounts only ONE active cue per integer frame range.
+ * Sleek bottom subtitle bar with real-time Whisper-synced Karaoke Japanese
+ * and Romaji highlighting (#34d399) + crisp English translation below.
  */
 export const Subtitles: React.FC<SubtitlesProps> = ({ subtitles }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const timeSec = frame / fps;
 
   let activeCue: SubtitleCue | null = null;
   let cueStartFrame = 0;
@@ -134,7 +339,7 @@ export const Subtitles: React.FC<SubtitlesProps> = ({ subtitles }) => {
             borderRadius: 18,
             backgroundColor: "rgba(11, 15, 21, 0.92)",
             border: `1.5px solid ${
-              guest ? "rgba(251, 191, 36, 0.55)" : "rgba(56, 235, 172, 0.48)"
+              guest ? "rgba(251, 191, 36, 0.55)" : "rgba(52, 211, 153, 0.52)"
             }`,
             boxShadow: "0 14px 36px rgba(0, 0, 0, 0.56)",
             opacity: subtitleOpacity,
@@ -179,34 +384,41 @@ export const Subtitles: React.FC<SubtitlesProps> = ({ subtitles }) => {
             </span>
           </div>
 
-          {/* Subtitle Text Stack */}
+          {/* Subtitle Text Stack with Progressive Karaoke Highlighting */}
           <div style={{ flex: 1, textAlign: "center" }}>
             <div
               style={{
-                fontSize: activeCue.japanese.length > 30 ? 27 : 31,
+                fontSize: activeCue.japanese.length > 34 ? 26 : 30,
                 fontWeight: 800,
                 color: "#ffffff",
                 letterSpacing: "0.02em",
-                lineHeight: 1.25,
+                lineHeight: 1.28,
                 marginBottom: 4,
               }}
             >
-              {activeCue.japanese}
+              {renderKaraokeJapanese(
+                activeCue.japanese,
+                activeCue.wordTimings,
+                timeSec,
+              )}
             </div>
             <div
               style={{
-                fontSize: 19,
-                fontWeight: 600,
-                color: guest ? "#fde68a" : "#36f2ae",
+                fontSize: activeCue.romaji.length > 70 ? 17.5 : 19,
                 letterSpacing: "0.015em",
                 marginBottom: 3,
               }}
             >
-              {activeCue.romaji}
+              {renderKaraokeRomaji(
+                activeCue.romaji,
+                activeCue.wordTimings,
+                timeSec,
+                guest,
+              )}
             </div>
             <div
               style={{
-                fontSize: 20,
+                fontSize: 19.5,
                 fontWeight: 500,
                 color: "#e2e8f0",
                 lineHeight: 1.3,

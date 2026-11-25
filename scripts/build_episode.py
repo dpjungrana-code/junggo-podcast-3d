@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """
-Free Japanese TTS + Timestamp Generator for JungGo Podcast Studio.
+Free Japanese "Yukkuri" TTS + Whisper QA + Timestamp Generator for JungGo Podcast Studio.
 
-Reads `scripts/episode_script.json`, synthesizes each line via `edge-tts`
-(`ja-JP-KeitaNeural` with warm, measured Sensei delivery `rate="-6%", pitch="-2Hz"`
-and `ja-JP-NanamiNeural` for Maria), inserts natural human micro-pauses between
-sentences, parses exact MPEG audio frame durations in pure Python (no ffmpeg
-required), writes combined MP3 audio to `public/audio/current_episode.mp3`, and
-outputs synced timestamps + section ranges to `src/data/currentEpisode.json`.
+Pipeline:
+1. Audits `scripts/episode_script.json` with `fugashi` (`unidic-lite`) + `pykakasi`
+   for morphological accuracy, Romaji consistency, and 100% English (zero Nepali).
+2. Synthesizes each line using `edge-tts` (`ja-JP-KeitaNeural` & `ja-JP-NanamiNeural`
+   at slow learner-friendly `rate="-16%"`), capturing `WordBoundary` metadata and
+   inserting crisp inter-sentence silent pauses (450ms–650ms).
+3. Verifies EVERY clip with `faster-whisper` (`language="ja"`, `word_timestamps=True`),
+   auto-correcting any TTS reading discrepancy via `ttsText` phonetic Kana if needed.
+4. Projects true Whisper acoustic word timestamps onto display Japanese & Romaji spans,
+   writes `public/audio/current_episode.mp3`, generates custom colorful SVG station
+   diagrams into `public/images/generated/`, and writes `src/data/currentEpisode.json`.
 """
 
 from __future__ import annotations
@@ -23,11 +28,20 @@ from typing import Any
 
 import edge_tts
 
+from qa_engine import (
+    align_word_timings,
+    audit_script_morphology,
+    compare_phonetics,
+    decode_mp3_to_pcm16k,
+    japanese_to_spoken_kana,
+    transcribe_clip_whisper,
+)
+
 VOICE_PROFILE_MAP: dict[str, tuple[str, str, str]] = {
-    "sensei": ("ja-JP-KeitaNeural", "-6%", "-2Hz"),
-    "junggo": ("ja-JP-KeitaNeural", "-6%", "-2Hz"),
-    "maria": ("ja-JP-NanamiNeural", "-3%", "+0Hz"),
-    "yuki": ("ja-JP-NanamiNeural", "-3%", "+0Hz"),
+    "sensei": ("ja-JP-KeitaNeural", "-16%", "-2Hz"),
+    "junggo": ("ja-JP-KeitaNeural", "-16%", "-2Hz"),
+    "maria": ("ja-JP-NanamiNeural", "-16%", "+0Hz"),
+    "yuki": ("ja-JP-NanamiNeural", "-16%", "+0Hz"),
 }
 
 # MPEG Layer III lookup tables
@@ -49,6 +63,7 @@ class Mp3StreamInfo:
     template_header: bytes
     frame_duration_sec: float
     frame_size_bytes: int
+    word_boundaries: tuple[tuple[str, float, float], ...] = ()
 
 
 def _strip_id3_tags(data: bytes) -> bytes:
@@ -70,7 +85,10 @@ def _strip_id3_tags(data: bytes) -> bytes:
     return data[start:end]
 
 
-def _parse_mp3_frames(raw_data: bytes) -> Mp3StreamInfo:
+def _parse_mp3_frames(
+    raw_data: bytes,
+    word_boundaries: tuple[tuple[str, float, float], ...] = (),
+) -> Mp3StreamInfo:
     """Parses MPEG Layer III frames to extract clean audio bytes and exact duration."""
     data = _strip_id3_tags(raw_data)
     out = bytearray()
@@ -120,7 +138,6 @@ def _parse_mp3_frames(raw_data: bytes) -> Mp3StreamInfo:
         frame_bytes = data[pos : pos + frame_len]
         frame_dur = samples_per_frame / sample_rate
 
-        # Skip any leading Xing/Info VBR metadata header frame
         if not out and (b"Xing" in frame_bytes[:48] or b"Info" in frame_bytes[:48]):
             pos += frame_len
             continue
@@ -150,6 +167,7 @@ def _parse_mp3_frames(raw_data: bytes) -> Mp3StreamInfo:
         template_header=template_header,
         frame_duration_sec=template_frame_duration,
         frame_size_bytes=template_frame_size,
+        word_boundaries=word_boundaries,
     )
 
 
@@ -168,21 +186,42 @@ def _synthesize_silence(
 
 
 def _split_japanese_sentences(text: str) -> list[str]:
-    """Splits a Japanese cue into natural sentences while keeping punctuation attached."""
-    parts = [part.strip() for part in SENTENCE_SPLIT_RE.split(text) if part.strip()]
+    """Splits a Japanese cue into sentences while keeping punctuation attached."""
+    raw_parts = [part.strip() for part in SENTENCE_SPLIT_RE.split(text) if part.strip()]
+    # Reattach closing quote if split left `」` on its own element
+    parts: list[str] = []
+    for part in raw_parts:
+        if part in ("」", "』", "）", ")") and parts:
+            parts[-1] = parts[-1] + part
+        else:
+            parts.append(part)
     return parts if parts else [text.strip()]
 
 
 async def _tts_clause(text: str, voice: str, rate: str, pitch: str) -> Mp3StreamInfo:
-    """Synthesizes one Japanese clause via edge-tts with tuned rate and pitch."""
-    communicate = edge_tts.Communicate(text=text, voice=voice, rate=rate, pitch=pitch)
+    """Synthesizes one Japanese clause via edge-tts and captures WordBoundary metadata."""
+    communicate = edge_tts.Communicate(
+        text=text,
+        voice=voice,
+        rate=rate,
+        pitch=pitch,
+        boundary="WordBoundary",
+    )
     audio_buffer = bytearray()
+    boundaries: list[tuple[str, float, float]] = []
     async for chunk in communicate.stream():
-        if chunk["type"] == "audio":
+        ctype = chunk.get("type")
+        if ctype == "audio":
             audio_buffer.extend(chunk["data"])
+        elif ctype == "WordBoundary":
+            offset_sec = float(chunk.get("offset", 0)) / 10_000_000.0
+            dur_sec = float(chunk.get("duration", 0)) / 10_000_000.0
+            word_txt = str(chunk.get("text", "")).strip()
+            if word_txt:
+                boundaries.append((word_txt, offset_sec, offset_sec + dur_sec))
     if not audio_buffer:
         raise RuntimeError(f"edge-tts returned empty audio for: {text!r}")
-    return _parse_mp3_frames(bytes(audio_buffer))
+    return _parse_mp3_frames(bytes(audio_buffer), tuple(boundaries))
 
 
 async def _tts_line_with_micro_pauses(
@@ -190,9 +229,9 @@ async def _tts_line_with_micro_pauses(
     voice: str,
     rate: str,
     pitch: str,
-    micro_pause_sec: float = 0.22,
+    micro_pause_sec: float = 0.45,
 ) -> Mp3StreamInfo:
-    """Synthesizes a line sentence-by-sentence with natural human breath micro-pauses."""
+    """Synthesizes a line sentence-by-sentence with learner-friendly breath pauses."""
     sentences = _split_japanese_sentences(text)
     clauses = await asyncio.gather(
         *[_tts_clause(sentence, voice=voice, rate=rate, pitch=pitch) for sentence in sentences]
@@ -201,9 +240,13 @@ async def _tts_line_with_micro_pauses(
     ref = clauses[0]
     combined = bytearray()
     total_dur = 0.0
+    combined_boundaries: list[tuple[str, float, float]] = []
 
     for idx, clause in enumerate(clauses):
+        clause_offset = total_dur
         combined.extend(clause.frames_bytes)
+        for b_word, b_s, b_e in clause.word_boundaries:
+            combined_boundaries.append((b_word, clause_offset + b_s, clause_offset + b_e))
         total_dur += clause.duration_sec
         if idx < len(clauses) - 1 and micro_pause_sec > 0:
             pause_bytes, pause_dur = _synthesize_silence(
@@ -221,6 +264,7 @@ async def _tts_line_with_micro_pauses(
         template_header=ref.template_header,
         frame_duration_sec=ref.frame_duration_sec,
         frame_size_bytes=ref.frame_size_bytes,
+        word_boundaries=tuple(combined_boundaries),
     )
 
 
@@ -240,31 +284,173 @@ def _generate_visual_svg(
     kanji_data: dict[str, Any] | None,
     out_dir: Path,
 ) -> str:
-    """Generates a clean vector SVG diagram into `public/images/generated/` when no manual image exists."""
+    """Generates a custom colorful vector SVG diagram in `public/images/generated/`."""
     out_dir.mkdir(parents=True, exist_ok=True)
     safe_name = f"{_safe_slug(slug)}.svg"
     out_file = out_dir / safe_name
 
     kanji_char = str((kanji_data or {}).get("kanji", "")).strip()
     meaning = str((kanji_data or {}).get("meaningEn", "")).strip()
-    haystack = f"{visual_prompt} {kanji_char} {meaning}".lower()
+    haystack = f"{slug} {visual_prompt} {kanji_char} {meaning}".lower()
 
-    if any(k in haystack for k in ("朝", "morning", "sunrise", "dawn", "sun")):
+    if "station_exits_map" in haystack:
         body = (
-            '<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">'
-            '<stop offset="0%" stop-color="#0f172a"/><stop offset="65%" stop-color="#1e3a5f"/>'
-            '<stop offset="100%" stop-color="#7c2d12"/></linearGradient></defs>'
-            '<rect width="240" height="240" rx="22" fill="url(#sky)"/>'
-            '<circle cx="176" cy="56" r="18" fill="#fde68a" opacity="0.88"/>'
-            '<circle cx="184" cy="52" r="15" fill="#13223b"/>'
-            '<circle cx="118" cy="142" r="46" fill="#f59e0b" opacity="0.22"/>'
-            '<circle cx="118" cy="142" r="32" fill="#ef4444"/>'
-            '<path d="M118 96 V84 M82 110 L73 101 M154 110 L163 101" '
-            'stroke="#fbbf24" stroke-width="4" stroke-linecap="round"/>'
-            '<path d="M0 172 Q65 136 128 166 T240 156 V240 H0 Z" fill="#0d5434"/>'
-            '<path d="M0 194 Q95 162 175 186 T240 180 V240 H0 Z" fill="#148c53"/>'
-            '<circle cx="52" cy="60" r="3" fill="#36f2ae"/>'
-            '<circle cx="94" cy="44" r="2.5" fill="#ffffff" opacity="0.8"/>'
+            '<rect width="320" height="240" rx="18" fill="#0b131d"/>'
+            '<rect x="10" y="10" width="300" height="220" rx="14" fill="#0f1b28" stroke="#22c55e" stroke-width="2" stroke-opacity="0.45"/>'
+            # Railway tracks horizontally behind station
+            '<line x1="16" y1="120" x2="304" y2="120" stroke="#334155" stroke-width="10"/>'
+            '<line x1="16" y1="120" x2="304" y2="120" stroke="#94a3b8" stroke-width="2" stroke-dasharray="10 8"/>'
+            # Four Exit Pills
+            '<rect x="114" y="20" width="92" height="34" rx="10" fill="#148c53" stroke="#34d399" stroke-width="2"/>'
+            '<text x="160" y="42" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="800">北口 N</text>'
+            '<rect x="114" y="186" width="92" height="34" rx="10" fill="#148c53" stroke="#34d399" stroke-width="2"/>'
+            '<text x="160" y="208" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="800">南口 S</text>'
+            '<rect x="18" y="102" width="76" height="36" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>'
+            '<text x="56" y="125" text-anchor="middle" fill="#e0f2fe" font-size="15" font-weight="800">西口 W</text>'
+            '<rect x="226" y="102" width="76" height="36" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>'
+            '<text x="264" y="125" text-anchor="middle" fill="#e0f2fe" font-size="15" font-weight="800">東口 E</text>'
+            # Compass connecting lines
+            '<path d="M160 56 V80 M160 160 V184 M96 120 H116 M204 120 H224" stroke="#34d399" stroke-width="3" stroke-linecap="round"/>'
+            # Center Station Hub + Entrance/Exit badges
+            '<circle cx="160" cy="120" r="38" fill="#102536" stroke="#34d399" stroke-width="3"/>'
+            '<text x="160" y="129" text-anchor="middle" fill="#ffffff" font-size="30" font-weight="900">駅</text>'
+            '<rect x="18" y="22" width="76" height="26" rx="7" fill="#0d9488"/>'
+            '<text x="56" y="40" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="800">入口 IN</text>'
+            '<rect x="226" y="22" width="76" height="26" rx="7" fill="#facc15"/>'
+            '<text x="264" y="40" text-anchor="middle" fill="#111827" font-size="12" font-weight="900">出口 OUT</text>'
+        )
+    elif "ticket_machine_ic" in haystack:
+        body = (
+            '<rect width="320" height="240" rx="18" fill="#0b131d"/>'
+            # Ticket Machine Kiosk (券売機)
+            '<rect x="22" y="22" width="166" height="196" rx="14" fill="#182534" stroke="#34d399" stroke-width="2.5"/>'
+            '<rect x="34" y="32" width="142" height="26" rx="6" fill="#0f766e"/>'
+            '<text x="105" y="50" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900">券売機 TICKETS</text>'
+            # LCD Touch Screen
+            '<rect x="36" y="66" width="138" height="90" rx="8" fill="#0b121c" stroke="#38bdf8" stroke-width="1.8"/>'
+            '<rect x="44" y="76" width="58" height="32" rx="6" fill="#0284c7"/>'
+            '<text x="73" y="96" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="800">片道</text>'
+            '<rect x="108" y="76" width="58" height="32" rx="6" fill="#148c53"/>'
+            '<text x="137" y="96" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="800">往復</text>'
+            '<rect x="44" y="116" width="122" height="30" rx="6" fill="#1e293b" stroke="#fbbf24" stroke-width="1.5"/>'
+            '<text x="105" y="136" text-anchor="middle" fill="#fde68a" font-size="13" font-weight="800">運賃 ¥200  EN</text>'
+            # Ticket slot
+            '<rect x="52" y="174" width="106" height="26" rx="6" fill="#0f172a" stroke="#64748b" stroke-width="1.5"/>'
+            '<rect x="82" y="182" width="46" height="10" rx="3" fill="#34d399"/>'
+            # Suica / PASMO IC Card & Contactless Charge Pad
+            '<circle cx="250" cy="158" r="40" fill="#0f2922" stroke="#34d399" stroke-width="2.5" stroke-dasharray="6 4"/>'
+            '<text x="250" y="163" text-anchor="middle" fill="#34d399" font-size="13" font-weight="900">IC チャージ</text>'
+            '<rect x="206" y="34" width="92" height="62" rx="10" fill="#22c55e" stroke="#bbf7d0" stroke-width="2"/>'
+            '<rect x="206" y="48" width="92" height="14" fill="#15803d"/>'
+            '<text x="252" y="78" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="900">Suica / IC</text>'
+            # Tap Waves
+            '<path d="M236 106 Q250 116 264 106 M228 114 Q250 128 272 114" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>'
+        )
+    elif "ticket_gate_fare_adjust" in haystack:
+        body = (
+            '<rect width="320" height="240" rx="18" fill="#0b131d"/>'
+            # Left: Ticket Gate (改札口)
+            '<rect x="18" y="24" width="148" height="192" rx="14" fill="#132231" stroke="#38bdf8" stroke-width="2"/>'
+            '<text x="92" y="48" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900">改札口 GATE</text>'
+            # Two silver gate pillars + open pass lane
+            '<rect x="34" y="64" width="38" height="130" rx="8" fill="#334155" stroke="#64748b" stroke-width="1.5"/>'
+            '<rect x="112" y="64" width="38" height="130" rx="8" fill="#334155" stroke="#64748b" stroke-width="1.5"/>'
+            # Glowing blue IC reader on top
+            '<ellipse cx="53" cy="76" rx="14" ry="8" fill="#38bdf8"/>'
+            '<circle cx="131" cy="76" r="8" fill="#22c55e"/>'
+            # Green pass arrow
+            '<path d="M92 178 V88 M78 104 L92 86 L106 104" fill="none" stroke="#34d399" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'
+            '<rect x="44" y="186" width="96" height="20" rx="6" fill="#0f766e"/>'
+            '<text x="92" y="200" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="800">IC タッチ PASS</text>'
+            # Right: Fare Adjustment Machine (精算機)
+            '<rect x="182" y="24" width="120" height="192" rx="14" fill="#3b2f0b" stroke="#facc15" stroke-width="2.5"/>'
+            '<rect x="194" y="34" width="96" height="26" rx="6" fill="#facc15"/>'
+            '<text x="242" y="52" text-anchor="middle" fill="#111827" font-size="14" font-weight="900">精算機</text>'
+            '<rect x="196" y="70" width="92" height="58" rx="8" fill="#111827" stroke="#fbbf24" stroke-width="1.5"/>'
+            '<text x="242" y="94" text-anchor="middle" fill="#fde68a" font-size="13" font-weight="800">残高不足</text>'
+            '<text x="242" y="116" text-anchor="middle" fill="#34d399" font-size="16" font-weight="900">+¥180 OK</text>'
+            '<rect x="200" y="142" width="84" height="24" rx="6" fill="#1f2937"/>'
+            '<text x="242" y="158" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">FARE ADJUST</text>'
+            '<rect x="212" y="178" width="60" height="22" rx="6" fill="#f59e0b"/>'
+            '<text x="242" y="193" text-anchor="middle" fill="#111827" font-size="11" font-weight="900">精算券</text>'
+        )
+    elif "train_types_stops" in haystack:
+        body = (
+            '<rect width="320" height="240" rx="18" fill="#0b131d"/>'
+            # Platform header
+            '<rect x="16" y="16" width="288" height="32" rx="8" fill="#132533" stroke="#34d399" stroke-width="1.8"/>'
+            '<text x="160" y="37" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900">3番線 PLATFORM 3  →  新宿</text>'
+            # Stop columns header (Stations A B C D E)
+            '<text x="122" y="64" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="700">S1</text>'
+            '<text x="162" y="64" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="700">S2</text>'
+            '<text x="202" y="64" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="700">S3</text>'
+            '<text x="242" y="64" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="700">S4</text>'
+            '<text x="282" y="64" text-anchor="middle" fill="#34d399" font-size="10" font-weight="900">新宿</text>'
+            # 1. 各駅停車 (Blue - all 5 stops)
+            '<rect x="16" y="72" width="84" height="30" rx="7" fill="#0284c7"/>'
+            '<text x="58" y="92" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="900">各駅停車</text>'
+            '<line x1="122" y1="87" x2="282" y2="87" stroke="#38bdf8" stroke-width="4"/>'
+            '<circle cx="122" cy="87" r="6" fill="#ffffff" stroke="#0284c7" stroke-width="3"/>'
+            '<circle cx="162" cy="87" r="6" fill="#ffffff" stroke="#0284c7" stroke-width="3"/>'
+            '<circle cx="202" cy="87" r="6" fill="#ffffff" stroke="#0284c7" stroke-width="3"/>'
+            '<circle cx="242" cy="87" r="6" fill="#ffffff" stroke="#0284c7" stroke-width="3"/>'
+            '<circle cx="282" cy="87" r="7" fill="#ffffff" stroke="#0284c7" stroke-width="3"/>'
+            # 2. 快速 (Green - skips S2, S4)
+            '<rect x="16" y="112" width="84" height="30" rx="7" fill="#148c53"/>'
+            '<text x="58" y="132" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900">快速</text>'
+            '<line x1="122" y1="127" x2="282" y2="127" stroke="#34d399" stroke-width="4"/>'
+            '<circle cx="122" cy="127" r="6" fill="#ffffff" stroke="#148c53" stroke-width="3"/>'
+            '<circle cx="202" cy="127" r="6" fill="#ffffff" stroke="#148c53" stroke-width="3"/>'
+            '<circle cx="282" cy="127" r="7" fill="#ffffff" stroke="#148c53" stroke-width="3"/>'
+            # 3. 急行 (Amber - S1, S3, Shinjuku or S1 & S3/S5)
+            '<rect x="16" y="152" width="84" height="30" rx="7" fill="#d97706"/>'
+            '<text x="58" y="172" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900">急行</text>'
+            '<line x1="122" y1="167" x2="282" y2="167" stroke="#fbbf24" stroke-width="4"/>'
+            '<circle cx="122" cy="167" r="6" fill="#ffffff" stroke="#d97706" stroke-width="3"/>'
+            '<circle cx="202" cy="167" r="6" fill="#ffffff" stroke="#d97706" stroke-width="3"/>'
+            '<circle cx="282" cy="167" r="7" fill="#ffffff" stroke="#d97706" stroke-width="3"/>'
+            # 4. 特急 (Rose - terminal to terminal)
+            '<rect x="16" y="192" width="84" height="30" rx="7" fill="#e11d48"/>'
+            '<text x="58" y="212" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="900">特急</text>'
+            '<line x1="122" y1="207" x2="282" y2="207" stroke="#fb7185" stroke-width="4"/>'
+            '<circle cx="122" cy="207" r="6" fill="#ffffff" stroke="#e11d48" stroke-width="3"/>'
+            '<circle cx="282" cy="207" r="7" fill="#ffffff" stroke="#e11d48" stroke-width="3"/>'
+        )
+    elif "yellow_exit_transfer" in haystack:
+        body = (
+            '<rect width="320" height="240" rx="18" fill="#0b131d"/>'
+            # Official Japanese bright yellow overhead EXIT sign
+            '<rect x="20" y="20" width="280" height="66" rx="10" fill="#facc15" stroke="#fde047" stroke-width="2.5"/>'
+            '<rect x="28" y="28" width="46" height="50" rx="8" fill="#148c53"/>'
+            '<text x="51" y="61" text-anchor="middle" fill="#ffffff" font-size="22" font-weight="900">↗</text>'
+            '<text x="186" y="52" text-anchor="middle" fill="#111827" font-size="24" font-weight="900">出口  EXIT</text>'
+            '<text x="186" y="74" text-anchor="middle" fill="#1f2937" font-size="11.5" font-weight="800">南口 South Exit · Yellow Standard</text>'
+            # Transfer lines box (乗り換え)
+            '<rect x="20" y="102" width="280" height="72" rx="12" fill="#132230" stroke="#38bdf8" stroke-width="2"/>'
+            '<text x="36" y="126" fill="#38bdf8" font-size="13" font-weight="900">乗り換え TRANSFER</text>'
+            '<rect x="34" y="136" width="94" height="26" rx="13" fill="#16a34a"/>'
+            '<text x="81" y="154" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="800">JR 山手線</text>'
+            '<path d="M138 149 H178 M168 141 L180 149 L168 157" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>'
+            '<rect x="190" y="136" width="96" height="26" rx="13" fill="#e11d48"/>'
+            '<text x="238" y="154" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="800">東京メトロ</text>'
+            # Last Train badge (終電)
+            '<rect x="20" y="186" width="280" height="36" rx="10" fill="#1e1b4b" stroke="#a78bfa" stroke-width="1.8"/>'
+            '<text x="160" y="210" text-anchor="middle" fill="#fde68a" font-size="15" font-weight="900">終電 LAST TRAIN  23:58 Check!</text>'
+        )
+    elif "roleplay_shinjuku_gate" in haystack:
+        body = (
+            '<rect width="320" height="240" rx="18" fill="#0b131d"/>'
+            '<rect x="18" y="18" width="284" height="44" rx="10" fill="#148c53" stroke="#34d399" stroke-width="2"/>'
+            '<text x="160" y="46" text-anchor="middle" fill="#ffffff" font-size="20" font-weight="900">新宿  SHINJUKU  3番線</text>'
+            '<rect x="26" y="78" width="128" height="66" rx="12" fill="#1f2937" stroke="#f59e0b" stroke-width="2"/>'
+            '<text x="90" y="102" text-anchor="middle" fill="#fde68a" font-size="12" font-weight="800">MARIA (Traveler)</text>'
+            '<text x="90" y="126" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="800">新宿に行きますか？</text>'
+            '<rect x="166" y="78" width="128" height="66" rx="12" fill="#132533" stroke="#34d399" stroke-width="2"/>'
+            '<text x="230" y="102" text-anchor="middle" fill="#34d399" font-size="12" font-weight="800">SENSEI (Staff)</text>'
+            '<text x="230" y="126" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="800">3番線の快速です!</text>'
+            '<rect x="26" y="160" width="268" height="58" rx="12" fill="#facc15"/>'
+            '<text x="160" y="185" text-anchor="middle" fill="#111827" font-size="16" font-weight="900">出口 南口 SOUTH EXIT  ↑</text>'
+            '<text x="160" y="206" text-anchor="middle" fill="#1f2937" font-size="12" font-weight="800">Miss a stop? → Use the 精算機 Fare Machine</text>'
         )
     elif any(k in haystack for k in ("駅", "station", "train", "rail", "platform")):
         body = (
@@ -280,60 +466,8 @@ def _generate_visual_svg(
             '<circle cx="88" cy="157" r="7" fill="#fbbf24"/>'
             '<circle cx="152" cy="157" r="7" fill="#fbbf24"/>'
         )
-    elif any(k in haystack for k in ("勉", "強", "study", "notebook", "book", "pencil", "effort")):
-        body = (
-            '<rect width="240" height="240" rx="22" fill="#0d1520"/>'
-            '<path d="M36 68 Q78 54 120 74 Q162 54 204 68 V184 Q162 170 120 190 Q78 170 36 184 Z" '
-            'fill="#162230" stroke="#36f2ae" stroke-width="3"/>'
-            '<line x1="120" y1="74" x2="120" y2="190" stroke="#36f2ae" stroke-width="2.5"/>'
-            '<path d="M54 96 H104 M54 116 H100 M54 136 H96 M136 96 H186 M136 116 H180" '
-            'stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>'
-            '<g transform="translate(154 114) rotate(32)">'
-            '<rect x="-9" y="-42" width="18" height="68" rx="4" fill="#f59e0b"/>'
-            '<polygon points="-9,26 9,26 0,44" fill="#fde68a"/>'
-            '<rect x="-9" y="-42" width="18" height="12" rx="3" fill="#ef4444"/></g>'
-            '<polygon points="62,36 66,46 76,46 68,52 71,62 62,56 53,62 56,52 48,46 58,46" fill="#fbbf24"/>'
-            '<circle cx="182" cy="44" r="5" fill="#36f2ae"/>'
-        )
-    elif any(k in haystack for k in ("料", "理", "食", "cook", "food", "bowl", "kitchen", "meal")):
-        body = (
-            '<rect width="240" height="240" rx="22" fill="#0d151d"/>'
-            '<path d="M84 74 C76 58 94 48 86 34 M120 70 C112 52 130 42 122 26 M156 74 C148 58 166 48 158 34" '
-            'fill="none" stroke="#36f2ae" stroke-width="4.5" stroke-linecap="round" opacity="0.85"/>'
-            '<line x1="138" y1="102" x2="206" y2="62" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/>'
-            '<line x1="144" y1="112" x2="212" y2="82" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/>'
-            '<ellipse cx="118" cy="116" rx="70" ry="20" fill="#f8fafc"/>'
-            '<ellipse cx="118" cy="118" rx="60" ry="14" fill="#c27832"/>'
-            '<path d="M48 118 C48 182 188 182 188 118 Z" fill="#148c53" stroke="#36f2ae" stroke-width="2.5"/>'
-            '<rect x="86" y="174" width="64" height="14" rx="5" fill="#0e663c"/>'
-            '<circle cx="98" cy="115" r="9" fill="#fde68a"/>'
-            '<circle cx="132" cy="114" r="8" fill="#ef4444"/>'
-        )
-    elif any(k in haystack for k in ("話", "語", "speak", "talk", "conversation", "bubble", "chat")):
-        body = (
-            '<rect width="240" height="240" rx="22" fill="#0c151f"/>'
-            '<rect x="28" y="44" width="130" height="82" rx="20" fill="#148c53" stroke="#36f2ae" stroke-width="2.5"/>'
-            '<polygon points="56,124 44,148 80,124" fill="#148c53"/>'
-            '<rect x="88" y="106" width="124" height="78" rx="20" fill="#1e293b" stroke="#fbbf24" stroke-width="2.5"/>'
-            '<polygon points="184,182 196,204 162,182" fill="#1e293b"/>'
-            '<circle cx="68" cy="85" r="7" fill="#ffffff"/>'
-            '<circle cx="93" cy="85" r="7" fill="#ffffff"/>'
-            '<circle cx="118" cy="85" r="7" fill="#ffffff"/>'
-            '<path d="M114 145 H184 M114 162 H164" stroke="#fde68a" stroke-width="5" stroke-linecap="round"/>'
-            '<path d="M196 58 Q210 72 196 86 M206 48 Q226 72 206 96" '
-            'fill="none" stroke="#36f2ae" stroke-width="4" stroke-linecap="round"/>'
-        )
-    elif any(k in haystack for k in ("雨", "天", "気", "weather", "rain", "cloud")):
-        body = (
-            '<rect width="240" height="240" rx="22" fill="#0c1522"/>'
-            '<circle cx="158" cy="68" r="24" fill="#f59e0b"/>'
-            '<path d="M54 136 H182 A26 26 0 0 0 182 86 A38 38 0 0 0 110 74 A30 30 0 0 0 54 136 Z" '
-            'fill="#e2e8f0"/>'
-            '<path d="M76 154 L66 184 M112 154 L102 184 M148 154 L138 184 M182 154 L172 184" '
-            'stroke="#60a5fa" stroke-width="5" stroke-linecap="round"/>'
-        )
     else:
-        badge_text = html.escape(kanji_char or "漢")
+        badge_text = html.escape(kanji_char or "駅")
         sub_text = html.escape((meaning or visual_prompt)[:24])
         body = (
             '<rect width="240" height="240" rx="22" fill="#0c141d"/>'
@@ -344,8 +478,20 @@ def _generate_visual_svg(
             f'<text x="120" y="198" text-anchor="middle" fill="#36f2ae" font-size="16" font-weight="700">{sub_text}</text>'
         )
 
+    is_wide = any(
+        tag in haystack
+        for tag in (
+            "station_exits_map",
+            "ticket_machine_ic",
+            "ticket_gate_fare_adjust",
+            "train_types_stops",
+            "yellow_exit_transfer",
+            "roleplay_shinjuku_gate",
+        )
+    )
+    w, h = (320, 240) if is_wide else (240, 240)
     svg_doc = (
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">\n'
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}">\n'
         f"  {body}\n"
         "</svg>\n"
     )
@@ -353,38 +499,109 @@ def _generate_visual_svg(
     return f"images/generated/{safe_name}"
 
 
-async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: Path) -> dict[str, Any]:
+async def _synthesize_and_verify_line(
+    line: dict[str, Any],
+    default_rate: str,
+    micro_pause_sec: float,
+    whisper_model: str,
+) -> tuple[Mp3StreamInfo, Any, list[dict[str, Any]] | None]:
+    """
+    Synthesizes a cue clip with Edge-TTS (`rate="-16%"`), checks it blindly with
+    `faster-whisper`, and auto-retries using canonical spoken hiragana if similarity < 0.88.
+    """
+    voice, rate, pitch = _resolve_voice_profile(line.get("speaker", "Sensei"))
+    rate = line.get("rate") or default_rate or rate
+    pitch = line.get("pitch") or pitch
+    pause_in_line = float(line.get("microPauseSec", micro_pause_sec))
+
+    primary_text = str(line.get("ttsText") or line["japanese"])
+    stream = await _tts_line_with_micro_pauses(
+        text=primary_text,
+        voice=voice,
+        rate=rate,
+        pitch=pitch,
+        micro_pause_sec=pause_in_line,
+    )
+    pcm = decode_mp3_to_pcm16k(stream.frames_bytes)
+    whisper_res = transcribe_clip_whisper(pcm, model_size=whisper_model)
+    sim = compare_phonetics(primary_text, whisper_res.transcript)
+
+    if sim < 0.88:
+        auto_kana = japanese_to_spoken_kana(str(line["japanese"]))
+        print(
+            f"[QA AUTO-FIX] {line.get('id')}: low Whisper similarity ({sim:.2%}) "
+            f"| expected={japanese_to_spoken_kana(primary_text)} vs heard={whisper_res.kana}. "
+            f"Retrying with pure kana ttsText..."
+        )
+        retry_stream = await _tts_line_with_micro_pauses(
+            text=auto_kana,
+            voice=voice,
+            rate=rate,
+            pitch=pitch,
+            micro_pause_sec=pause_in_line,
+        )
+        retry_pcm = decode_mp3_to_pcm16k(retry_stream.frames_bytes)
+        retry_whisper = transcribe_clip_whisper(retry_pcm, model_size=whisper_model)
+        retry_sim = compare_phonetics(primary_text, retry_whisper.transcript)
+        if retry_sim > sim:
+            stream = retry_stream
+            pcm = retry_pcm
+            whisper_res = retry_whisper
+            sim = retry_sim
+            line["ttsText"] = auto_kana
+
+    return stream, (pcm, whisper_res, sim), None
+
+
+async def build_episode(
+    script_path: Path,
+    audio_out_path: Path,
+    json_out_path: Path,
+    whisper_model: str = "small",
+) -> dict[str, Any]:
     raw_script = json.loads(script_path.read_text(encoding="utf-8"))
+
+    # Pre-TTS Morphological & Zero-Nepali Gate
+    morph_errors = audit_script_morphology(raw_script)
+    if morph_errors:
+        joined = "\n  - ".join(morph_errors)
+        raise RuntimeError(f"Pre-TTS morphological/Nepali audit failed:\n  - {joined}")
+    print("[QA] Pre-TTS morphological, Romaji & zero-Nepali check PASSED (0 errors).")
 
     episode_number: str = raw_script.get("episodeNumber", "EP. 01")
     title: str = raw_script.get("title", "JungGo Podcast Episode")
-    jlpt_level: str = raw_script.get("jlptLevel", "JLPT N5")
+    jlpt_level: str = raw_script.get("jlptLevel", "JLPT N4")
     raw_studio_mode: str = str(raw_script.get("studioMode", "solo")).strip().lower()
     studio_mode: str = raw_studio_mode if raw_studio_mode in ("solo", "dual") else "solo"
-    lead_in_target: float = float(raw_script.get("leadInSec", 0.40))
-    outro_target: float = float(raw_script.get("outroSec", 0.72))
-    micro_pause_sec: float = float(raw_script.get("sentenceMicroPauseSec", 0.22))
+    speech_rate: str = str(raw_script.get("speechRate", "-16%"))
+    lead_in_target: float = float(raw_script.get("leadInSec", 0.45))
+    outro_target: float = float(raw_script.get("outroSec", 0.75))
+    micro_pause_sec: float = float(raw_script.get("sentenceMicroPauseSec", 0.45))
     raw_sections: list[dict[str, Any]] = list(raw_script.get("sections", []))
     raw_lines: list[dict[str, Any]] = list(raw_script.get("lines", []))
 
     if not raw_lines:
         raise ValueError("episode_script.json must contain at least one entry in 'lines'.")
 
-    tasks = []
+    # Step 1: Synthesize all lines concurrently via Edge-TTS
+    synthesized: list[Mp3StreamInfo] = []
+    pcms: list[Any] = []
+    whisper_results: list[Any] = []
     for line in raw_lines:
-        default_voice, default_rate, default_pitch = _resolve_voice_profile(
-            line.get("speaker", "Sensei")
+        line_dict = dict(line)
+        stream, (pcm, wres, sim), _ = await _synthesize_and_verify_line(
+            line=line_dict,
+            default_rate=speech_rate,
+            micro_pause_sec=micro_pause_sec,
+            whisper_model=whisper_model,
         )
-        tasks.append(
-            _tts_line_with_micro_pauses(
-                text=line["japanese"],
-                voice=line.get("voice") or default_voice,
-                rate=line.get("rate") or raw_script.get("speechRate") or default_rate,
-                pitch=line.get("pitch") or default_pitch,
-                micro_pause_sec=float(line.get("microPauseSec", micro_pause_sec)),
-            )
+        synthesized.append(stream)
+        pcms.append(pcm)
+        whisper_results.append((wres, sim))
+        print(
+            f"  [TTS+Whisper] {line.get('id', '?'):<7} ({line.get('speaker', '?'):<6}) "
+            f"dur={stream.duration_sec:5.2f}s | match={sim * 100:5.1f}% | {wres.transcript}"
         )
-    synthesized: list[Mp3StreamInfo] = await asyncio.gather(*tasks)
 
     ref = synthesized[0]
     combined_audio = bytearray()
@@ -401,11 +618,23 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
     section_spans: dict[str, list[float]] = {}
     section_line_starts: dict[str, list[float]] = {}
 
-    for idx, (line, stream) in enumerate(zip(raw_lines, synthesized)):
+    for idx, (line, stream, pcm, (wres, _sim)) in enumerate(
+        zip(raw_lines, synthesized, pcms, whisper_results)
+    ):
         start_sec = round(cursor_sec, 3)
         combined_audio.extend(stream.frames_bytes)
         cursor_sec += stream.duration_sec
         end_sec = round(cursor_sec, 3)
+
+        word_timings = align_word_timings(
+            japanese=str(line["japanese"]),
+            romaji=str(line.get("romaji", "")),
+            clip_start_sec=start_sec,
+            clip_duration_sec=stream.duration_sec,
+            pcm_16k=pcm,
+            whisper_words=wres.words,
+            edge_boundaries=list(stream.word_boundaries),
+        )
 
         cue_obj: dict[str, Any] = {
             "id": line.get("id", f"sub-{idx + 1}"),
@@ -415,7 +644,10 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
             "japanese": line["japanese"],
             "romaji": line.get("romaji", ""),
             "english": line.get("english", ""),
+            "wordTimings": word_timings,
         }
+        if line.get("ttsText"):
+            cue_obj["ttsText"] = line["ttsText"]
         if line.get("gesture"):
             cue_obj["gesture"] = line["gesture"]
         if line.get("imageUrl"):
@@ -440,7 +672,7 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
                 section_spans[sec_id][1] = end_sec
 
         if idx < len(raw_lines) - 1:
-            pause_target = float(line.get("pauseSec", 0.50))
+            pause_target = float(line.get("pauseSec", 0.55))
             pause_bytes, pause_dur = _synthesize_silence(
                 pause_target,
                 ref.template_header,
@@ -502,16 +734,28 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
             if "vocab" in sec:
                 built_sec["vocab"] = sec["vocab"]
 
+            station_payload: dict[str, Any] | None = (
+                dict(sec["stationGuide"]) if isinstance(sec.get("stationGuide"), dict) else None
+            )
             kanji_payload: dict[str, Any] | None = (
                 dict(sec["kanji"]) if isinstance(sec.get("kanji"), dict) else None
             )
 
-            sec_image_url = sec.get("imageUrl") or sec.get("imageSrc")
-            if not sec_image_url and kanji_payload is not None:
-                sec_image_url = kanji_payload.get("imageUrl")
+            sec_image_url = (
+                sec.get("imageUrl")
+                or sec.get("imageSrc")
+                or (station_payload.get("imageUrl") if station_payload else None)
+                or (kanji_payload.get("imageUrl") if kanji_payload else None)
+            )
+            sec_image_caption = (
+                sec.get("imageCaption")
+                or (station_payload.get("imageCaption") if station_payload else None)
+                or (kanji_payload.get("imageCaption") if kanji_payload else None)
+            )
 
             prompt_text = str(
                 sec.get("visualPrompt")
+                or (station_payload.get("visualPrompt") if station_payload else "")
                 or (kanji_payload.get("visualPrompt") if kanji_payload else "")
                 or ""
             ).strip()
@@ -524,6 +768,11 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
                     out_dir=generated_dir,
                 )
 
+            if station_payload is not None:
+                if sec_image_url and not station_payload.get("imageUrl"):
+                    station_payload["imageUrl"] = sec_image_url
+                built_sec["stationGuide"] = station_payload
+
             if kanji_payload is not None:
                 if sec_image_url and not kanji_payload.get("imageUrl"):
                     kanji_payload["imageUrl"] = sec_image_url
@@ -535,8 +784,9 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
                 built_sec["imageUrl"] = sec_image_url
             if sec.get("imageSrc"):
                 built_sec["imageSrc"] = sec["imageSrc"]
-            if sec.get("imageCaption"):
-                built_sec["imageCaption"] = sec["imageCaption"]
+            if sec_image_caption:
+                built_sec["imageCaption"] = sec_image_caption
+
             if "quiz" in sec:
                 quiz = dict(sec["quiz"])
                 sec_dur = max(1.0, sec_end - sec_start)
@@ -588,7 +838,7 @@ async def build_episode(script_path: Path, audio_out_path: Path, json_out_path: 
 def main() -> None:
     root = Path(__file__).resolve().parent.parent
     parser = argparse.ArgumentParser(
-        description="Generate free Japanese edge-tts MP3 + synced Remotion episode JSON."
+        description="Generate slow Yukkuri Japanese edge-tts MP3 + Whisper QA synced Remotion JSON."
     )
     parser.add_argument(
         "--script",
@@ -608,18 +858,26 @@ def main() -> None:
         default=root / "src" / "data" / "currentEpisode.json",
         help="Path to output synced Remotion episode JSON.",
     )
+    parser.add_argument(
+        "--whisper-model",
+        type=str,
+        default="small",
+        help="faster-whisper model size (default: small).",
+    )
     args = parser.parse_args()
 
-    episode = asyncio.run(build_episode(args.script, args.audio_out, args.json_out))
+    episode = asyncio.run(
+        build_episode(
+            args.script,
+            args.audio_out,
+            args.json_out,
+            whisper_model=args.whisper_model,
+        )
+    )
 
     print(f"\nGenerated audio: {args.audio_out} ({args.audio_out.stat().st_size / 1024:.1f} KB)")
     print(f"Generated JSON : {args.json_out}")
     print(f"Total duration : {episode['durationSec']:.3f}s ({round(episode['durationSec'] * 30)} frames @ 30fps)\n")
-    for cue in episode["subtitles"]:
-        print(
-            f"  [{cue['startSec']:6.3f}s -> {cue['endSec']:6.3f}s] "
-            f"{cue['speaker']:<7} | {cue['japanese']}"
-        )
 
 
 if __name__ == "__main__":

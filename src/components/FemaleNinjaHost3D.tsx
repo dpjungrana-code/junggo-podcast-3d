@@ -11,7 +11,10 @@ import {
   isGuestSpeaker,
   resolveCueGesture,
 } from "../data/demoEpisode";
-import { usePodcastAudioMetrics } from "../utils/audio";
+import {
+  computeDualLockMouthMetrics,
+  usePodcastAudioMetrics,
+} from "../utils/audio";
 import { createHoodieLogoTexture } from "../utils/textures";
 
 export type FemaleNinjaHost3DProps = {
@@ -554,14 +557,22 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
 
   const activeSection = findSectionAt(sections, timeSec);
   const activeCue = subtitles ? getActiveSubtitle(subtitles, timeSec) : null;
+  void activeCue;
 
-  // Dual-Lock Lip-Sync: locked BOTH to Maria's exact cue timestamps [startSec, endSec] AND audio spectrum
-  const isMariaCueActive =
-    activeCue !== null &&
-    isGuestSpeaker(activeCue.speaker) &&
-    timeSec >= activeCue.startSec &&
-    timeSec <= activeCue.endSec;
-  const isMariaSpeaking = isMariaCueActive;
+  // Dual-Lock Silence-Gated Lip-Sync: requires BOTH active speech window AND RMS >= 0.035
+  const mouthMetrics = computeDualLockMouthMetrics(
+    subtitles,
+    true,
+    timeSec,
+    fps,
+    audio,
+    isGuestSpeaker,
+  );
+  const isMariaSpeaking = mouthMetrics.isSpeakingNow;
+  const voiceEnergy = mouthMetrics.voiceEnergy;
+  const speechPeak = mouthMetrics.speechPeak;
+  const mouthOpen = mouthMetrics.jawOpen;
+  const mouthWidth = mouthMetrics.mouthWidth;
 
   const mariaSpeakingWeight = computeSpeakerEnvelope(subtitles, true, timeSec);
   const senseiSpeakingWeight = computeSpeakerEnvelope(
@@ -604,58 +615,9 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   const quizWeight = computeSectionWeight(sections, ["quiz"], timeSec);
   const kanjiOrVocabWeight = computeSectionWeight(
     sections,
-    ["kanji_lesson", "vocabulary", "grammar"],
+    ["kanji_lesson", "vocabulary", "grammar", "station_guide"],
     timeSec,
   );
-
-  const cueEdgeFade =
-    isMariaCueActive && activeCue
-      ? Math.min(
-          interpolate(
-            timeSec,
-            [activeCue.startSec, activeCue.startSec + 0.06],
-            [0, 1],
-            { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-          ),
-          interpolate(
-            timeSec,
-            [activeCue.endSec - 0.07, activeCue.endSec],
-            [1, 0],
-            { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-          ),
-        )
-      : 0;
-
-  const syllableWave =
-    0.6 +
-    0.25 * Math.sin(timeSec * 17.8 + 0.4) +
-    0.15 * Math.cos(timeSec * 24.6 + 1.2);
-  const syllableFloor = 0.34 * (0.48 + 0.52 * syllableWave);
-
-  const quietFallback = 0.05 + 0.03 * Math.sin(timeSec * 1.7 + 1.1);
-  const voiceEnergy = isMariaSpeaking
-    ? Math.max(syllableFloor, audio.volume * 1.15) * cueEdgeFade
-    : quietFallback * 0.65;
-  const speechPeak = isMariaSpeaking
-    ? clamp01((voiceEnergy - 0.28) * 1.5)
-    : 0;
-
-  const lowBand =
-    audio.spectrum.slice(0, 4).reduce((acc, v) => acc + v, 0) / 4;
-  const midBand =
-    audio.spectrum.slice(4, 14).reduce((acc, v) => acc + v, 0) / 10;
-  const vowelOpenBias = clamp01(0.5 + (midBand - lowBand) * 1.8);
-  const mouthOpen =
-    isMariaSpeaking && cueEdgeFade > 0.05
-      ? clamp01(Math.pow(voiceEnergy, 0.72) * (0.68 + 0.52 * syllableWave))
-      : 0;
-  const mouthWidth = isMariaSpeaking
-    ? lerp(
-        0.8,
-        1.32,
-        clamp01(vowelOpenBias * 0.65 + (0.5 + 0.5 * Math.cos(timeSec * 12.2)) * 0.35),
-      )
-    : 1.06;
 
   const logoTexture = useMemo(() => createHoodieLogoTexture(), []);
 

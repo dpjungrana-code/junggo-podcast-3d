@@ -74,7 +74,8 @@ const getSectionPose = (
 
     case "vocabulary":
     case "grammar":
-    case "kanji_lesson": {
+    case "kanji_lesson":
+    case "station_guide": {
       const orbit = Easing.inOut(Easing.sin)(localProgress);
       return {
         pos: [

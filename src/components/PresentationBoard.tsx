@@ -13,6 +13,7 @@ import {
   EpisodeSection,
   KanjiLessonData,
   QuizCardData,
+  StationGuideData,
   StudioMode,
   SubtitleCue,
   VocabCardData,
@@ -737,20 +738,6 @@ const KanjiLessonBoardContent: React.FC<{
             >
               {kanji.meaningEn}
             </div>
-            {kanji.meaningNp ? (
-              <div
-                style={{
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: "#fde68a",
-                  marginTop: 2,
-                  fontFamily:
-                    '"Kohinoor Devanagari", "Noto Sans Devanagari", "Devanagari MT", sans-serif',
-                }}
-              >
-                {kanji.meaningNp}
-              </div>
-            ) : null}
           </div>
 
           {/* On-yomi & Kun-yomi Reading Pills */}
@@ -901,6 +888,232 @@ const KanjiLessonBoardContent: React.FC<{
   );
 };
 
+/**
+ * Authoritative Station Survival Guide lesson card (100% English explanations):
+ * Displays JR/Tokyo Metro terminology grid, auto-generated SVG station diagram,
+ * survival key phrase with Hepburn Romaji, and practical station tip.
+ */
+const StationGuideBoardContent: React.FC<{
+  readonly guide: StationGuideData;
+  readonly visualUrl?: string;
+  readonly visualCaption?: string;
+}> = ({ guide, visualUrl, visualCaption }) => {
+  const mediaUrl = visualUrl ?? guide.imageUrl;
+  const mediaCaption = visualCaption ?? guide.imageCaption;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+      {/* Header Row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span
+            style={{
+              fontSize: 13.5,
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              color: "#ffffff",
+              backgroundColor: "#148c53",
+              padding: "4px 14px",
+              borderRadius: 999,
+            }}
+          >
+            {guide.jlptLevel}
+          </span>
+          <span
+            style={{
+              fontSize: 12.5,
+              fontWeight: 700,
+              color: "#98c8b6",
+              backgroundColor: "rgba(255, 255, 255, 0.08)",
+              padding: "4px 12px",
+              borderRadius: 999,
+            }}
+          >
+            {guide.sceneTag}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <AudioWaveIcon />
+          <span style={{ fontSize: 14, fontWeight: 700, color: "#e2f5ec" }}>
+            Station Survival Guide
+          </span>
+        </div>
+      </div>
+
+      {/* Main Split Row: Title + 2x2 Terms Grid + Auto-Generated Station SVG */}
+      <div style={{ display: "flex", alignItems: "stretch", gap: 14 }}>
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: 22,
+                fontWeight: 900,
+                color: "#ffffff",
+                lineHeight: 1.15,
+              }}
+            >
+              {guide.titleJp}
+            </div>
+            <div
+              style={{
+                fontSize: 14.5,
+                fontWeight: 700,
+                color: "#34d399",
+                marginTop: 2,
+              }}
+            >
+              {guide.titleEn}
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 7,
+            }}
+          >
+            {guide.terms.slice(0, 4).map((term) => (
+              <div
+                key={`${term.jp}-${term.romaji}`}
+                style={{
+                  backgroundColor: "#0d141a",
+                  border: "1px solid rgba(52, 211, 153, 0.22)",
+                  borderLeft: `3.5px solid ${term.badgeColor ?? "#34d399"}`,
+                  borderRadius: 9,
+                  padding: "6px 9px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1.5,
+                  minWidth: 0,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 5,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: term.jp.length >= 4 ? 14.5 : 16.5,
+                      fontWeight: 800,
+                      color: "#ffffff",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {term.jp}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: term.reading.length >= 6 ? 10 : 11,
+                      fontWeight: 700,
+                      color: "#34d399",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {term.reading}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11.5, fontWeight: 600, color: "#cbd5e1" }}>
+                  {term.meaningEn}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {mediaUrl ? (
+          <MediaVisualFrame
+            imageUrl={mediaUrl}
+            caption={mediaCaption}
+            width={220}
+            height={158}
+          />
+        ) : null}
+      </div>
+
+      {/* Survival Key Phrase Box */}
+      <div
+        style={{
+          backgroundColor: "#0d141a",
+          border: "1px solid rgba(52, 211, 153, 0.28)",
+          borderRadius: 12,
+          padding: "9px 14px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 10.5,
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            color: "#34d399",
+          }}
+        >
+          SURVIVAL PHRASE
+        </div>
+        <div style={{ fontSize: 19, fontWeight: 800, color: "#ffffff", lineHeight: 1.25 }}>
+          {guide.keyPhraseJp}
+        </div>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: "#34d399" }}>
+          {guide.keyPhraseRomaji}
+        </div>
+        <div style={{ fontSize: 13.5, fontWeight: 500, color: "#e2e8f0" }}>
+          {guide.keyPhraseEn}
+        </div>
+      </div>
+
+      {/* Practical Tip Footer */}
+      <div
+        style={{
+          backgroundColor: "#0d141a",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          borderLeft: "3px solid #f59e0b",
+          borderRadius: 8,
+          padding: "6px 10px",
+          fontSize: 12,
+          fontWeight: 500,
+          color: "#d6e6df",
+          lineHeight: 1.32,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "0.06em",
+            color: "#fbbf24",
+            marginRight: 6,
+          }}
+        >
+          TIP
+        </span>
+        {guide.tipEn}
+      </div>
+    </div>
+  );
+};
+
 const OverviewBoardContent: React.FC<{
   readonly episodeNumber: string;
   readonly episodeTitle: string;
@@ -908,6 +1121,7 @@ const OverviewBoardContent: React.FC<{
   readonly activeSection: EpisodeSection;
   readonly featuredVocab?: VocabCardData;
   readonly kanjiList: readonly KanjiLessonData[];
+  readonly stationGuides: readonly StationGuideData[];
   readonly activeCue: SubtitleCue | null;
   readonly visualUrl?: string;
   readonly visualCaption?: string;
@@ -918,6 +1132,7 @@ const OverviewBoardContent: React.FC<{
   activeSection,
   featuredVocab,
   kanjiList,
+  stationGuides,
   activeCue,
   visualUrl,
   visualCaption,
@@ -965,7 +1180,7 @@ const OverviewBoardContent: React.FC<{
             {visualUrl && !isDialogue
               ? "Visual Guide"
               : isDialogue
-                ? "Cafe Dialogue"
+                ? activeSection.label || "Station Roleplay"
                 : "Today's Lesson"}
           </span>
         </div>
@@ -1008,7 +1223,7 @@ const OverviewBoardContent: React.FC<{
                 {activeCue.speaker}
               </span>
               <span style={{ fontSize: 14, fontWeight: 600, color: "#9fb0c0" }}>
-                Natural Tokyo Cafe Conversation
+                Practical Station Roleplay
               </span>
             </div>
             <div
@@ -1033,8 +1248,8 @@ const OverviewBoardContent: React.FC<{
             <MediaVisualFrame
               imageUrl={visualUrl}
               caption={visualCaption}
-              width={210}
-              height={196}
+              width={220}
+              height={165}
             />
           ) : null}
         </div>
@@ -1075,7 +1290,64 @@ const OverviewBoardContent: React.FC<{
         </div>
       )}
 
-      {!visualUrl && kanjiList.length > 0 ? (
+      {!visualUrl && stationGuides.length > 0 ? (
+        <div
+          style={{
+            backgroundColor: "#0d141a",
+            border: "1px solid rgba(52, 211, 153, 0.25)",
+            borderRadius: 14,
+            padding: "14px 18px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              color: "#34d399",
+            }}
+          >
+            STATION SURVIVAL ROADMAP ({stationGuides.length} SCENES)
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {stationGuides.slice(0, 5).map((item, idx) => (
+              <div
+                key={`${item.sceneTag}-${idx}`}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  backgroundColor: "#121b22",
+                  border: "1px solid rgba(52, 211, 153, 0.22)",
+                  borderRadius: 10,
+                  padding: "9px 6px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span style={{ fontSize: 17, fontWeight: 900, color: "#ffffff", textAlign: "center" }}>
+                  {item.titleJp.split("・")[0]}
+                </span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#98c8b6",
+                    textAlign: "center",
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {item.titleEn.split("&")[0].trim()}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : !visualUrl && kanjiList.length > 0 ? (
         <div
           style={{
             backgroundColor: "#0d141a",
@@ -1305,8 +1577,12 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
   const kanjiList = sections
     .map((s) => s.kanji)
     .filter((k): k is KanjiLessonData => Boolean(k));
+  const stationGuides = sections
+    .map((s) => s.stationGuide)
+    .filter((g): g is StationGuideData => Boolean(g));
   const activeVisualUrl =
     activeCue?.imageUrl ??
+    activeSection.stationGuide?.imageUrl ??
     activeSection.kanji?.imageUrl ??
     activeSection.vocab?.imageUrl ??
     activeSection.vocab?.imageSrc ??
@@ -1314,6 +1590,7 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
     activeSection.imageSrc;
   const activeVisualCaption =
     activeCue?.imageCaption ??
+    activeSection.stationGuide?.imageCaption ??
     activeSection.kanji?.imageCaption ??
     activeSection.vocab?.imageCaption ??
     activeSection.imageCaption;
@@ -1397,8 +1674,17 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
             translate: `0px ${contentOffsetY}px`,
           }}
         >
-          {(activeSection.type === "kanji_lesson" || Boolean(activeSection.kanji)) &&
-          activeSection.kanji ? (
+          {(activeSection.type === "station_guide" ||
+            Boolean(activeSection.stationGuide)) &&
+          activeSection.stationGuide ? (
+            <StationGuideBoardContent
+              guide={activeSection.stationGuide}
+              visualUrl={activeVisualUrl}
+              visualCaption={activeVisualCaption}
+            />
+          ) : (activeSection.type === "kanji_lesson" ||
+              Boolean(activeSection.kanji)) &&
+            activeSection.kanji ? (
             <KanjiLessonBoardContent
               kanji={activeSection.kanji}
               sectionStartFrame={sectionStartFrame}
@@ -1424,6 +1710,7 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
               activeSection={activeSection}
               featuredVocab={featuredVocab}
               kanjiList={kanjiList}
+              stationGuides={stationGuides}
               activeCue={activeCue}
               visualUrl={activeVisualUrl}
               visualCaption={activeVisualCaption}

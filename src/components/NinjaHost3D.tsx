@@ -13,7 +13,10 @@ import {
   isGuestSpeaker,
   resolveCueGesture,
 } from "../data/demoEpisode";
-import { usePodcastAudioMetrics } from "../utils/audio";
+import {
+  computeDualLockMouthMetrics,
+  usePodcastAudioMetrics,
+} from "../utils/audio";
 import { createHoodieLogoTexture } from "../utils/textures";
 
 export type NinjaHost3DProps = {
@@ -575,65 +578,26 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
 
   const activeSection = getActiveSection(sections, timeSec);
   const activeCue = subtitles ? getActiveSubtitle(subtitles, timeSec) : null;
+  void activeCue;
 
-  // Dual-Lock Lip-Sync: locked BOTH to exact cue timestamps [startSec, endSec] AND real-time audio spectrum
-  const isHostCueActive =
-    activeCue !== null &&
-    !isGuestSpeaker(activeCue.speaker) &&
-    timeSec >= activeCue.startSec &&
-    timeSec <= activeCue.endSec;
-  const isHostSpeaking = isHostCueActive || (activeCue === null && audio.isSpeaking);
-
-  const cueEdgeFade = isHostCueActive && activeCue
-    ? Math.min(
-        interpolate(timeSec, [activeCue.startSec, activeCue.startSec + 0.06], [0, 1], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        }),
-        interpolate(timeSec, [activeCue.endSec - 0.07, activeCue.endSec], [1, 0], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        }),
-      )
-    : isHostSpeaking
-      ? 1
-      : 0;
-
-  // Multi-harmonic Japanese syllable cadence guarantees continuous lip-sync across quieter syllables
-  const syllableWave =
-    0.6 +
-    0.25 * Math.sin(timeSec * 16.5) +
-    0.15 * Math.cos(timeSec * 23.4 + 0.8);
-  const syllableFloor = 0.34 * (0.48 + 0.52 * syllableWave);
-
-  const quietFallback = 0.05 + 0.035 * Math.sin(timeSec * 1.9);
-  const voiceEnergy = isHostSpeaking
-    ? Math.max(syllableFloor, audio.volume * 1.15) * cueEdgeFade
-    : quietFallback * 0.65;
-  const speechPeak = isHostSpeaking
-    ? clamp01((voiceEnergy - 0.28) * 1.5)
-    : 0;
-
-  const lowBand =
-    audio.spectrum.slice(0, 4).reduce((acc, v) => acc + v, 0) / 4;
-  const midBand =
-    audio.spectrum.slice(4, 14).reduce((acc, v) => acc + v, 0) / 10;
-  const vowelOpenBias = clamp01(0.5 + (midBand - lowBand) * 1.8);
-  const mouthOpen =
-    isHostSpeaking && cueEdgeFade > 0.05
-      ? clamp01(Math.pow(voiceEnergy, 0.72) * (0.68 + 0.52 * syllableWave))
-      : 0;
-  const mouthWidth = isHostSpeaking
-    ? lerp(
-        0.8,
-        1.34,
-        clamp01(vowelOpenBias * 0.65 + (0.5 + 0.5 * Math.cos(timeSec * 11.4)) * 0.35),
-      )
-    : 1.06;
+  // Dual-Lock Silence-Gated Lip-Sync: requires BOTH active speech window AND RMS >= 0.035
+  const mouthMetrics = computeDualLockMouthMetrics(
+    subtitles,
+    false,
+    timeSec,
+    fps,
+    audio,
+    isGuestSpeaker,
+  );
+  const isHostSpeaking = mouthMetrics.isSpeakingNow;
+  const voiceEnergy = mouthMetrics.voiceEnergy;
+  const speechPeak = mouthMetrics.speechPeak;
+  const mouthOpen = mouthMetrics.jawOpen;
+  const mouthWidth = mouthMetrics.mouthWidth;
 
   const vocabWeight = computeSectionWeight(
     sections,
-    ["vocabulary", "grammar", "kanji_lesson"],
+    ["vocabulary", "grammar", "kanji_lesson", "station_guide"],
     timeSec,
   );
   const quizWeight = computeSectionWeight(sections, ["quiz"], timeSec);
