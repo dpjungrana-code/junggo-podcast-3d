@@ -1,0 +1,106 @@
+{
+  "episodeNumber": "EP. 01",
+  "title": "Morning Coffee in Tokyo",
+  "jlptLevel": "JLPT N5",
+  "leadInSec": 0.36,
+  "outroSec": 0.72,
+  "sections": [
+    {
+      "id": "sec-intro",
+      "type": "intro",
+      "label": "INTRO"
+    },
+    {
+      "id": "sec-vocab",
+      "type": "vocabulary",
+      "label": "VOCABULARY",
+      "vocab": {
+        "word": "おいしい",
+        "reading": "美味しい",
+        "romaji": "oishii",
+        "meaning": "Delicious / Tasty",
+        "partOfSpeech": "i-Adjective",
+        "jlptLevel": "JLPT N5",
+        "exampleJp": "このコーヒーはとてもおいしいです。",
+        "exampleRomaji": "Kono koohii wa totemo oishii desu.",
+        "exampleEn": "This coffee is very delicious."
+      }
+    },
+    {
+      "id": "sec-dialogue",
+      "type": "dialogue",
+      "label": "DIALOGUE"
+    },
+    {
+      "id": "sec-quiz",
+      "type": "quiz",
+      "label": "QUICK QUIZ",
+      "quiz": {
+        "title": "JLPT N5 LISTENING CHECK",
+        "questionJp": "「おいしい」の意味はどれ？",
+        "questionEn": "What does \"oishii\" mean in English?",
+        "options": [
+          {
+            "label": "A",
+            "jp": "あつい",
+            "romaji": "atsui",
+            "english": "Hot",
+            "isCorrect": false
+          },
+          {
+            "label": "B",
+            "jp": "おいしい",
+            "romaji": "oishii",
+            "english": "Delicious",
+            "isCorrect": true
+          },
+          {
+            "label": "C",
+            "jp": "たかい",
+            "romaji": "takai",
+            "english": "Expensive",
+            "isCorrect": false
+          }
+        ]
+      }
+    }
+  ],
+  "lines": [
+    {
+      "id": "sub-1",
+      "sectionId": "sec-intro",
+      "speaker": "Sensei",
+      "japanese": "みなさん、こんばんは！JungGoポッドキャストへようこそ。",
+      "romaji": "Minasan, konbanwa! JungGo Poddokyasuto e youkoso.",
+      "english": "Good evening, everyone! Welcome to the JungGo Podcast.",
+      "pauseSec": 0.45
+    },
+    {
+      "id": "sub-2",
+      "sectionId": "sec-vocab",
+      "speaker": "Sensei",
+      "japanese": "今日のN5キーワードは「おいしい」です。このコーヒーはとてもおいしいです。",
+      "romaji": "Kyou no N5 kiiwaado wa \"oishii\" desu. Kono koohii wa totemo oishii desu.",
+      "english": "Today's N5 keyword is \"oishii.\" This coffee is very delicious.",
+      "pauseSec": 0.55
+    },
+    {
+      "id": "sub-3",
+      "sectionId": "sec-dialogue",
+      "speaker": "Maria",
+      "japanese": "すみません、ホットコーヒーをひとつください。わあ、とてもおいしいですね！",
+      "romaji": "Sumimasen, hotto koohii o hitotsu kudasai. Waa, totemo oishii desu ne!",
+      "english": "Excuse me, one hot coffee please. Wow, it's really delicious!",
+      "pauseSec": 0.55
+    },
+    {
+      "id": "sub-4",
+      "sectionId": "sec-quiz",
+      "speaker": "Sensei",
+      "japanese": "さあ、クイズです！「おいしい」の意味はどれでしょう？正解はBのDeliciousでした！",
+      "romaji": "Saa, kuizu desu! \"Oishii\" no imi wa dore deshou? Seikai wa B no Delicious deshita!",
+      "english": "Now for a quick quiz! What does \"oishii\" mean? The correct answer is B, Delicious!",
+      "pauseSec": 0.65
+    }
+  ]
+}
