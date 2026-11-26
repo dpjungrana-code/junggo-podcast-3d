@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import html
 import json
 import math
@@ -203,8 +204,23 @@ def _split_japanese_sentences(text: str) -> list[str]:
     return parts if parts else [text.strip()]
 
 
+_TTS_CACHE_DIR = Path(__file__).resolve().parent.parent / ".cache" / "tts_clips"
+
+
 async def _tts_clause(text: str, voice: str, rate: str, pitch: str) -> Mp3StreamInfo:
-    """Synthesizes one Japanese clause via edge-tts and captures WordBoundary metadata."""
+    """Synthesizes one Japanese clause via edge-tts (with SHA256 local disk cache) and captures WordBoundary metadata."""
+    cache_key = hashlib.sha256(f"{voice}|{rate}|{pitch}|{text}".encode("utf-8")).hexdigest()[:24]
+    mp3_cache = _TTS_CACHE_DIR / f"{cache_key}.mp3"
+    bounds_cache = _TTS_CACHE_DIR / f"{cache_key}.bounds.json"
+
+    if mp3_cache.exists() and bounds_cache.exists():
+        try:
+            raw_bounds = json.loads(bounds_cache.read_text(encoding="utf-8"))
+            cached_bounds = tuple((str(b[0]), float(b[1]), float(b[2])) for b in raw_bounds)
+            return _parse_mp3_frames(mp3_cache.read_bytes(), cached_bounds)
+        except Exception:
+            pass
+
     communicate = edge_tts.Communicate(
         text=text,
         voice=voice,
@@ -226,6 +242,10 @@ async def _tts_clause(text: str, voice: str, rate: str, pitch: str) -> Mp3Stream
                 boundaries.append((word_txt, offset_sec, offset_sec + dur_sec))
     if not audio_buffer:
         raise RuntimeError(f"edge-tts returned empty audio for: {text!r}")
+
+    _TTS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    mp3_cache.write_bytes(bytes(audio_buffer))
+    bounds_cache.write_text(json.dumps(boundaries, ensure_ascii=False), encoding="utf-8")
     return _parse_mp3_frames(bytes(audio_buffer), tuple(boundaries))
 
 
@@ -660,6 +680,28 @@ def _generate_sfx_library(sfx_dir: Path) -> dict[str, str]:
         ) * np.exp(-dt * 8.0)
     _write_wav_pcm16(sfx_dir / "quiz_correct.wav", sig_q * 0.52, sr)
 
+    # 7. timer_tick.wav: crisp "Pi!" digital timer tick for countdown beats 5..2 (0.10s)
+    t_tk = np.linspace(0.0, 0.10, int(sr * 0.10), endpoint=False)
+    env_tk = np.minimum(1.0, t_tk / 0.004) * np.exp(-t_tk * 38.0)
+    sig_tk = (
+        0.78 * np.sin(2.0 * math.pi * 1850.0 * t_tk)
+        + 0.22 * np.sin(2.0 * math.pi * 3700.0 * t_tk)
+    ) * env_tk
+    _write_wav_pcm16(sfx_dir / "timer_tick.wav", sig_tk * 0.50, sr)
+
+    # 8. timer_urgent.wav: punchy "Pi-Tu-Tu-Tu!" urgent final countdown burst for count 1->0 (0.78s)
+    t_ur = np.linspace(0.0, 0.78, int(sr * 0.78), endpoint=False)
+    sig_ur = np.zeros_like(t_ur)
+    for onset, freq in [(0.0, 1450.0), (0.17, 1750.0), (0.34, 2050.0), (0.51, 2400.0)]:
+        dt = np.maximum(0.0, t_ur - onset)
+        mask = t_ur >= onset
+        env = np.minimum(1.0, dt / 0.004) * np.exp(-dt * 26.0)
+        sig_ur += mask * (
+            0.76 * np.sin(2.0 * math.pi * freq * dt)
+            + 0.24 * np.sin(2.0 * math.pi * (freq * 2.0) * dt)
+        ) * env
+    _write_wav_pcm16(sfx_dir / "timer_urgent.wav", sig_ur * 0.56, sr)
+
     return {
         "whoosh": "audio/sfx/whoosh.wav",
         "ic_beep": "audio/sfx/ic_beep.wav",
@@ -667,6 +709,8 @@ def _generate_sfx_library(sfx_dir: Path) -> dict[str, str]:
         "error_buzz": "audio/sfx/error_buzz.wav",
         "train_chime": "audio/sfx/train_chime.wav",
         "quiz_correct": "audio/sfx/quiz_correct.wav",
+        "timer_tick": "audio/sfx/timer_tick.wav",
+        "timer_urgent": "audio/sfx/timer_urgent.wav",
     }
 
 
@@ -714,6 +758,7 @@ async def build_episode(
     audio_out_path: Path,
     json_out_path: Path,
     whisper_model: str = "small",
+    min_duration_sec: float = 420.0,
 ) -> dict[str, Any]:
     raw_script = json.loads(script_path.read_text(encoding="utf-8"))
 
@@ -784,6 +829,7 @@ async def build_episode(
     subtitles: list[dict[str, Any]] = []
     section_spans: dict[str, list[float]] = {}
     section_line_starts: dict[str, list[float]] = {}
+    section_line_ends: dict[str, list[float]] = {}
 
     for idx, (line, stream, pcm, (wres, _sim)) in enumerate(
         zip(parsed_lines, synthesized, pcms, whisper_results)
@@ -838,6 +884,8 @@ async def build_episode(
             cue_obj["activeSubTopicIndex"] = int(line["activeSubTopicIndex"])
         if line.get("activeSubTopic"):
             cue_obj["activeSubTopic"] = line["activeSubTopic"]
+        if line.get("visualBeat"):
+            cue_obj["visualBeat"] = str(line["visualBeat"])
 
         sec_id = line.get("sectionId")
         sec_def = raw_sections_by_id.get(str(sec_id or ""), {})
@@ -860,6 +908,7 @@ async def build_episode(
 
         if sec_id:
             section_line_starts.setdefault(sec_id, []).append(start_sec)
+            section_line_ends.setdefault(sec_id, []).append(end_sec)
             if sec_id not in section_spans:
                 section_spans[sec_id] = [start_sec, end_sec]
             else:
@@ -867,6 +916,12 @@ async def build_episode(
 
         if idx < len(raw_lines) - 1:
             pause_target = float(line.get("pauseSec", 0.55))
+            if (
+                sec_id
+                and sec_def.get("type") == "quiz"
+                and len(section_line_starts.get(sec_id, [])) == 1
+            ):
+                pause_target = max(pause_target, 5.2)
             pause_bytes, pause_dur = _synthesize_silence(
                 pause_target,
                 ref.template_header,
@@ -925,8 +980,15 @@ async def build_episode(
             }
             if sec.get("gesture"):
                 built_sec["gesture"] = sec["gesture"]
-            if "vocab" in sec:
-                built_sec["vocab"] = sec["vocab"]
+            if isinstance(sec.get("vocab"), dict):
+                vocab_copy = dict(sec["vocab"])
+                w_disp, w_toks = parse_furigana_markup(str(vocab_copy.get("word", "")))
+                v_ex_disp, v_ex_toks = parse_furigana_markup(str(vocab_copy.get("exampleJp", "")))
+                vocab_copy["word"] = w_disp
+                vocab_copy["wordTokens"] = w_toks
+                vocab_copy["exampleJp"] = v_ex_disp
+                vocab_copy["exampleTokens"] = v_ex_toks
+                built_sec["vocab"] = vocab_copy
 
             station_payload: dict[str, Any] | None = (
                 dict(sec["stationGuide"]) if isinstance(sec.get("stationGuide"), dict) else None
@@ -1016,6 +1078,8 @@ async def build_episode(
                 built_sec["imageSrc"] = sec["imageSrc"]
             if sec_image_caption:
                 built_sec["imageCaption"] = sec_image_caption
+            if sec.get("visualBeat"):
+                built_sec["visualBeat"] = str(sec["visualBeat"])
             if sec_animation_scene:
                 built_sec["animationScene"] = sec_animation_scene
 
@@ -1034,18 +1098,25 @@ async def build_episode(
                 quiz["options"] = parsed_opts
                 sec_dur = max(1.0, sec_end - sec_start)
                 quiz_line_starts = section_line_starts.get(sec_id, [])
-                if "revealSec" not in quiz and len(quiz_line_starts) >= 2:
-                    default_cd_start = round(quiz_line_starts[0] + 0.3, 3)
-                    default_reveal = round(quiz_line_starts[-1], 3)
-                    quiz.setdefault("countdownStartSec", default_cd_start)
-                    quiz.setdefault("revealSec", default_reveal)
-                    quiz.setdefault(
-                        "countdownDurationSec",
-                        round(max(0.8, default_reveal - quiz["countdownStartSec"]), 3),
+                quiz_line_ends = section_line_ends.get(sec_id, [])
+                if quiz_line_ends:
+                    q_end = quiz_line_ends[0]
+                    cd_start = round(q_end + 0.1, 3)
+                    cd_dur = float(quiz.get("countdownDurationSec", 5.0))
+                    reveal_sec = round(
+                        quiz_line_starts[-1]
+                        if len(quiz_line_starts) >= 2
+                        else cd_start + cd_dur,
+                        3,
                     )
+                    if reveal_sec < cd_start + cd_dur - 0.05:
+                        reveal_sec = round(cd_start + cd_dur, 3)
+                    quiz["countdownStartSec"] = cd_start
+                    quiz["countdownDurationSec"] = round(cd_dur, 3)
+                    quiz["revealSec"] = reveal_sec
                 else:
                     quiz.setdefault("countdownStartSec", round(sec_start + sec_dur * 0.2, 3))
-                    quiz.setdefault("countdownDurationSec", round(sec_dur * 0.48, 3))
+                    quiz.setdefault("countdownDurationSec", 5.0)
                     quiz.setdefault(
                         "revealSec",
                         round(quiz["countdownStartSec"] + quiz["countdownDurationSec"], 3),
@@ -1055,17 +1126,28 @@ async def build_episode(
 
         sections[-1]["endSec"] = total_duration_sec
 
-    # Build cleanly spaced procedural SFX triggers (-14dB = volume 0.20)
+    if min_duration_sec > 0 and total_duration_sec < min_duration_sec:
+        raise RuntimeError(
+            f"Built episode duration {total_duration_sec:.2f}s is under minimum {min_duration_sec:.2f}s."
+        )
+
+    # Build cleanly spaced procedural SFX triggers (-14dB = volume 0.20, quiz countdown 0.22..0.24)
     sfx_events: list[dict[str, Any]] = []
 
-    def _add_sfx(time_sec: float, kind: str, min_gap: float = 1.15) -> None:
+    def _add_sfx(
+        time_sec: float,
+        kind: str,
+        min_gap: float = 1.15,
+        volume: float = 0.20,
+        allow_tight: bool = False,
+    ) -> None:
         src = sfx_map.get(kind)
         if not src:
             return
         t_val = round(max(0.0, time_sec), 3)
-        if any(abs(t_val - ev["timeSec"]) < min_gap for ev in sfx_events):
+        if not allow_tight and any(abs(t_val - ev["timeSec"]) < min_gap for ev in sfx_events):
             return
-        sfx_events.append({"timeSec": t_val, "kind": kind, "src": src, "volume": 0.20})
+        sfx_events.append({"timeSec": t_val, "kind": kind, "src": src, "volume": volume})
 
     sections_by_id: dict[str, dict[str, Any]] = {s["id"]: s for s in sections}
     for s in sections:
@@ -1075,7 +1157,29 @@ async def build_episode(
         elif s.get("type") in ("station_guide", "dialogue") and s["startSec"] > 0.5:
             _add_sfx(s["startSec"] + 0.05, "whoosh", min_gap=0.8)
         if s.get("type") == "quiz" and isinstance(s.get("quiz"), dict):
-            _add_sfx(float(s["quiz"]["revealSec"]) + 0.05, "quiz_correct", min_gap=0.5)
+            cd_start = float(s["quiz"]["countdownStartSec"])
+            for tick_offset in (0.0, 1.0, 2.0, 3.0):
+                _add_sfx(
+                    cd_start + tick_offset,
+                    "timer_tick",
+                    min_gap=0.1,
+                    volume=0.22,
+                    allow_tight=True,
+                )
+            _add_sfx(
+                cd_start + 4.0,
+                "timer_urgent",
+                min_gap=0.1,
+                volume=0.24,
+                allow_tight=True,
+            )
+            _add_sfx(
+                float(s["quiz"]["revealSec"]) + 0.05,
+                "quiz_correct",
+                min_gap=0.1,
+                volume=0.24,
+                allow_tight=True,
+            )
 
     for cue in subtitles:
         switches = cue.get("subTopicSwitches") or []
@@ -1154,6 +1258,12 @@ def main() -> None:
         default="small",
         help="faster-whisper model size (default: small).",
     )
+    parser.add_argument(
+        "--min-duration-sec",
+        type=float,
+        default=420.0,
+        help="Minimum built episode duration in seconds (default: 420.0; set 0 to disable).",
+    )
     args = parser.parse_args()
 
     episode = asyncio.run(
@@ -1162,6 +1272,7 @@ def main() -> None:
             args.audio_out,
             args.json_out,
             whisper_model=args.whisper_model,
+            min_duration_sec=args.min_duration_sec,
         )
     )
 

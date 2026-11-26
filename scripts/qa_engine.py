@@ -79,6 +79,27 @@ STATION_READING_OVERRIDES: dict[str, tuple[str, str]] = {
     "種類": ("しゅるい", "shurui"),
     "N4": ("えぬよん", "n4"),
     "N3": ("えぬさん", "n3"),
+    "点字ブロック": ("てんじぶろっく", "tenji burokku"),
+    "優先席": ("ゆうせんせき", "yuusenseki"),
+    "マナーモード": ("まなーもーど", "manaa moodo"),
+    "新宿駅": ("しんじゅくえき", "shinjuku-eki"),
+    "二番線": ("にばんせん", "nibansen"),
+    "2番線": ("にばんせん", "nibansen"),
+    "三番線": ("さんばんせん", "sanbansen"),
+    "3番線": ("さんばんせん", "sanbansen"),
+    "200": ("にひゃく", "nihyaku"),
+    "5秒": ("ごびょう", "gobyou"),
+    "第三問": ("だいさんもん", "daisanmon"),
+    "第3問": ("だいさんもん", "daisanmon"),
+    "第四問": ("だいよんもん", "daiyonmon"),
+    "第4問": ("だいよんもん", "daiyonmon"),
+    "黄色い": ("きいろい", "kiiroi"),
+    "スマートフォン": ("すまーとふぉん", "sumaatofon"),
+    "スマホ": ("すまほ", "sumaho"),
+    "携帯電話": ("けいたいでんわ", "keitai denwa"),
+    "通話": ("つうわ", "tsuuwa"),
+    "自販機": ("じはんき", "jihanki"),
+    "じはんき": ("ジハンキ", "jihanki"),
 }
 
 _SORTED_OVERRIDES = sorted(
@@ -148,6 +169,24 @@ COMPOUND_WORD_CHUNKS: tuple[str, ...] = (
     "クイズ",
     "N4",
     "N3",
+    "点字ブロック",
+    "優先席",
+    "マナーモード",
+    "新宿駅",
+    "二番線",
+    "2番線",
+    "三番線",
+    "3番線",
+    "第三問",
+    "第3問",
+    "第四問",
+    "第4問",
+    "黄色い",
+    "スマートフォン",
+    "スマホ",
+    "携帯電話",
+    "通話",
+    "自販機",
 )
 
 _PUNCTUATION_RE = re.compile(r'^[\s「」『』、。！？!?…・（）()【】「」"“”\',.\-]+$')
@@ -361,6 +400,7 @@ def furigana_tokens_to_tts_text(tokens: list[dict[str, str | None]]) -> str:
             txt = re.sub(r"(?<![A-Za-z])A(?![A-Za-z])", "エー", txt)
             txt = re.sub(r"(?<![A-Za-z])B(?![A-Za-z])", "ビー", txt)
             txt = re.sub(r"(?<![A-Za-z])C(?![A-Za-z])", "しー", txt)
+            txt = re.sub(r"(?<![A-Za-z])D(?![A-Za-z])", "ディー", txt)
             parts.append(txt)
     return "".join(parts)
 
@@ -487,6 +527,7 @@ def _apply_reading_overrides(text: str) -> str:
     out = re.sub(r"(?<![A-Za-z])[Aa](?![A-Za-z])", "えー", out)
     out = re.sub(r"(?<![A-Za-z])[Bb](?![A-Za-z])", "びー", out)
     out = re.sub(r"(?<![A-Za-z])[Cc](?![A-Za-z])", "しー", out)
+    out = re.sub(r"(?<![A-Za-z])[Dd](?![A-Za-z])", "でぃー", out)
     return out
 
 
@@ -531,8 +572,13 @@ def japanese_to_romaji(text: str) -> str:
     spoken_kana = japanese_to_spoken_kana(text)
     if not spoken_kana:
         return ""
+    # Since particles は/へ/を are already normalized to わ/え/お, convert hiragana to katakana
+    # so pykakasi does not misread syllable は inside pure-kana words as particle 'wa'.
+    kata_spoken = "".join(
+        chr(ord(ch) + 0x60) if "\u3041" <= ch <= "\u3096" else ch for ch in spoken_kana
+    )
     kks = _get_kakasi()
-    raw = "".join(item.get("hepburn", item.get("orig", "")) for item in kks.convert(spoken_kana))
+    raw = "".join(item.get("hepburn", item.get("orig", "")) for item in kks.convert(kata_spoken))
     return raw.lower()
 
 
@@ -549,6 +595,7 @@ def normalize_romaji_compare(text: str) -> str:
     s = re.sub(r"\ba\b", "ee", s)
     s = re.sub(r"\bb\b", "bii", s)
     s = re.sub(r"\bc\b", "shii", s)
+    s = re.sub(r"\bd\b", "dii", s)
     s = s.replace("ō", "ou").replace("ū", "uu").replace("ā", "aa").replace("ī", "ii").replace("ē", "ee")
     # Remove spaces, hyphens, quotes, punctuation
     s = re.sub(r"[^a-z0-9]", "", s)

@@ -452,30 +452,53 @@ const QuizBoardContent: React.FC<{
   const revealSummary = correctOpt
     ? `${correctOpt.label} — ${correctOpt.jp} (${correctOpt.romaji}) = ${correctOpt.english}!`
     : "CORRECT ANSWER!";
-  const remainingFraction = interpolate(
-    timeSec,
-    [
-      quiz.countdownStartSec,
-      quiz.countdownStartSec + quiz.countdownDurationSec,
-    ],
-    [1, 0],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    },
-  );
 
-  const barFraction = revealed ? 1 : remainingFraction;
-  const barColor = revealed
-    ? "#36f2ae"
-    : remainingFraction > 0.5
-      ? "#36f2ae"
-      : remainingFraction > 0.25
+  const totalDur = Math.max(0.5, quiz.countdownDurationSec || 5);
+  const remainingSec = Math.max(0, quiz.revealSec - timeSec);
+  const countdownStarted = timeSec >= quiz.countdownStartSec;
+  const remainingFraction = revealed
+    ? 0
+    : countdownStarted
+      ? Math.max(0, Math.min(1, remainingSec / totalDur))
+      : 1;
+
+  // Integer countdown 5 -> 4 -> 3 -> 2 -> 1
+  const countNum = revealed
+    ? 0
+    : countdownStarted
+      ? Math.max(1, Math.min(5, Math.ceil(remainingSec)))
+      : 5;
+
+  // Per-second subtle pulse when counting down
+  const secFrac = countdownStarted && !revealed ? remainingSec - Math.floor(remainingSec) : 0;
+  const tickPulse =
+    countdownStarted && !revealed
+      ? 1 + Math.sin(secFrac * Math.PI) * 0.08
+      : 1;
+
+  const ringColor = revealed
+    ? "#34d399"
+    : countNum >= 4
+      ? "#34d399"
+      : countNum >= 2
         ? "#fbbf24"
-        : "#fb7185";
+        : "#f43f5e";
+
+  const ringRadius = 68;
+  const ringCircumference = 2 * Math.PI * ringRadius;
+  const ringOffset = ringCircumference * (1 - remainingFraction);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        height: "100%",
+        gap: 18,
+      }}
+    >
+      {/* Top Badge Row */}
       <div
         style={{
           display: "flex",
@@ -498,41 +521,128 @@ const QuizBoardContent: React.FC<{
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <AudioWaveIcon />
-          <span style={{ fontSize: 19, fontWeight: 700, color: "#b6d8cb" }}>
-            Listening Check
+          <span style={{ fontSize: 18, fontWeight: 700, color: "#b6d8cb" }}>
+            5-Second Listening Quiz
           </span>
         </div>
       </div>
 
-      <div>
-        <div
-          style={{
-            fontSize: 44,
-            fontWeight: 800,
-            color: "#ffffff",
-            lineHeight: 1.55,
-          }}
-        >
-          <RubyText
-            tokens={quiz.questionTokens}
-            fallback={quiz.questionJp}
-            rtSize="0.4em"
-            rtColor="#c4b5fd"
-          />
+      {/* Question + Glowing Circular 5-Second SVG Countdown Timer */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 28,
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontSize: 40,
+              fontWeight: 900,
+              color: "#ffffff",
+              lineHeight: 1.52,
+            }}
+          >
+            <RubyText
+              tokens={quiz.questionTokens}
+              fallback={quiz.questionJp}
+              rtSize="0.4em"
+              rtColor="#c4b5fd"
+            />
+          </div>
+          <div
+            style={{
+              fontSize: 24,
+              fontWeight: 600,
+              color: "#c4b5fd",
+              marginTop: 8,
+            }}
+          >
+            {quiz.questionEn}
+          </div>
         </div>
+
+        {/* Circular SVG Countdown Ring */}
         <div
           style={{
-            fontSize: 25,
-            fontWeight: 600,
-            color: "#c4b5fd",
-            marginTop: 8,
+            position: "relative",
+            width: 172,
+            height: 172,
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            scale: tickPulse,
           }}
         >
-          {quiz.questionEn}
+          <svg width="172" height="172" viewBox="0 0 172 172">
+            <circle
+              cx="86"
+              cy="86"
+              r={ringRadius}
+              fill="rgba(11, 17, 24, 0.9)"
+              stroke="rgba(255, 255, 255, 0.1)"
+              strokeWidth="12"
+            />
+            <circle
+              cx="86"
+              cy="86"
+              r={ringRadius}
+              fill="none"
+              stroke={ringColor}
+              strokeWidth="12"
+              strokeLinecap="round"
+              strokeDasharray={ringCircumference}
+              strokeDashoffset={revealed ? 0 : ringOffset}
+              transform="rotate(-90 86 86)"
+            />
+          </svg>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span
+              style={{
+                fontSize: revealed ? 56 : 64,
+                fontWeight: 900,
+                color: ringColor,
+                lineHeight: 1,
+                textShadow: `0 0 22px ${ringColor}66`,
+              }}
+            >
+              {revealed ? "✓" : countNum}
+            </span>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: "0.08em",
+                color: "#cbd5e1",
+                marginTop: 4,
+              }}
+            >
+              {revealed ? "ANSWER" : "SECONDS"}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* 2x2 Grid of Interactive A/B/C/D Answer Cards */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: quiz.options.length >= 4 ? "1fr 1fr" : "1fr",
+          gap: 16,
+        }}
+      >
         {quiz.options.map((opt) => {
           const isHit = revealed && opt.isCorrect;
           const isDimmed = revealed && !opt.isCorrect;
@@ -541,49 +651,78 @@ const QuizBoardContent: React.FC<{
               key={opt.label}
               style={{
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "18px 24px",
+                flexDirection: "column",
+                justifyContent: "center",
+                gap: 6,
+                padding: "18px 22px",
                 borderRadius: 16,
                 backgroundColor: isHit
-                  ? "rgba(20, 140, 83, 0.36)"
+                  ? "rgba(20, 140, 83, 0.42)"
                   : isDimmed
                     ? "rgba(255, 255, 255, 0.03)"
                     : "rgba(255, 255, 255, 0.07)",
                 border: isHit
-                  ? "2.5px solid #34d399"
+                  ? "3px solid #34d399"
                   : isDimmed
-                    ? "1px solid rgba(255, 255, 255, 0.08)"
-                    : "1px solid rgba(196, 181, 253, 0.25)",
-                opacity: isDimmed ? 0.5 : 1,
+                    ? "1px solid rgba(255, 255, 255, 0.06)"
+                    : "1.5px solid rgba(196, 181, 253, 0.28)",
+                boxShadow: isHit ? "0 0 28px rgba(52, 211, 153, 0.35)" : "none",
+                opacity: isDimmed ? 0.42 : 1,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                <span
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 10,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 22,
-                    fontWeight: 900,
-                    backgroundColor: isHit ? "#34d399" : "#4c2c96",
-                    color: isHit ? "#082419" : "#ffffff",
-                  }}
-                >
-                  {opt.label}
-                </span>
-                <span style={{ fontSize: 30, fontWeight: 800, color: "#ffffff" }}>
-                  {opt.english}
-                </span>
-              </div>
-              <span
+              <div
                 style={{
-                  fontSize: 24,
-                  fontWeight: 600,
-                  color: isHit ? "#7cf5c4" : "#cbd5e1",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <span
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 10,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 21,
+                      fontWeight: 900,
+                      flexShrink: 0,
+                      backgroundColor: isHit ? "#34d399" : "#5b21b6",
+                      color: isHit ? "#082419" : "#ffffff",
+                    }}
+                  >
+                    {opt.label}
+                  </span>
+                  <span style={{ fontSize: 26, fontWeight: 800, color: "#ffffff" }}>
+                    {opt.english}
+                  </span>
+                </div>
+                {isHit ? (
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 900,
+                      color: "#06291b",
+                      backgroundColor: "#34d399",
+                      padding: "4px 12px",
+                      borderRadius: 999,
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}
+                  >
+                    ✓ CORRECT
+                  </span>
+                ) : null}
+              </div>
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: isHit ? "#a7f3d0" : "#cbd5e1",
+                  paddingLeft: 54,
                   lineHeight: 1.55,
                 }}
               >
@@ -593,42 +732,31 @@ const QuizBoardContent: React.FC<{
                   rtSize="0.46em"
                   rtColor={isHit ? "#7cf5c4" : "#93c5fd"}
                 />{" "}
-                ({opt.romaji})
-              </span>
+                <span style={{ fontSize: 16, fontWeight: 600, color: "#94a3b8" }}>
+                  ({opt.romaji})
+                </span>
+              </div>
             </div>
           );
         })}
       </div>
 
-      <div style={{ marginTop: 6 }}>
-        <div
-          style={{
-            fontSize: 17,
-            fontWeight: 700,
-            color: revealed ? "#34d399" : "#f5cf93",
-            marginBottom: 8,
-          }}
-        >
-          {revealed ? revealSummary : "TIME REMAINING"}
-        </div>
-        <div
-          style={{
-            width: "100%",
-            height: 14,
-            borderRadius: 999,
-            backgroundColor: "#0c1116",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              width: `${Math.round(barFraction * 100)}%`,
-              height: "100%",
-              borderRadius: 999,
-              backgroundColor: barColor,
-            }}
-          />
-        </div>
+      {/* Bottom Reveal Banner */}
+      <div
+        style={{
+          padding: "10px 18px",
+          borderRadius: 12,
+          backgroundColor: revealed ? "rgba(20, 140, 83, 0.25)" : "rgba(12, 17, 22, 0.85)",
+          border: revealed
+            ? "1.5px solid rgba(52, 211, 153, 0.55)"
+            : "1px solid rgba(255, 255, 255, 0.08)",
+          fontSize: 18,
+          fontWeight: 700,
+          color: revealed ? "#7cf5c4" : "#fde68a",
+          textAlign: "center",
+        }}
+      >
+        {revealed ? `✓ ${revealSummary}` : `Think fast! Answer reveals in ${countNum}s...`}
       </div>
     </div>
   );
@@ -1122,7 +1250,8 @@ const StationGuideBoardContent: React.FC<{
 
   const accent = activeTopic.accentColor ?? "#34d399";
   const jpLen = activeTopic.jp.length;
-  const jpFontSize = jpLen >= 8 ? 46 : jpLen >= 5 ? 56 : jpLen >= 4 ? 64 : 78;
+  const jpFontSize = jpLen >= 8 ? 34 : jpLen >= 5 ? 42 : jpLen >= 4 ? 48 : 54;
+  const activeVisualBeat = activeCue?.visualBeat ?? activeTopic.visualBeat;
 
   return (
     <div
@@ -1131,7 +1260,7 @@ const StationGuideBoardContent: React.FC<{
         flexDirection: "column",
         justifyContent: "space-between",
         height: "100%",
-        gap: 18,
+        gap: 11,
       }}
     >
       {/* Compact Header Row */}
@@ -1142,15 +1271,15 @@ const StationGuideBoardContent: React.FC<{
           justifyContent: "space-between",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span
             style={{
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: 800,
               letterSpacing: "0.04em",
               color: "#ffffff",
               backgroundColor: "#148c53",
-              padding: "6px 17px",
+              padding: "5px 15px",
               borderRadius: 999,
             }}
           >
@@ -1158,24 +1287,24 @@ const StationGuideBoardContent: React.FC<{
           </span>
           <span
             style={{
-              fontSize: 15.5,
+              fontSize: 14.5,
               fontWeight: 700,
               color: "#98c8b6",
               backgroundColor: "rgba(255, 255, 255, 0.08)",
-              padding: "6px 15px",
+              padding: "5px 14px",
               borderRadius: 999,
             }}
           >
             {guide.sceneTag}
           </span>
-          <span style={{ fontSize: 20, fontWeight: 800, color: "#e2f5ec", marginLeft: 4 }}>
+          <span style={{ fontSize: 18.5, fontWeight: 800, color: "#e2f5ec", marginLeft: 4 }}>
             {guide.titleJp} · <span style={{ color: "#34d399" }}>{guide.titleEn}</span>
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <AudioWaveIcon />
-          <span style={{ fontSize: 16.5, fontWeight: 700, color: "#b7d9ca" }}>
-            Single-Topic Focus
+          <span style={{ fontSize: 15.5, fontWeight: 700, color: "#b7d9ca" }}>
+            2.5D Visual Lesson
           </span>
         </div>
       </div>
@@ -1186,16 +1315,16 @@ const StationGuideBoardContent: React.FC<{
           display: "flex",
           alignItems: "center",
           gap: 10,
-          padding: "8px 10px",
-          borderRadius: 14,
-          backgroundColor: "rgba(10, 17, 23, 0.72)",
+          padding: "6px 8px",
+          borderRadius: 12,
+          backgroundColor: "rgba(10, 17, 23, 0.75)",
           border: "1px solid rgba(255, 255, 255, 0.08)",
         }}
       >
         {subTopics.map((item, idx) => {
           const isActive = idx === activeIdx;
           const pillAccent = item.accentColor ?? "#34d399";
-          const pillScale = isActive ? 1 + (1 - focusPop) * 0.02 + focusPop * 0.02 : 1;
+          const pillScale = isActive ? 1 + (1 - focusPop) * 0.015 + focusPop * 0.02 : 1;
           return (
             <div
               key={item.id}
@@ -1203,21 +1332,19 @@ const StationGuideBoardContent: React.FC<{
                 flex: 1,
                 minWidth: 0,
                 textAlign: "center",
-                padding: "10px 14px",
-                borderRadius: 10,
+                padding: "8px 12px",
+                borderRadius: 9,
                 backgroundColor: isActive
-                  ? "rgba(20, 140, 83, 0.34)"
+                  ? "rgba(20, 140, 83, 0.36)"
                   : "rgba(255, 255, 255, 0.03)",
                 border: isActive
                   ? `2px solid ${pillAccent}`
                   : "1px solid rgba(255, 255, 255, 0.07)",
-                boxShadow: isActive
-                  ? `0 0 18px ${pillAccent}44`
-                  : "none",
+                boxShadow: isActive ? `0 0 16px ${pillAccent}44` : "none",
                 color: isActive ? "#ffffff" : "#7b93a3",
-                fontSize: 17.5,
+                fontSize: 16.5,
                 fontWeight: isActive ? 900 : 600,
-                opacity: isActive ? 1 : 0.62,
+                opacity: isActive ? 1 : 0.6,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -1231,171 +1358,133 @@ const StationGuideBoardContent: React.FC<{
         })}
       </div>
 
-      {/* Split Focused Canvas: Single Active Sub-Topic (Left ~43%) + Layered 2.5D Animation (Right ~57%) */}
+      {/* Compact Single-Topic Header Strip (~105px height -> leaving ~72% for 2.5D World!) */}
       <div
+        key={activeTopic.id}
         style={{
-          flex: 1,
-          minHeight: 0,
           display: "flex",
           alignItems: "center",
-          gap: 30,
+          justifyContent: "space-between",
+          gap: 24,
+          padding: "10px 18px",
+          borderRadius: 14,
+          backgroundColor: "rgba(12, 20, 27, 0.85)",
+          border: `1.5px solid ${accent}44`,
+          opacity: cardFade,
+          translate: `0px ${cardSlideY}px`,
         }}
       >
-        {/* Left Focus Column: Spacious, Zero Clutter */}
-        <div
-          key={activeTopic.id}
-          style={{
-            flex: "0 0 43%",
-            minWidth: 0,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            gap: 18,
-            paddingLeft: 8,
-            opacity: cardFade,
-            translate: `0px ${cardSlideY}px`,
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div
-              style={{
-                fontSize: jpFontSize,
-                fontWeight: 900,
-                color: "#ffffff",
-                lineHeight: 1.38,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              <RubyText
-                tokens={activeTopic.jpTokens}
-                fallback={activeTopic.jp}
-                rtSize="0.34em"
-                rtColor={accent}
-              />
-            </div>
-            {!activeTopic.jpTokens || activeTopic.jpTokens.length === 0 ? (
-              <div
-                style={{
-                  fontSize: 28,
-                  fontWeight: 800,
-                  color: accent,
-                  lineHeight: 1.2,
-                }}
-              >
-                {activeTopic.reading}
-              </div>
-            ) : null}
-            <div style={{ marginTop: 2 }}>
-              <span
-                style={{
-                  display: "inline-block",
-                  fontSize: 19,
-                  fontWeight: 700,
-                  color: "#e2f5ec",
-                  backgroundColor: "rgba(52, 211, 153, 0.14)",
-                  border: `1px solid ${accent}55`,
-                  padding: "4px 16px",
-                  borderRadius: 999,
-                }}
-              >
-                {activeTopic.romaji}
-              </span>
-            </div>
-          </div>
-
-          <div
-            style={{
-              fontSize: 33,
-              fontWeight: 800,
-              color: "#f8fafc",
-              lineHeight: 1.18,
-            }}
-          >
-            {activeTopic.meaningEn}
-          </div>
-
-          <div
-            style={{
-              height: 1,
-              width: "88%",
-              backgroundColor: "rgba(255, 255, 255, 0.12)",
-            }}
-          />
-
-          {/* 1 Concise Survival Example Sentence with Inline Ruby Furigana */}
-          <div
-            style={{
-              borderLeft: `4px solid ${accent}`,
-              paddingLeft: 16,
-              display: "flex",
-              flexDirection: "column",
-              gap: 5,
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11.5,
-                fontWeight: 800,
-                letterSpacing: "0.08em",
-                color: accent,
-              }}
-            >
-              SURVIVAL EXAMPLE
-            </div>
-            <div
-              style={{
-                fontSize: 24,
-                fontWeight: 800,
-                color: "#ffffff",
-                lineHeight: 1.68,
-              }}
-            >
-              <RubyText
-                tokens={activeTopic.exampleTokens}
-                fallback={activeTopic.exampleJp}
-                rtSize="0.46em"
-                rtColor={accent}
-              />
-            </div>
-            <div style={{ fontSize: 16.5, fontWeight: 600, color: accent }}>
-              {activeTopic.exampleRomaji}
-            </div>
-            <div style={{ fontSize: 17.5, fontWeight: 500, color: "#cbd5e1" }}>
-              {activeTopic.exampleEn}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Animated 2.5D Stage */}
+        {/* Active Kanji + Furigana + Romaji + English Meaning */}
         <div
           style={{
-            flex: "1 1 57%",
+            flex: "0 0 46%",
             minWidth: 0,
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
+            gap: 18,
           }}
         >
-          {activeScene ? (
-            <StickmanScenePlayer
-              scene={activeScene}
-              sectionStartSec={sectionStartSec}
-              sectionEndSec={sectionEndSec}
-              activeSubTopicKey={activeTopic.highlightKey ?? activeTopic.id}
-              activeSubTopicLabel={activeTopic.pillLabel}
-              caption={mediaCaption}
-              width="100%"
-              height={465}
+          <div
+            style={{
+              fontSize: jpFontSize,
+              fontWeight: 900,
+              color: "#ffffff",
+              lineHeight: 1.45,
+              whiteSpace: "nowrap",
+            }}
+          >
+            <RubyText
+              tokens={activeTopic.jpTokens}
+              fallback={activeTopic.jp}
+              rtSize="0.34em"
+              rtColor={accent}
             />
-          ) : mediaUrl ? (
-            <MediaVisualFrame
-              imageUrl={mediaUrl}
-              caption={mediaCaption}
-              width="100%"
-              height={465}
-            />
-          ) : null}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+            <span
+              style={{
+                display: "inline-block",
+                alignSelf: "flex-start",
+                fontSize: 16.5,
+                fontWeight: 700,
+                color: "#e2f5ec",
+                backgroundColor: "rgba(52, 211, 153, 0.14)",
+                border: `1px solid ${accent}55`,
+                padding: "3px 13px",
+                borderRadius: 999,
+              }}
+            >
+              {activeTopic.romaji}
+            </span>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 800,
+                color: "#f8fafc",
+                lineHeight: 1.2,
+                maxWidth: 260,
+              }}
+            >
+              {activeTopic.meaningEn}
+            </div>
+          </div>
         </div>
+
+        {/* 1 Concise Survival Example with Inline Ruby Furigana */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            borderLeft: `4px solid ${accent}`,
+            paddingLeft: 16,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 21,
+              fontWeight: 800,
+              color: "#ffffff",
+              lineHeight: 1.6,
+            }}
+          >
+            <RubyText
+              tokens={activeTopic.exampleTokens}
+              fallback={activeTopic.exampleJp}
+              rtSize="0.46em"
+              rtColor={accent}
+            />
+          </div>
+          <div style={{ fontSize: 15.5, fontWeight: 600, color: accent }}>
+            {activeTopic.exampleRomaji} —{" "}
+            <span style={{ color: "#cbd5e1", fontWeight: 500 }}>{activeTopic.exampleEn}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* GIANT ~72% Area Real-Japan 2.5D Toon-3D Animated Stage */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "stretch" }}>
+        {activeScene ? (
+          <StickmanScenePlayer
+            scene={activeScene}
+            sectionStartSec={sectionStartSec}
+            sectionEndSec={sectionEndSec}
+            activeSubTopicKey={activeTopic.highlightKey ?? activeTopic.id}
+            activeSubTopicLabel={activeTopic.pillLabel}
+            visualBeat={activeVisualBeat}
+            width="100%"
+            height={480}
+          />
+        ) : mediaUrl ? (
+          <MediaVisualFrame
+            imageUrl={mediaUrl}
+            caption={mediaCaption}
+            width="100%"
+            height={480}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -1484,30 +1573,31 @@ const OverviewBoardContent: React.FC<{
         <div
           style={{
             display: "flex",
-            alignItems: "stretch",
-            gap: 28,
+            flexDirection: "column",
+            gap: 14,
+            height: "100%",
           }}
         >
           <div
             style={{
-              flex: 1,
               backgroundColor: "#0d141a",
-              border: "1px solid rgba(251, 191, 36, 0.3)",
-              borderRadius: 18,
-              padding: "30px 34px",
+              border: "1px solid rgba(251, 191, 36, 0.32)",
+              borderRadius: 15,
+              padding: "14px 22px",
               display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              gap: 16,
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 20,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
               <span
                 style={{
-                  fontSize: 17,
+                  fontSize: 16,
                   fontWeight: 800,
-                  padding: "6px 16px",
+                  padding: "6px 15px",
                   borderRadius: 8,
+                  flexShrink: 0,
                   backgroundColor: isGuestSpeaker(activeCue.speaker)
                     ? "#f59e0b"
                     : "#148c53",
@@ -1516,30 +1606,29 @@ const OverviewBoardContent: React.FC<{
               >
                 {activeCue.speaker}
               </span>
-              <span style={{ fontSize: 18, fontWeight: 600, color: "#9fb0c0" }}>
-                Practical Station Roleplay
-              </span>
-            </div>
-            <div
-              style={{
-                fontSize: hasVisual ? 33 : 40,
-                fontWeight: 800,
-                color: "#ffffff",
-                lineHeight: 1.66,
-              }}
-            >
-              <RubyText
-                tokens={activeCue.furiganaTokens}
-                fallback={activeCue.japanese}
-                rtSize="0.45em"
-                rtColor="#34d399"
-              />
-            </div>
-            <div style={{ fontSize: hasVisual ? 22 : 26, fontWeight: 600, color: "#fde68a" }}>
-              {activeCue.romaji}
-            </div>
-            <div style={{ fontSize: hasVisual ? 23 : 27, fontWeight: 500, color: "#cbd5e1" }}>
-              {activeCue.english}
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 25,
+                    fontWeight: 800,
+                    color: "#ffffff",
+                    lineHeight: 1.58,
+                  }}
+                >
+                  <RubyText
+                    tokens={activeCue.furiganaTokens}
+                    fallback={activeCue.japanese}
+                    rtSize="0.45em"
+                    rtColor="#34d399"
+                  />
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#fde68a" }}>
+                  {activeCue.romaji} —{" "}
+                  <span style={{ color: "#cbd5e1", fontWeight: 500 }}>
+                    {activeCue.english}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1548,16 +1637,18 @@ const OverviewBoardContent: React.FC<{
               scene={animationScene}
               sectionStartSec={sectionStartSec}
               sectionEndSec={sectionEndSec}
+              visualBeat={activeCue.visualBeat}
+              activeSubTopicLabel={activeSection.label}
               caption={visualCaption}
-              width={480}
-              height={360}
+              width="100%"
+              height={460}
             />
           ) : visualUrl ? (
             <MediaVisualFrame
               imageUrl={visualUrl}
               caption={visualCaption}
-              width={480}
-              height={360}
+              width="100%"
+              height={460}
             />
           ) : null}
         </div>
@@ -1578,9 +1669,11 @@ const OverviewBoardContent: React.FC<{
               scene={animationScene}
               sectionStartSec={sectionStartSec}
               sectionEndSec={sectionEndSec}
+              visualBeat={activeCue?.visualBeat ?? activeSection.visualBeat}
+              activeSubTopicLabel={activeSection.label}
               caption={visualCaption}
-              width={480}
-              height={320}
+              width="100%"
+              height={460}
             />
           ) : visualUrl ? (
             <MediaVisualFrame

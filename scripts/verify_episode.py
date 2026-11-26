@@ -80,6 +80,7 @@ def verify_episode(
     public_dir: Path,
     whisper_model: str = "small",
     min_phonetic_sim: float = 0.88,
+    min_duration_sec: float = 420.0,
 ) -> int:
     raw_script = json.loads(script_path.read_text(encoding="utf-8"))
     episode = json.loads(episode_path.read_text(encoding="utf-8"))
@@ -124,6 +125,56 @@ def verify_episode(
         sfx_path = public_dir / str(ev.get("src", ""))
         if not sfx_path.exists():
             errors.append(f"Missing SFX asset: {sfx_path}")
+
+    # 4b. Check 3: Duration >= 420s, 1:1 visual scene mapping, all 8 SFX WAVs & 5s quiz sync
+    duration_sec = float(episode.get("durationSec", 0.0))
+    if min_duration_sec > 0 and duration_sec < min_duration_sec:
+        errors.append(f"Episode duration {duration_sec:.2f}s < minimum {min_duration_sec:.2f}s")
+
+    for req_sfx in (
+        "whoosh.wav",
+        "ic_beep.wav",
+        "coin_clink.wav",
+        "error_buzz.wav",
+        "train_chime.wav",
+        "quiz_correct.wav",
+        "timer_tick.wav",
+        "timer_urgent.wav",
+    ):
+        req_path = public_dir / "audio" / "sfx" / req_sfx
+        if not req_path.exists():
+            errors.append(f"Missing required SFX library file: {req_path}")
+
+    sfx_events = episode.get("sfxEvents", [])
+    for sec in episode.get("sections", []):
+        sid = str(sec.get("id", "?"))
+        stype = str(sec.get("type", ""))
+        if stype in ("station_guide", "dialogue"):
+            anim = sec.get("animationScene") or (sec.get("stationGuide") or {}).get("animationScene")
+            if not anim:
+                errors.append(f"{sid}: missing animationScene for {stype}")
+        if stype == "quiz":
+            q = sec.get("quiz") or {}
+            opts = q.get("options") or []
+            if len(opts) != 4:
+                errors.append(f"{sid}: expected 4 quiz options A/B/C/D, got {len(opts)}")
+            cd_dur = float(q.get("countdownDurationSec", 0.0))
+            cd_start = float(q.get("countdownStartSec", 0.0))
+            rev_sec = float(q.get("revealSec", 0.0))
+            if abs(cd_dur - 5.0) > 0.05:
+                errors.append(f"{sid}: quiz countdownDurationSec={cd_dur} != 5.0")
+            if rev_sec < cd_start + 4.9:
+                errors.append(f"{sid}: revealSec={rev_sec} < countdownStartSec+4.9 ({cd_start + 4.9:.2f})")
+            s_start = float(sec.get("startSec", 0.0))
+            s_end = float(sec.get("endSec", 0.0))
+            sec_sfx = [ev for ev in sfx_events if s_start - 0.1 <= float(ev.get("timeSec", -1)) <= s_end + 0.1]
+            tick_cnt = sum(1 for ev in sec_sfx if ev.get("kind") == "timer_tick")
+            urg_cnt = sum(1 for ev in sec_sfx if ev.get("kind") == "timer_urgent")
+            rev_cnt = sum(1 for ev in sec_sfx if ev.get("kind") == "quiz_correct")
+            if tick_cnt < 4 or urg_cnt < 1 or rev_cnt < 1:
+                errors.append(
+                    f"{sid}: quiz SFX incomplete (timer_tick={tick_cnt}, timer_urgent={urg_cnt}, quiz_correct={rev_cnt})"
+                )
 
     # 5. Load final MP3 PCM & run blind Whisper Audio-vs-Furigana triple-check + RMS silence check
     pcm = decode_mp3_to_pcm16k(audio_path)
@@ -239,6 +290,7 @@ def main() -> None:
     parser.add_argument("--audio", type=Path, default=root / "public" / "audio" / "current_episode.mp3")
     parser.add_argument("--public", type=Path, default=root / "public")
     parser.add_argument("--whisper-model", type=str, default="small")
+    parser.add_argument("--min-duration-sec", type=float, default=420.0)
     args = parser.parse_args()
 
     code = verify_episode(
@@ -247,6 +299,7 @@ def main() -> None:
         audio_path=args.audio,
         public_dir=args.public,
         whisper_model=args.whisper_model,
+        min_duration_sec=args.min_duration_sec,
     )
     sys.exit(code)
 

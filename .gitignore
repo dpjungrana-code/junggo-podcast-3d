@@ -24,3 +24,7 @@ venv/
 
 # OS artifacts
 .DS_Store
+
+# Reference kits & local TTS cache (never commit)
+reference_kit/
+.cache/

@@ -5,8 +5,12 @@ export type LayoutMode = "auto" | "studio_wide" | "board_focus";
 export type StickmanSceneId =
   | "walk_to_station"
   | "buy_ticket_ic"
+  | "buy_ticket_and_suica"
   | "tap_ticket_gate"
-  | "ride_and_exit_train";
+  | "tap_ic_card_gate"
+  | "board_train_platform"
+  | "ride_and_exit_train"
+  | "roleplay_shinjuku";
 
 export type FuriganaToken = {
   readonly text: string;
@@ -26,6 +30,7 @@ export type SubTopicItem = {
   readonly exampleRomaji: string;
   readonly exampleEn: string;
   readonly highlightKey?: string;
+  readonly visualBeat?: string;
   readonly accentColor?: string;
   readonly triggerKeywords?: readonly string[];
 };
@@ -41,7 +46,9 @@ export type SfxKind =
   | "coin_clink"
   | "error_buzz"
   | "train_chime"
-  | "quiz_correct";
+  | "quiz_correct"
+  | "timer_tick"
+  | "timer_urgent";
 
 export type SfxEvent = {
   readonly timeSec: number;
@@ -86,6 +93,7 @@ export type KanjiLessonData = {
   readonly imageUrl?: string;
   readonly imageCaption?: string;
   readonly animationScene?: StickmanSceneId;
+  readonly visualBeat?: string;
   readonly subTopics?: readonly SubTopicItem[];
 };
 
@@ -113,6 +121,7 @@ export type StationGuideData = {
   readonly imageUrl?: string;
   readonly imageCaption?: string;
   readonly animationScene?: StickmanSceneId;
+  readonly visualBeat?: string;
   readonly subTopics?: readonly SubTopicItem[];
 };
 
@@ -142,6 +151,7 @@ export type SubtitleCue = {
   readonly imageUrl?: string;
   readonly imageCaption?: string;
   readonly animationScene?: StickmanSceneId;
+  readonly visualBeat?: string;
   readonly activeSubTopicIndex?: number;
   readonly activeSubTopic?: string;
   readonly subTopicSwitches?: readonly SubTopicSwitch[];
@@ -286,7 +296,7 @@ export type VocabCardData = {
 };
 
 export type QuizOption = {
-  readonly label: "A" | "B" | "C";
+  readonly label: "A" | "B" | "C" | "D";
   readonly jp: string;
   readonly jpTokens?: readonly FuriganaToken[];
   readonly romaji: string;
@@ -320,6 +330,7 @@ export type EpisodeSection = {
   readonly imageSrc?: string;
   readonly imageCaption?: string;
   readonly animationScene?: StickmanSceneId;
+  readonly visualBeat?: string;
   readonly subTopics?: readonly SubTopicItem[];
 };
 
