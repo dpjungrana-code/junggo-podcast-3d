@@ -3,7 +3,6 @@ import * as THREE from "three";
 import { Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import {
   EpisodeSection,
-  HostGestureType,
   PodcastSectionType,
   StudioMode,
   SubtitleCue,
@@ -18,6 +17,7 @@ import {
   usePodcastAudioMetrics,
 } from "../utils/audio";
 import { createHoodieLogoTexture } from "../utils/textures";
+import { PixarHand3D, computeCalmGestureEnvelopes } from "./PixarHand3D";
 
 export type NinjaHost3DProps = {
   readonly sections: readonly EpisodeSection[];
@@ -156,54 +156,6 @@ const findSectionAt = (
     }
   }
   return sections[sections.length - 1];
-};
-
-/**
- * Computes a smooth 0..1 envelope for an explicit or keyword-inferred teaching gesture
- * across all subtitle cues so transitions ramp cleanly without frame pops.
- */
-const computeGestureWeight = (
-  sections: readonly EpisodeSection[],
-  subtitles: readonly SubtitleCue[] | undefined,
-  targetGesture: HostGestureType,
-  timeSec: number,
-): number => {
-  if (!subtitles || subtitles.length === 0) {
-    return 0;
-  }
-
-  let maxWeight = 0;
-  for (const cue of subtitles) {
-    const midSec = (cue.startSec + cue.endSec) * 0.5;
-    const sectionForCue = findSectionAt(sections, midSec);
-    if (resolveCueGesture(cue, sectionForCue) !== targetGesture) {
-      continue;
-    }
-
-    const enter = interpolate(
-      timeSec,
-      [cue.startSec - 0.16, cue.startSec + 0.22],
-      [0, 1],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    const exit = interpolate(
-      timeSec,
-      [cue.endSec - 0.12, cue.endSec + 0.33],
-      [1, 0],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    maxWeight = Math.max(maxWeight, Math.min(enter, exit));
-  }
-
-  return clamp01(maxWeight);
 };
 
 /**
@@ -424,13 +376,14 @@ type ArticulatedArmProps = {
   readonly shoulderRotation: readonly [number, number, number];
   readonly elbowRotation: readonly [number, number, number];
   readonly wristRotation: readonly [number, number, number];
-  readonly indexCurl: number;
-  readonly otherFingersCurl: number;
+  readonly fingerCurl: number;
+  readonly fingerSpread: number;
+  readonly thumbCurl: number;
 };
 
 /**
- * Smooth articulated emerald hoodie sleeve, black ninja wrist wrap, and sculpted warm peach hand
- * with shoulder, elbow, wrist, and finger pivots.
+ * Smooth articulated emerald hoodie sleeve, black ninja wrist wrap, and sculpted 5-finger
+ * Pixar hand with shoulder, elbow, wrist, and multi-segment finger pivots.
  */
 const ArticulatedArm3D: React.FC<ArticulatedArmProps> = ({
   name,
@@ -439,11 +392,10 @@ const ArticulatedArm3D: React.FC<ArticulatedArmProps> = ({
   shoulderRotation,
   elbowRotation,
   wristRotation,
-  indexCurl,
-  otherFingersCurl,
+  fingerCurl,
+  fingerSpread,
+  thumbCurl,
 }) => {
-  const thumbSign = side === "left" ? -1 : 1;
-
   return (
     <group
       name={name}
@@ -510,53 +462,19 @@ const ArticulatedArm3D: React.FC<ArticulatedArmProps> = ({
           <meshStandardMaterial color="#171b22" roughness={0.72} />
         </mesh>
 
-        {/* Wrist & Expressive Peach Pixar Hand */}
+        {/* Wrist & Sculpted 5-Finger Pixar Hand */}
         <group
           position={[0, -0.214, 0]}
           rotation={[wristRotation[0], wristRotation[1], wristRotation[2]]}
         >
-          <mesh position={[0, -0.022, 0]} scale={[1.05, 0.92, 0.72]} castShadow>
-            <sphereGeometry args={[0.052, 12, 10]} />
-            <meshStandardMaterial color="#ffd0ae" roughness={0.5} />
-          </mesh>
-
-          <group
-            position={[thumbSign * 0.04, -0.015, 0.018]}
-            rotation={[0.25, thumbSign * 0.35, thumbSign * 0.65]}
-          >
-            <mesh position={[0, -0.02, 0]} castShadow>
-              <capsuleGeometry args={[0.014, 0.026, 4, 8]} />
-              <meshStandardMaterial color="#ffd0ae" roughness={0.5} />
-            </mesh>
-          </group>
-
-          <group
-            position={[thumbSign * 0.022, -0.052, 0.008]}
-            rotation={[indexCurl, 0, thumbSign * 0.06]}
-          >
-            <mesh position={[0, -0.024, 0]} castShadow>
-              <capsuleGeometry args={[0.013, 0.034, 4, 8]} />
-              <meshStandardMaterial color="#ffd3b2" roughness={0.5} />
-            </mesh>
-          </group>
-
-          <group
-            position={[-thumbSign * 0.015, -0.052, 0.004]}
-            rotation={[otherFingersCurl, 0, -thumbSign * 0.05]}
-          >
-            <mesh position={[thumbSign * 0.013, -0.023, 0.003]} castShadow>
-              <capsuleGeometry args={[0.0125, 0.032, 4, 8]} />
-              <meshStandardMaterial color="#ffd0ae" roughness={0.5} />
-            </mesh>
-            <mesh position={[-thumbSign * 0.01, -0.021, 0]} castShadow>
-              <capsuleGeometry args={[0.012, 0.028, 4, 8]} />
-              <meshStandardMaterial color="#ffd0ae" roughness={0.5} />
-            </mesh>
-            <mesh position={[-thumbSign * 0.03, -0.017, -0.004]} castShadow>
-              <capsuleGeometry args={[0.0105, 0.022, 4, 8]} />
-              <meshStandardMaterial color="#fcc8a4" roughness={0.5} />
-            </mesh>
-          </group>
+          <PixarHand3D
+            side={side}
+            skinColor="#ffd2b0"
+            scale={1.04}
+            fingerCurl={fingerCurl}
+            fingerSpread={fingerSpread}
+            thumbCurl={thumbCurl}
+          />
         </group>
       </group>
     </group>
@@ -616,24 +534,24 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     : 0;
   const quizRevealWeight = computeQuizRevealWeight(sections, timeSec);
 
-  const pointBoardWeight = computeGestureWeight(
+  const calmGestures = computeCalmGestureEnvelopes(
+    frame,
+    fps,
     sections,
     subtitles,
-    "point_board",
-    timeSec,
+    false,
   );
+  const pointBoardWeight = calmGestures.pointBoardWeight;
   const nodEncourageWeight = clamp01(
-    Math.max(
-      computeGestureWeight(sections, subtitles, "nod_encourage", timeSec),
-      quizRevealWeight * 0.9,
-    ),
+    Math.max(calmGestures.nodEncourageWeight, quizRevealWeight * 0.75),
   );
   const thinkingWeight = clamp01(
     Math.max(
-      computeGestureWeight(sections, subtitles, "thinking", timeSec),
-      quizWeight * (1 - quizRevealWeight) * 0.85,
+      calmGestures.thinkingWeight,
+      quizWeight * (1 - quizRevealWeight) * 0.7,
     ),
   );
+  const calmEmphasisWeight = calmGestures.calmEmphasisWeight;
 
   const logoTexture = useMemo(() => createHoodieLogoTexture(), []);
 
@@ -784,175 +702,149 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
 
   const tailSway = Math.sin(timeSec * 2.65) * 0.085 + voiceEnergy * 0.065;
 
-  // Expressive Arm & Hand Gestures
-  const gesturePulse = Math.sin(timeSec * 5.2) * voiceEnergy;
-  const gestureAlt = Math.cos(timeSec * 3.7) * voiceEnergy;
-  const explainMode = clamp01(vocabWeight + quizWeight * 0.55);
-  const speakingMode = isHostSpeaking ? clamp01(voiceEnergy * 1.35) : 0;
+  // Calm, Unhurried Phrase-Level Arm & Hand Gestures ("Less-Is-More": ~0.4 Hz max, quiet desk rest when listening)
+  const slowBreathArm = Math.sin(timeSec * 1.9) * 0.018;
+  const calmDrift = Math.sin(timeSec * 2.5) * 0.022;
+  const calmFollowThrough = Math.cos(timeSec * 2.1 + 0.5) * 0.02;
 
-  // Right Arm (-X, viewer's left): desk rest / emphasis, smoothly raises hand near chin when thinking
-  const rightBaseShoulder: [number, number, number] = [
-    -0.28 - speakingMode * 0.07 - quizRevealWeight * 0.05 + gestureAlt * 0.035,
-    0.06 + speakingMode * 0.04,
-    -0.22 - speakingMode * 0.05,
+  // Right Arm (-X, viewer's left): rests calmly near desk (~95% of time), gently raises on thinking cues
+  const rightRestShoulder: [number, number, number] = [
+    -0.28 + slowBreathArm,
+    0.05,
+    -0.2 - calmEmphasisWeight * 0.03,
   ];
   const rightThinkShoulder: [number, number, number] = [
-    -0.98 + Math.sin(timeSec * 2.1) * 0.02,
-    0.26,
-    -0.36,
+    -0.9 + slowBreathArm,
+    0.22,
+    -0.32,
   ];
   const rightShoulderRot: [number, number, number] = [
-    lerp(rightBaseShoulder[0], rightThinkShoulder[0], thinkingWeight),
-    lerp(rightBaseShoulder[1], rightThinkShoulder[1], thinkingWeight),
-    lerp(rightBaseShoulder[2], rightThinkShoulder[2], thinkingWeight),
+    lerp(rightRestShoulder[0], rightThinkShoulder[0], thinkingWeight),
+    lerp(rightRestShoulder[1], rightThinkShoulder[1], thinkingWeight),
+    lerp(rightRestShoulder[2], rightThinkShoulder[2], thinkingWeight),
   ];
 
-  const rightBaseElbow: [number, number, number] = [
-    -1.02 - speakingMode * 0.14 - quizRevealWeight * 0.14 + gesturePulse * 0.07,
+  const rightRestElbow: [number, number, number] = [
+    -1.06 - calmEmphasisWeight * 0.05 + slowBreathArm * 0.6,
     0,
-    0.26 - speakingMode * 0.08,
+    0.24,
   ];
   const rightThinkElbow: [number, number, number] = [
-    -1.66 + Math.cos(timeSec * 2.4) * 0.03,
-    0.14,
-    0.48,
+    -1.6 + calmFollowThrough * 0.5,
+    0.12,
+    0.44,
   ];
   const rightElbowRot: [number, number, number] = [
-    lerp(rightBaseElbow[0], rightThinkElbow[0], thinkingWeight),
-    lerp(rightBaseElbow[1], rightThinkElbow[1], thinkingWeight),
-    lerp(rightBaseElbow[2], rightThinkElbow[2], thinkingWeight),
+    lerp(rightRestElbow[0], rightThinkElbow[0], thinkingWeight),
+    lerp(rightRestElbow[1], rightThinkElbow[1], thinkingWeight),
+    lerp(rightRestElbow[2], rightThinkElbow[2], thinkingWeight),
   ];
 
-  const rightBaseWrist: [number, number, number] = [
-    0.16 - speakingMode * 0.24,
-    0.15,
-    -0.1 + speakingMode * 0.2,
+  const rightRestWrist: [number, number, number] = [
+    0.18 - calmEmphasisWeight * 0.06,
+    0.16,
+    -0.08,
   ];
-  const rightThinkWrist: [number, number, number] = [0.22, 0.18, -0.15];
+  const rightThinkWrist: [number, number, number] = [0.22, 0.16, -0.14];
   const rightWristRot: [number, number, number] = [
-    lerp(rightBaseWrist[0], rightThinkWrist[0], thinkingWeight),
-    lerp(rightBaseWrist[1], rightThinkWrist[1], thinkingWeight),
-    lerp(rightBaseWrist[2], rightThinkWrist[2], thinkingWeight),
+    lerp(rightRestWrist[0], rightThinkWrist[0], thinkingWeight),
+    lerp(rightRestWrist[1], rightThinkWrist[1], thinkingWeight),
+    lerp(rightRestWrist[2], rightThinkWrist[2], thinkingWeight),
   ];
 
-  const rightBaseFingerCurl = lerp(0.54, 0.22, speakingMode);
-  const rightIndexCurl = lerp(rightBaseFingerCurl, 0.42, thinkingWeight);
-  const rightOtherCurl = lerp(
-    rightBaseFingerCurl + 0.12,
-    0.78,
+  const rightFingerCurl = lerp(
+    lerp(0.5, 0.42, calmEmphasisWeight),
+    0.62,
     thinkingWeight,
   );
+  const rightFingerSpread = lerp(
+    0.18,
+    0.28,
+    calmEmphasisWeight * (1 - thinkingWeight),
+  );
+  const rightThumbCurl = lerp(0.32, 0.46, thinkingWeight);
 
-  // Left Arm (+X, viewer's right): teacher-like open-palm explaining & explicit `point_board` gesture
-  const leftIdleShoulder: [number, number, number] = [-0.36, -0.06, 0.28];
-  const leftSpeakShoulder: [number, number, number] = [
-    -0.9 + gesturePulse * 0.12 - speechPeak * 0.14 - quizRevealWeight * 0.1,
-    -0.14,
-    0.78 + voiceEnergy * 0.12 + speechPeak * 0.14,
+  // Left Arm (+X, viewer's right): rests calmly near desk (~65-70% of time); polite open-palm on key phrases & `point_board`
+  const leftRestShoulder: [number, number, number] = [
+    -0.3 + slowBreathArm,
+    -0.05,
+    0.22,
   ];
-  const leftExplainShoulder: [number, number, number] = [
-    -0.92 + gestureAlt * 0.05,
-    -0.2,
-    1.04 + Math.sin(timeSec * 2.4) * 0.03,
+  const leftEmphasisShoulder: [number, number, number] = [
+    -0.56 + calmDrift,
+    -0.1,
+    0.48 + calmFollowThrough * 0.8,
   ];
   const leftPointShoulder: [number, number, number] = isDual
     ? [
-        -0.68 + Math.sin(timeSec * 2.8) * 0.025,
-        -0.18,
-        1.34 + Math.cos(timeSec * 2.4) * 0.03,
+        -0.58 + calmDrift * 0.7,
+        -0.16,
+        1.08 + calmFollowThrough * 0.7,
       ]
     : [
-        -0.36 + Math.sin(timeSec * 2.8) * 0.025,
-        -0.24,
-        1.68 + Math.cos(timeSec * 2.4) * 0.03,
+        -0.36 + calmDrift * 0.7,
+        -0.2,
+        1.42 + calmFollowThrough * 0.7,
       ];
 
-  const leftIdleElbow: [number, number, number] = [-1.08, 0, -0.22];
-  const leftSpeakElbow: [number, number, number] = [
-    -0.96 + gestureAlt * 0.14 - quizRevealWeight * 0.12,
+  const leftRestElbow: [number, number, number] = [
+    -1.08 + slowBreathArm * 0.5,
     0,
-    -0.06 + voiceEnergy * 0.08,
+    -0.2,
   ];
-  const leftExplainElbow: [number, number, number] = [
-    -0.66 + gesturePulse * 0.05,
+  const leftEmphasisElbow: [number, number, number] = [
+    -0.9 + calmFollowThrough,
     0,
-    0.18,
+    -0.04,
   ];
   const leftPointElbow: [number, number, number] = [
-    -0.22 + gesturePulse * 0.03,
-    0.1,
-    0.28,
+    -0.36 + calmFollowThrough * 0.6,
+    0.12,
+    0.24,
   ];
 
-  const leftBaseShoulderX = lerp(
-    lerp(leftIdleShoulder[0], leftSpeakShoulder[0], speakingMode),
-    leftExplainShoulder[0],
-    explainMode,
-  );
-  const leftBaseShoulderY = lerp(
-    lerp(leftIdleShoulder[1], leftSpeakShoulder[1], speakingMode),
-    leftExplainShoulder[1],
-    explainMode,
-  );
-  const leftBaseShoulderZ = lerp(
-    lerp(leftIdleShoulder[2], leftSpeakShoulder[2], speakingMode),
-    leftExplainShoulder[2],
-    explainMode,
-  );
-
+  const leftBaseShoulder: [number, number, number] = [
+    lerp(leftRestShoulder[0], leftEmphasisShoulder[0], calmEmphasisWeight),
+    lerp(leftRestShoulder[1], leftEmphasisShoulder[1], calmEmphasisWeight),
+    lerp(leftRestShoulder[2], leftEmphasisShoulder[2], calmEmphasisWeight),
+  ];
   const leftShoulderRot: [number, number, number] = [
-    lerp(leftBaseShoulderX, leftPointShoulder[0], pointBoardWeight),
-    lerp(leftBaseShoulderY, leftPointShoulder[1], pointBoardWeight),
-    lerp(leftBaseShoulderZ, leftPointShoulder[2], pointBoardWeight),
+    lerp(leftBaseShoulder[0], leftPointShoulder[0], pointBoardWeight),
+    lerp(leftBaseShoulder[1], leftPointShoulder[1], pointBoardWeight),
+    lerp(leftBaseShoulder[2], leftPointShoulder[2], pointBoardWeight),
   ];
 
-  const leftBaseElbowX = lerp(
-    lerp(leftIdleElbow[0], leftSpeakElbow[0], speakingMode),
-    leftExplainElbow[0],
-    explainMode,
-  );
-  const leftBaseElbowZ = lerp(
-    lerp(leftIdleElbow[2], leftSpeakElbow[2], speakingMode),
-    leftExplainElbow[2],
-    explainMode,
-  );
-
+  const leftBaseElbow: [number, number, number] = [
+    lerp(leftRestElbow[0], leftEmphasisElbow[0], calmEmphasisWeight),
+    0,
+    lerp(leftRestElbow[2], leftEmphasisElbow[2], calmEmphasisWeight),
+  ];
   const leftElbowRot: [number, number, number] = [
-    lerp(leftBaseElbowX, leftPointElbow[0], pointBoardWeight),
+    lerp(leftBaseElbow[0], leftPointElbow[0], pointBoardWeight),
     lerp(0, leftPointElbow[1], pointBoardWeight),
-    lerp(leftBaseElbowZ, leftPointElbow[2], pointBoardWeight),
+    lerp(leftBaseElbow[2], leftPointElbow[2], pointBoardWeight),
   ];
 
   const leftWristRot: [number, number, number] = [
-    lerp(
-      lerp(lerp(0.18, -0.36, speakingMode), -0.42, explainMode),
-      -0.28,
-      pointBoardWeight,
-    ),
-    lerp(
-      lerp(lerp(0.2, -0.36, speakingMode), -0.5, explainMode),
-      -0.42,
-      pointBoardWeight,
-    ),
-    lerp(
-      lerp(lerp(0.14, 0.3, speakingMode), 0.38, explainMode),
-      0.28,
-      pointBoardWeight,
-    ),
+    lerp(lerp(0.18, -0.18, calmEmphasisWeight), -0.22, pointBoardWeight),
+    lerp(lerp(0.16, -0.18, calmEmphasisWeight), -0.28, pointBoardWeight),
+    lerp(lerp(0.1, 0.2, calmEmphasisWeight), 0.24, pointBoardWeight),
   ];
 
-  const leftIndexCurl = lerp(
-    lerp(lerp(0.54, 0.14, speakingMode), 0.12, explainMode),
-    0.04,
+  // Pose-aware finger anatomy: relaxed semi-open rest -> welcoming open palm -> polite Japanese presentation
+  const leftFingerCurl = lerp(
+    lerp(0.5, 0.18, calmEmphasisWeight),
+    0.08,
     pointBoardWeight,
   );
-  const leftOtherCurl = lerp(
-    lerp(
-      lerp(0.66, 0.22, speakingMode),
-      lerp(0.24, 0.38, vocabWeight),
-      explainMode,
-    ),
-    0.14,
+  const leftFingerSpread = lerp(
+    lerp(0.18, 0.68, calmEmphasisWeight),
+    0.08,
+    pointBoardWeight,
+  );
+  const leftThumbCurl = lerp(
+    lerp(0.32, 0.14, calmEmphasisWeight),
+    0.12,
     pointBoardWeight,
   );
 
@@ -1092,8 +984,9 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
           shoulderRotation={rightShoulderRot}
           elbowRotation={rightElbowRot}
           wristRotation={rightWristRot}
-          indexCurl={rightIndexCurl}
-          otherFingersCurl={rightOtherCurl}
+          fingerCurl={rightFingerCurl}
+          fingerSpread={rightFingerSpread}
+          thumbCurl={rightThumbCurl}
         />
 
         <ArticulatedArm3D
@@ -1103,8 +996,9 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
           shoulderRotation={leftShoulderRot}
           elbowRotation={leftElbowRot}
           wristRotation={leftWristRot}
-          indexCurl={leftIndexCurl}
-          otherFingersCurl={leftOtherCurl}
+          fingerCurl={leftFingerCurl}
+          fingerSpread={leftFingerSpread}
+          thumbCurl={leftThumbCurl}
         />
 
         {/* ==================== HEAD GROUP ==================== */}

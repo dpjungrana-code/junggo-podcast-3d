@@ -3,7 +3,6 @@ import * as THREE from "three";
 import { Easing, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import {
   EpisodeSection,
-  HostGestureType,
   PodcastSectionType,
   SubtitleCue,
   getActiveSubtitle,
@@ -16,6 +15,7 @@ import {
   usePodcastAudioMetrics,
 } from "../utils/audio";
 import { createHoodieLogoTexture } from "../utils/textures";
+import { PixarHand3D, computeCalmGestureEnvelopes } from "./PixarHand3D";
 
 export type FemaleNinjaHost3DProps = {
   readonly sections: readonly EpisodeSection[];
@@ -103,49 +103,6 @@ const computeSpeakerEnvelope = (
     const exit = interpolate(
       timeSec,
       [cue.endSec - 0.16, cue.endSec + 0.34],
-      [1, 0],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    maxWeight = Math.max(maxWeight, Math.min(enter, exit));
-  }
-  return clamp01(maxWeight);
-};
-
-const computeSpeakerGestureWeight = (
-  sections: readonly EpisodeSection[],
-  subtitles: readonly SubtitleCue[] | undefined,
-  targetGesture: HostGestureType,
-  forGuest: boolean,
-  timeSec: number,
-): number => {
-  if (!subtitles || subtitles.length === 0) {
-    return 0;
-  }
-
-  let maxWeight = 0;
-  for (const cue of subtitles) {
-    const midSec = (cue.startSec + cue.endSec) * 0.5;
-    const sectionForCue = findSectionAt(sections, midSec);
-    if (resolveCueGesture(cue, sectionForCue, forGuest) !== targetGesture) {
-      continue;
-    }
-    const enter = interpolate(
-      timeSec,
-      [cue.startSec - 0.16, cue.startSec + 0.22],
-      [0, 1],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    const exit = interpolate(
-      timeSec,
-      [cue.endSec - 0.12, cue.endSec + 0.33],
       [1, 0],
       {
         extrapolateLeft: "clamp",
@@ -391,12 +348,14 @@ type FemaleArmProps = {
   readonly shoulderRotation: readonly [number, number, number];
   readonly elbowRotation: readonly [number, number, number];
   readonly wristRotation: readonly [number, number, number];
-  readonly indexCurl: number;
-  readonly otherFingersCurl: number;
+  readonly fingerCurl: number;
+  readonly fingerSpread: number;
+  readonly thumbCurl: number;
 };
 
 /**
- * Smooth articulated crimson-red velvet hoodie sleeve, matte-black wrist wrap, and sculpted Pixar hand.
+ * Smooth articulated crimson-red velvet hoodie sleeve, matte-black wrist wrap,
+ * and sculpted 5-finger Pixar hand.
  */
 const FemaleArticulatedArm3D: React.FC<FemaleArmProps> = ({
   name,
@@ -405,11 +364,10 @@ const FemaleArticulatedArm3D: React.FC<FemaleArmProps> = ({
   shoulderRotation,
   elbowRotation,
   wristRotation,
-  indexCurl,
-  otherFingersCurl,
+  fingerCurl,
+  fingerSpread,
+  thumbCurl,
 }) => {
-  const thumbSign = side === "left" ? -1 : 1;
-
   return (
     <group
       name={name}
@@ -486,53 +444,19 @@ const FemaleArticulatedArm3D: React.FC<FemaleArmProps> = ({
           <meshStandardMaterial color="#f5b82e" metalness={0.5} roughness={0.35} />
         </mesh>
 
-        {/* Expressive Peach Hand */}
+        {/* Sculpted 5-Finger Pixar Hand */}
         <group
           position={[0, -0.208, 0]}
           rotation={[wristRotation[0], wristRotation[1], wristRotation[2]]}
         >
-          <mesh position={[0, -0.022, 0]} scale={[1.02, 0.9, 0.7]} castShadow>
-            <sphereGeometry args={[0.049, 12, 10]} />
-            <meshStandardMaterial color="#ffd3b5" roughness={0.5} />
-          </mesh>
-
-          <group
-            position={[thumbSign * 0.038, -0.015, 0.017]}
-            rotation={[0.25, thumbSign * 0.35, thumbSign * 0.65]}
-          >
-            <mesh position={[0, -0.019, 0]} castShadow>
-              <capsuleGeometry args={[0.013, 0.025, 4, 8]} />
-              <meshStandardMaterial color="#ffd3b5" roughness={0.5} />
-            </mesh>
-          </group>
-
-          <group
-            position={[thumbSign * 0.021, -0.05, 0.008]}
-            rotation={[indexCurl, 0, thumbSign * 0.06]}
-          >
-            <mesh position={[0, -0.023, 0]} castShadow>
-              <capsuleGeometry args={[0.012, 0.033, 4, 8]} />
-              <meshStandardMaterial color="#ffd6b8" roughness={0.5} />
-            </mesh>
-          </group>
-
-          <group
-            position={[-thumbSign * 0.014, -0.05, 0.004]}
-            rotation={[otherFingersCurl, 0, -thumbSign * 0.05]}
-          >
-            <mesh position={[thumbSign * 0.012, -0.022, 0.003]} castShadow>
-              <capsuleGeometry args={[0.012, 0.031, 4, 8]} />
-              <meshStandardMaterial color="#ffd3b5" roughness={0.5} />
-            </mesh>
-            <mesh position={[-thumbSign * 0.01, -0.02, 0]} castShadow>
-              <capsuleGeometry args={[0.0115, 0.027, 4, 8]} />
-              <meshStandardMaterial color="#ffd3b5" roughness={0.5} />
-            </mesh>
-            <mesh position={[-thumbSign * 0.028, -0.016, -0.004]} castShadow>
-              <capsuleGeometry args={[0.01, 0.021, 4, 8]} />
-              <meshStandardMaterial color="#fccaa8" roughness={0.5} />
-            </mesh>
-          </group>
+          <PixarHand3D
+            side={side}
+            skinColor="#ffd5b8"
+            scale={0.98}
+            fingerCurl={fingerCurl}
+            fingerSpread={fingerSpread}
+            thumbCurl={thumbCurl}
+          />
         </group>
       </group>
     </group>
@@ -586,27 +510,24 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
     subtitles,
     timeSec,
   );
-  const senseiPointWeight = computeSpeakerGestureWeight(
+  const senseiCalmGestures = computeCalmGestureEnvelopes(
+    frame,
+    fps,
     sections,
     subtitles,
-    "point_board",
     false,
-    timeSec,
   );
-  const mariaPointWeight = computeSpeakerGestureWeight(
+  const mariaCalmGestures = computeCalmGestureEnvelopes(
+    frame,
+    fps,
     sections,
     subtitles,
-    "point_board",
     true,
-    timeSec,
   );
-  const mariaNodWeight = computeSpeakerGestureWeight(
-    sections,
-    subtitles,
-    "nod_encourage",
-    true,
-    timeSec,
-  );
+  const senseiPointWeight = senseiCalmGestures.pointBoardWeight;
+  const mariaPointWeight = mariaCalmGestures.pointBoardWeight;
+  const mariaNodWeight = mariaCalmGestures.nodEncourageWeight;
+  const mariaCalmEmphasis = mariaCalmGestures.calmEmphasisWeight;
 
   const introWeight = computeSectionWeight(
     sections,
@@ -792,65 +713,75 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   const tailSway = Math.sin(timeSec * 2.5 + 1.4) * 0.08 + voiceEnergy * 0.055;
   const ponytailSwayZ = Math.sin(timeSec * 2.1 + 0.5) * 0.045 - headYaw * 0.25;
 
-  // Expressive Arm & Hand Gestures (Left Arm +X = board side, Right Arm -X = Sensei side)
-  const gesturePulse = Math.sin(timeSec * 5.0 + 0.6) * voiceEnergy;
-  const gestureAlt = Math.cos(timeSec * 3.8 + 0.4) * voiceEnergy;
-  const speakingMode = isMariaSpeaking ? clamp01(voiceEnergy * 1.35) : 0;
+  // Calm, Unhurried Phrase-Level Arm & Hand Gestures ("Less-Is-More": quiet desk rest when listening)
+  const slowBreathArm = Math.sin(timeSec * 2.0 + 0.8) * 0.016;
+  const calmDrift = Math.sin(timeSec * 2.4 + 0.4) * 0.02;
+  const calmFollowThrough = Math.cos(timeSec * 2.0 + 0.9) * 0.018;
 
-  // Right Arm (-X, facing Sensei): natural conversational gesture when Maria speaks
+  // Right Arm (-X, facing Sensei): rests calmly near desk (~70% of time); gentle subtle open-palm on selected emphasis phrases
   const rightShoulderRot: [number, number, number] = [
-    -0.34 - speakingMode * 0.42 - speechPeak * 0.14 + gestureAlt * 0.08,
-    0.1 + speakingMode * 0.12,
-    -0.26 - speakingMode * 0.28 - speechPeak * 0.08,
+    -0.32 - mariaCalmEmphasis * 0.24 + slowBreathArm + calmDrift * mariaCalmEmphasis,
+    0.08 + mariaCalmEmphasis * 0.08,
+    -0.22 - mariaCalmEmphasis * 0.14,
   ];
   const rightElbowRot: [number, number, number] = [
-    -1.06 + speakingMode * 0.12 + gesturePulse * 0.1,
+    -1.08 +
+      mariaCalmEmphasis * 0.14 +
+      slowBreathArm * 0.6 +
+      calmFollowThrough * mariaCalmEmphasis,
     0,
-    0.22 - speakingMode * 0.14,
+    0.2 - mariaCalmEmphasis * 0.08,
   ];
   const rightWristRot: [number, number, number] = [
-    0.18 - speakingMode * 0.32,
-    0.2,
-    -0.12 + speakingMode * 0.22,
+    0.16 - mariaCalmEmphasis * 0.22,
+    0.16 + mariaCalmEmphasis * 0.1,
+    -0.1 + mariaCalmEmphasis * 0.14,
   ];
-  const rightFingerCurl = lerp(0.56, 0.2, speakingMode);
+  const rightFingerCurl = lerp(0.5, 0.2, mariaCalmEmphasis);
+  const rightFingerSpread = lerp(0.18, 0.66, mariaCalmEmphasis);
+  const rightThumbCurl = lerp(0.32, 0.15, mariaCalmEmphasis);
 
-  // Left Arm (+X, board side): gentle attentive posture, or raised pointing toward board when `mariaPointWeight` is active
-  const leftBaseShoulder: [number, number, number] = [
-    -0.34 - speakingMode * 0.42 + gesturePulse * 0.05,
-    -0.08,
-    0.26 + speakingMode * 0.28,
+  // Left Arm (+X, board side): rests quietly near desk unless Maria politely presents toward the board (`point_board`)
+  const leftRestShoulder: [number, number, number] = [
+    -0.32 + slowBreathArm,
+    -0.06,
+    0.22,
   ];
   const leftPointShoulder: [number, number, number] = [
-    -0.38 + Math.sin(timeSec * 2.6) * 0.025,
-    -0.22,
-    1.62 + Math.cos(timeSec * 2.3) * 0.03,
+    -0.52 + calmDrift * 0.7,
+    -0.18,
+    0.98 + calmFollowThrough * 0.7,
   ];
   const leftShoulderRot: [number, number, number] = [
-    lerp(leftBaseShoulder[0], leftPointShoulder[0], mariaPointWeight),
-    lerp(leftBaseShoulder[1], leftPointShoulder[1], mariaPointWeight),
-    lerp(leftBaseShoulder[2], leftPointShoulder[2], mariaPointWeight),
+    lerp(leftRestShoulder[0], leftPointShoulder[0], mariaPointWeight),
+    lerp(leftRestShoulder[1], leftPointShoulder[1], mariaPointWeight),
+    lerp(leftRestShoulder[2], leftPointShoulder[2], mariaPointWeight),
   ];
 
-  const leftBaseElbow: [number, number, number] = [
-    -1.06 + speakingMode * 0.16 + gestureAlt * 0.08,
+  const leftRestElbow: [number, number, number] = [
+    -1.08 + slowBreathArm * 0.5,
     0,
-    -0.2 + speakingMode * 0.14,
+    -0.2,
   ];
-  const leftPointElbow: [number, number, number] = [-0.24, 0.1, 0.26];
+  const leftPointElbow: [number, number, number] = [
+    -0.56 + calmFollowThrough * 0.6,
+    0.12,
+    0.2,
+  ];
   const leftElbowRot: [number, number, number] = [
-    lerp(leftBaseElbow[0], leftPointElbow[0], mariaPointWeight),
+    lerp(leftRestElbow[0], leftPointElbow[0], mariaPointWeight),
     lerp(0, leftPointElbow[1], mariaPointWeight),
-    lerp(leftBaseElbow[2], leftPointElbow[2], mariaPointWeight),
+    lerp(leftRestElbow[2], leftPointElbow[2], mariaPointWeight),
   ];
 
   const leftWristRot: [number, number, number] = [
-    lerp(0.16 - speakingMode * 0.28, -0.28, mariaPointWeight),
-    lerp(0.18 - speakingMode * 0.36, -0.4, mariaPointWeight),
-    lerp(0.14 + speakingMode * 0.18, 0.28, mariaPointWeight),
+    lerp(0.16, -0.22, mariaPointWeight),
+    lerp(0.16, -0.28, mariaPointWeight),
+    lerp(0.1, 0.24, mariaPointWeight),
   ];
-  const leftIndexCurl = lerp(lerp(0.56, 0.18, speakingMode), 0.05, mariaPointWeight);
-  const leftOtherCurl = lerp(lerp(0.66, 0.26, speakingMode), 0.15, mariaPointWeight);
+  const leftFingerCurl = lerp(0.5, 0.08, mariaPointWeight);
+  const leftFingerSpread = lerp(0.18, 0.08, mariaPointWeight);
+  const leftThumbCurl = lerp(0.32, 0.12, mariaPointWeight);
 
   void activeSection;
 
@@ -984,8 +915,9 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
           shoulderRotation={rightShoulderRot}
           elbowRotation={rightElbowRot}
           wristRotation={rightWristRot}
-          indexCurl={rightFingerCurl}
-          otherFingersCurl={rightFingerCurl + 0.12}
+          fingerCurl={rightFingerCurl}
+          fingerSpread={rightFingerSpread}
+          thumbCurl={rightThumbCurl}
         />
 
         <FemaleArticulatedArm3D
@@ -995,8 +927,9 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
           shoulderRotation={leftShoulderRot}
           elbowRotation={leftElbowRot}
           wristRotation={leftWristRot}
-          indexCurl={leftIndexCurl}
-          otherFingersCurl={leftOtherCurl}
+          fingerCurl={leftFingerCurl}
+          fingerSpread={leftFingerSpread}
+          thumbCurl={leftThumbCurl}
         />
 
         {/* ==================== HEAD GROUP ==================== */}
