@@ -6,6 +6,7 @@ import {
   PodcastSectionType,
   StudioMode,
   SubtitleCue,
+  computeHostGazeWeights,
   getActiveSection,
   getActiveSubtitle,
   isAddressingCoHost,
@@ -628,50 +629,60 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
       : 0;
   const blinkAmount = Math.max(primaryBlink, secondaryBlink);
 
-  // Smart cross-character gaze (~22deg toward Maria when addressing/listening) & board tracking
+  // Smart 3-target social gaze: camera (audience), partner (Maria), or board (right presentation)
+  const gaze = computeHostGazeWeights(sections, subtitles, timeSec);
   const coHostEngageWeight = clamp01(
-    Math.max(dialogueGuestWeight, addressMariaWeight),
+    Math.max(gaze.partner, dialogueGuestWeight * 0.5, addressMariaWeight * 0.6),
   );
-  const baseBoardGlance =
-    vocabWeight * (0.65 + 0.35 * Math.sin(timeSec * 1.15)) +
-    quizWeight * 0.45 * (1 - quizRevealWeight);
-  const basePupilX =
-    clamp01(baseBoardGlance + coHostEngageWeight * (isDual ? 1.0 : 0.5)) *
-      0.0135 +
-    Math.sin(timeSec * 0.85) * 0.0018;
-  const pupilOffsetX = lerp(basePupilX, 0.0155, pointBoardWeight);
+  const listenerAtBoard = isHostSpeaking ? 1 : 0.72 + 0.18 * Math.sin(timeSec * 0.9);
+
+  const camPupilX = 0;
+  const partnerPupilX = isDual ? 0.012 : 0.004;
+  const boardPupilX = lerp(0.0105, 0.015, Math.max(isHostSpeaking ? 1 : 0, pointBoardWeight)) * listenerAtBoard;
+  const pupilOffsetX =
+    gaze.camera * camPupilX +
+    gaze.partner * partnerPupilX +
+    gaze.board * boardPupilX +
+    Math.sin(timeSec * 0.85) * 0.0014;
   const pupilOffsetY =
     Math.cos(timeSec * 1.35) * 0.0014 +
     quizRevealWeight * 0.002 +
     pointBoardWeight * 0.003 +
     thinkingWeight * 0.0065;
 
-  // Breathing & Torso Motion
+  // Breathing & Torso Motion (`camera` cancels root [0, 0.34, 0] so Sensei faces viewer directly)
   const breathY = Math.sin(timeSec * 2.15) * 0.011;
-  const baseTorsoYaw =
-    vocabWeight * 0.09 +
-    coHostEngageWeight * (isDual ? 0.14 : 0.06) +
-    Math.sin(timeSec * 0.75) * 0.018;
-  const torsoYaw = lerp(baseTorsoYaw, 0.16, pointBoardWeight);
+  const camTorsoYaw = isDual ? -0.14 : -0.10;
+  const partnerTorsoYaw = isDual ? 0.10 : 0.04;
+  const boardTorsoYaw = lerp(0.08, 0.14, pointBoardWeight);
+  const torsoYaw =
+    gaze.camera * camTorsoYaw +
+    gaze.partner * partnerTorsoYaw +
+    gaze.board * boardTorsoYaw +
+    Math.sin(timeSec * 0.75) * 0.015;
   const torsoPitch = voiceEnergy * 0.024 + quizRevealWeight * -0.022;
 
-  // Head Turning, Nodding & Tilting (~0.38 rad / ~22deg eye-contact toward Maria)
+  // Head Turning, Nodding & Tilting
   const speakBobY = isHostSpeaking ? voiceEnergy * 0.012 : 0;
-  const baseHeadTurnTarget =
-    vocabWeight * (0.18 + 0.06 * Math.sin(timeSec * 1.1)) +
-    coHostEngageWeight * (isDual ? 0.38 : 0.18) +
-    quizWeight * (0.08 * (1 - quizRevealWeight));
-  const headTurnTarget = lerp(baseHeadTurnTarget, 0.44, pointBoardWeight);
+  const camHeadYaw = isDual ? -0.20 : -0.14;
+  const partnerHeadYaw = isDual ? 0.28 : 0.10;
+  const boardHeadYaw = lerp(
+    isHostSpeaking ? 0.28 : 0.22 + 0.05 * Math.sin(timeSec * 0.9),
+    0.36,
+    pointBoardWeight,
+  );
   const headYaw =
-    Math.min(0.46, headTurnTarget) +
-    Math.sin(timeSec * 1.05) * 0.03 * (1 - pointBoardWeight * 0.5) +
-    (isHostSpeaking ? Math.cos(timeSec * 4.8) * voiceEnergy * 0.02 : 0);
+    gaze.camera * camHeadYaw +
+    gaze.partner * partnerHeadYaw +
+    gaze.board * boardHeadYaw +
+    Math.sin(timeSec * 1.05) * 0.022 * (1 - pointBoardWeight * 0.4) +
+    (isHostSpeaking ? Math.cos(timeSec * 4.8) * voiceEnergy * 0.018 : 0);
 
   const speechNod = isHostSpeaking
     ? Math.sin(timeSec * 7.2) * voiceEnergy * 0.045 + voiceEnergy * 0.02
     : 0;
   const listeningNod =
-    dialogueGuestWeight * (0.04 * Math.max(0, Math.sin(timeSec * 3.8)));
+    coHostEngageWeight * (0.03 * Math.max(0, Math.sin(timeSec * 3.8))) * (isHostSpeaking ? 0 : 1);
   const revealNod = quizRevealWeight * Math.sin(timeSec * 5.6) * 0.035;
   const encourageNod =
     nodEncourageWeight * (0.055 + 0.125 * Math.sin(timeSec * 6.8));

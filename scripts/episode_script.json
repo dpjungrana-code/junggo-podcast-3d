@@ -3,7 +3,7 @@
   "title": "Japan Train Station Survival Guide",
   "jlptLevel": "JLPT N4–N3",
   "studioMode": "dual",
-  "speechRate": "-16%",
+  "speechRate": "-8%",
   "leadInSec": 0.45,
   "outroSec": 0.85,
   "sentenceMicroPauseSec": 0.45,
@@ -71,7 +71,10 @@
             "highlightKey": "north",
             "visualBeat": "north",
             "accentColor": "#34d399",
-            "triggerKeywords": ["北口", "駅"]
+            "triggerKeywords": [
+              "北口",
+              "駅"
+            ]
           },
           {
             "id": "south",
@@ -86,7 +89,11 @@
             "highlightKey": "south",
             "visualBeat": "south",
             "accentColor": "#facc15",
-            "triggerKeywords": ["南口", "入口", "方角"]
+            "triggerKeywords": [
+              "南口",
+              "入口",
+              "方角"
+            ]
           },
           {
             "id": "east",
@@ -101,7 +108,9 @@
             "highlightKey": "east",
             "visualBeat": "east",
             "accentColor": "#38bdf8",
-            "triggerKeywords": ["東口"]
+            "triggerKeywords": [
+              "東口"
+            ]
           },
           {
             "id": "west",
@@ -116,7 +125,9 @@
             "highlightKey": "west",
             "visualBeat": "west",
             "accentColor": "#fb7185",
-            "triggerKeywords": ["西口"]
+            "triggerKeywords": [
+              "西口"
+            ]
           }
         ]
       }
@@ -177,7 +188,10 @@
             "highlightKey": "ticket_machine",
             "visualBeat": "ticket_machine",
             "accentColor": "#34d399",
-            "triggerKeywords": ["券売機", "売り場"]
+            "triggerKeywords": [
+              "券売機",
+              "売り場"
+            ]
           },
           {
             "id": "fare",
@@ -192,7 +206,11 @@
             "highlightKey": "fare",
             "visualBeat": "fare",
             "accentColor": "#fbbf24",
-            "triggerKeywords": ["運賃表", "運賃", "値段"]
+            "triggerKeywords": [
+              "運賃表",
+              "運賃",
+              "値段"
+            ]
           },
           {
             "id": "charge",
@@ -207,7 +225,11 @@
             "highlightKey": "charge",
             "visualBeat": "charge",
             "accentColor": "#38bdf8",
-            "triggerKeywords": ["チャージ", "Suica", "PASMO"]
+            "triggerKeywords": [
+              "チャージ",
+              "Suica",
+              "PASMO"
+            ]
           },
           {
             "id": "ticket",
@@ -222,7 +244,11 @@
             "highlightKey": "ticket",
             "visualBeat": "ticket",
             "accentColor": "#a78bfa",
-            "triggerKeywords": ["切符", "お釣り", "領収書"]
+            "triggerKeywords": [
+              "切符",
+              "お釣り",
+              "領収書"
+            ]
           }
         ]
       }
@@ -283,7 +309,11 @@
             "highlightKey": "gate",
             "visualBeat": "gate",
             "accentColor": "#38bdf8",
-            "triggerKeywords": ["改札機", "タッチ", "自動"]
+            "triggerKeywords": [
+              "改札機",
+              "タッチ",
+              "自動"
+            ]
           },
           {
             "id": "low_balance",
@@ -298,7 +328,10 @@
             "highlightKey": "low_balance",
             "visualBeat": "low_balance",
             "accentColor": "#fb7185",
-            "triggerKeywords": ["残高不足", "足りない"]
+            "triggerKeywords": [
+              "残高不足",
+              "足りない"
+            ]
           },
           {
             "id": "adjust",
@@ -313,7 +346,10 @@
             "highlightKey": "adjust",
             "visualBeat": "adjust",
             "accentColor": "#facc15",
-            "triggerKeywords": ["精算機", "不足分"]
+            "triggerKeywords": [
+              "精算機",
+              "不足分"
+            ]
           },
           {
             "id": "staff",
@@ -328,7 +364,9 @@
             "highlightKey": "staff",
             "visualBeat": "staff",
             "accentColor": "#34d399",
-            "triggerKeywords": ["駅員"]
+            "triggerKeywords": [
+              "駅員"
+            ]
           }
         ]
       }
@@ -389,7 +427,11 @@
             "highlightKey": "platform",
             "visualBeat": "platform",
             "accentColor": "#34d399",
-            "triggerKeywords": ["番線", "ホーム", "降りる"]
+            "triggerKeywords": [
+              "番線",
+              "ホーム",
+              "降りる"
+            ]
           },
           {
             "id": "train_types",
@@ -404,7 +446,12 @@
             "highlightKey": "train_types",
             "visualBeat": "platform",
             "accentColor": "#38bdf8",
-            "triggerKeywords": ["普通", "快速", "特急", "止まります"]
+            "triggerKeywords": [
+              "普通",
+              "快速",
+              "特急",
+              "止まります"
+            ]
           },
           {
             "id": "tactile",
@@ -419,7 +466,10 @@
             "highlightKey": "tactile",
             "visualBeat": "tactile",
             "accentColor": "#facc15",
-            "triggerKeywords": ["点字ブロック", "内側"]
+            "triggerKeywords": [
+              "点字ブロック",
+              "内側"
+            ]
           },
           {
             "id": "etiquette",
@@ -434,7 +484,11 @@
             "highlightKey": "etiquette",
             "visualBeat": "priority_seat",
             "accentColor": "#a78bfa",
-            "triggerKeywords": ["優先席", "マナーモード", "静かに"]
+            "triggerKeywords": [
+              "優先席",
+              "マナーモード",
+              "静かに"
+            ]
           }
         ]
       }
@@ -495,7 +549,10 @@
             "highlightKey": "exit",
             "visualBeat": "exit",
             "accentColor": "#facc15",
-            "triggerKeywords": ["黄色い出口", "看板"]
+            "triggerKeywords": [
+              "黄色い出口",
+              "看板"
+            ]
           },
           {
             "id": "transfer",
@@ -510,7 +567,10 @@
             "highlightKey": "transfer",
             "visualBeat": "transfer",
             "accentColor": "#38bdf8",
-            "triggerKeywords": ["乗り換え", "山手線"]
+            "triggerKeywords": [
+              "乗り換え",
+              "山手線"
+            ]
           },
           {
             "id": "next_station",
@@ -525,7 +585,10 @@
             "highlightKey": "next_station",
             "visualBeat": "next_station",
             "accentColor": "#34d399",
-            "triggerKeywords": ["次の駅", "まもなく"]
+            "triggerKeywords": [
+              "次の駅",
+              "まもなく"
+            ]
           },
           {
             "id": "last_train",
@@ -540,7 +603,9 @@
             "highlightKey": "last_train",
             "visualBeat": "last_train",
             "accentColor": "#fb7185",
-            "triggerKeywords": ["終電"]
+            "triggerKeywords": [
+              "終電"
+            ]
           }
         ]
       }
@@ -739,7 +804,8 @@
       "gesture": "greeting",
       "animationScene": "walk_to_station",
       "visualBeat": "hook_shinjuku",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "camera"
     },
     {
       "id": "sub-2",
@@ -751,7 +817,8 @@
       "gesture": "nod",
       "animationScene": "walk_to_station",
       "visualBeat": "hook_shinjuku",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "camera"
     },
     {
       "id": "sub-3",
@@ -762,7 +829,8 @@
       "english": "Don't worry though! I'm Sensei. From street directions to tickets, gates, etiquette, and quizzes, we'll guide you slowly and clearly!",
       "gesture": "pointing",
       "animationScene": "walk_to_station",
-      "pauseSec": 0.85
+      "pauseSec": 0.85,
+      "gaze": "camera"
     },
     {
       "id": "sub-4",
@@ -775,7 +843,8 @@
       "animationScene": "walk_to_station",
       "activeSubTopicIndex": 0,
       "visualBeat": "north",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "camera"
     },
     {
       "id": "sub-5",
@@ -787,7 +856,8 @@
       "gesture": "pointing",
       "activeSubTopicIndex": 0,
       "visualBeat": "north",
-      "pauseSec": 0.8
+      "pauseSec": 0.8,
+      "gaze": "board"
     },
     {
       "id": "sub-6",
@@ -799,7 +869,8 @@
       "gesture": "explain",
       "activeSubTopicIndex": 1,
       "visualBeat": "south",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-7",
@@ -811,7 +882,8 @@
       "gesture": "nod",
       "activeSubTopicIndex": 2,
       "visualBeat": "east",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-8",
@@ -823,7 +895,8 @@
       "gesture": "explain",
       "activeSubTopicIndex": 3,
       "visualBeat": "west",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-9",
@@ -835,7 +908,8 @@
       "gesture": "thinking",
       "activeSubTopicIndex": 1,
       "visualBeat": "south",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-10",
@@ -847,7 +921,8 @@
       "gesture": "pointing",
       "activeSubTopicIndex": 0,
       "visualBeat": "north",
-      "pauseSec": 0.85
+      "pauseSec": 0.85,
+      "gaze": "camera"
     },
     {
       "id": "sub-11",
@@ -860,7 +935,8 @@
       "animationScene": "buy_ticket_and_suica",
       "activeSubTopicIndex": 0,
       "visualBeat": "ticket_machine",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "camera"
     },
     {
       "id": "sub-12",
@@ -872,7 +948,8 @@
       "gesture": "pointing",
       "activeSubTopicIndex": 1,
       "visualBeat": "fare",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-13",
@@ -884,7 +961,8 @@
       "gesture": "explain",
       "activeSubTopicIndex": 3,
       "visualBeat": "ticket",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-14",
@@ -896,7 +974,8 @@
       "gesture": "nod",
       "activeSubTopicIndex": 2,
       "visualBeat": "charge",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-15",
@@ -908,7 +987,8 @@
       "gesture": "pointing",
       "activeSubTopicIndex": 2,
       "visualBeat": "charge",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-16",
@@ -920,7 +1000,8 @@
       "gesture": "thinking",
       "activeSubTopicIndex": 2,
       "visualBeat": "charge",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-17",
@@ -932,7 +1013,8 @@
       "gesture": "explain",
       "activeSubTopicIndex": 3,
       "visualBeat": "ticket",
-      "pauseSec": 0.85
+      "pauseSec": 0.85,
+      "gaze": "partner"
     },
     {
       "id": "sub-18",
@@ -945,7 +1027,8 @@
       "animationScene": "tap_ic_card_gate",
       "activeSubTopicIndex": 0,
       "visualBeat": "gate",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "camera"
     },
     {
       "id": "sub-19",
@@ -957,7 +1040,8 @@
       "gesture": "nod",
       "activeSubTopicIndex": 0,
       "visualBeat": "gate",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-20",
@@ -969,7 +1053,8 @@
       "gesture": "thinking",
       "activeSubTopicIndex": 1,
       "visualBeat": "low_balance",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-21",
@@ -981,7 +1066,8 @@
       "gesture": "pointing",
       "activeSubTopicIndex": 2,
       "visualBeat": "adjust",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-22",
@@ -993,7 +1079,8 @@
       "gesture": "explain",
       "activeSubTopicIndex": 2,
       "visualBeat": "adjust",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-23",
@@ -1005,7 +1092,8 @@
       "gesture": "thinking",
       "activeSubTopicIndex": 3,
       "visualBeat": "staff",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-24",
@@ -1017,7 +1105,8 @@
       "gesture": "explain",
       "activeSubTopicIndex": 3,
       "visualBeat": "staff",
-      "pauseSec": 0.85
+      "pauseSec": 0.85,
+      "gaze": "partner"
     },
     {
       "id": "sub-25",
@@ -1030,7 +1119,8 @@
       "animationScene": "board_train_platform",
       "activeSubTopicIndex": 0,
       "visualBeat": "platform",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "camera"
     },
     {
       "id": "sub-26",
@@ -1042,7 +1132,8 @@
       "gesture": "pointing",
       "activeSubTopicIndex": 2,
       "visualBeat": "tactile",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-27",
@@ -1054,7 +1145,8 @@
       "gesture": "explain",
       "activeSubTopicIndex": 1,
       "visualBeat": "platform",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-28",
@@ -1066,7 +1158,8 @@
       "gesture": "nod",
       "activeSubTopicIndex": 1,
       "visualBeat": "platform",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-29",
@@ -1078,7 +1171,8 @@
       "gesture": "explain",
       "activeSubTopicIndex": 0,
       "visualBeat": "platform",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-30",
@@ -1090,7 +1184,8 @@
       "gesture": "explain",
       "activeSubTopicIndex": 3,
       "visualBeat": "priority_seat",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-31",
@@ -1102,7 +1197,8 @@
       "gesture": "pointing",
       "activeSubTopicIndex": 3,
       "visualBeat": "manner_mode",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-32",
@@ -1114,7 +1210,8 @@
       "gesture": "nod",
       "activeSubTopicIndex": 3,
       "visualBeat": "manner_mode",
-      "pauseSec": 0.85
+      "pauseSec": 0.85,
+      "gaze": "partner"
     },
     {
       "id": "sub-33",
@@ -1127,7 +1224,8 @@
       "animationScene": "ride_and_exit_train",
       "activeSubTopicIndex": 2,
       "visualBeat": "next_station",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "camera"
     },
     {
       "id": "sub-34",
@@ -1139,7 +1237,8 @@
       "gesture": "pointing",
       "activeSubTopicIndex": 2,
       "visualBeat": "next_station",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-35",
@@ -1151,7 +1250,8 @@
       "gesture": "explain",
       "activeSubTopicIndex": 0,
       "visualBeat": "exit",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-36",
@@ -1163,7 +1263,8 @@
       "gesture": "nod",
       "activeSubTopicIndex": 1,
       "visualBeat": "transfer",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-37",
@@ -1175,7 +1276,8 @@
       "gesture": "explain",
       "activeSubTopicIndex": 1,
       "visualBeat": "transfer",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "board"
     },
     {
       "id": "sub-38",
@@ -1187,7 +1289,8 @@
       "gesture": "thinking",
       "activeSubTopicIndex": 3,
       "visualBeat": "last_train",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-39",
@@ -1199,7 +1302,8 @@
       "gesture": "pointing",
       "activeSubTopicIndex": 3,
       "visualBeat": "last_train",
-      "pauseSec": 0.85
+      "pauseSec": 0.85,
+      "gaze": "partner"
     },
     {
       "id": "sub-40",
@@ -1211,7 +1315,8 @@
       "gesture": "pointing",
       "animationScene": "tap_ic_card_gate",
       "visualBeat": "staff",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-41",
@@ -1223,7 +1328,8 @@
       "gesture": "explain",
       "animationScene": "board_train_platform",
       "visualBeat": "platform",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-42",
@@ -1235,7 +1341,8 @@
       "gesture": "nod",
       "animationScene": "board_train_platform",
       "visualBeat": "platform",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-43",
@@ -1247,7 +1354,8 @@
       "gesture": "pointing",
       "animationScene": "board_train_platform",
       "visualBeat": "manner_mode",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-44",
@@ -1259,7 +1367,8 @@
       "gesture": "thinking",
       "animationScene": "tap_ic_card_gate",
       "visualBeat": "low_balance",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-45",
@@ -1271,7 +1380,8 @@
       "gesture": "explain",
       "animationScene": "tap_ic_card_gate",
       "visualBeat": "adjust",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-46",
@@ -1283,7 +1393,8 @@
       "gesture": "celebrate",
       "animationScene": "tap_ic_card_gate",
       "visualBeat": "gate",
-      "pauseSec": 0.75
+      "pauseSec": 0.75,
+      "gaze": "partner"
     },
     {
       "id": "sub-47",
@@ -1295,7 +1406,8 @@
       "gesture": "celebrate",
       "animationScene": "ride_and_exit_train",
       "visualBeat": "exit",
-      "pauseSec": 0.85
+      "pauseSec": 0.85,
+      "gaze": "partner"
     },
     {
       "id": "sub-48",
@@ -1305,7 +1417,8 @@
       "romaji": "Soredewa dai nana suteppu, gobyou kuizu desu! Dai ichimon! Kaisatsu no naka de Suica no zandaka ga tarinai toki, dono kikai o tsukaimasu ka? Gobyou sutaato!",
       "english": "Now for Chapter 7: 5-Second Pop Quizzes! Quiz 1: Which machine inside the gate do you use when your Suica balance is short? 5 seconds, go!",
       "gesture": "thinking",
-      "pauseSec": 5.2
+      "pauseSec": 5.2,
+      "gaze": "camera"
     },
     {
       "id": "sub-49",
@@ -1315,7 +1428,8 @@
       "romaji": "Taimu appu! Seikai wa, A no \"seisanki\" desu! Kiiroi seisanki de fusokubun o haraeba, sugu kaisatsu o deraremasu yo.",
       "english": "Time's up! Correct answer is A: Seisanki (Fare Adjustment Machine)! Pay the remaining fare at the yellow machine to exit right away.",
       "gesture": "celebrate",
-      "pauseSec": 0.85
+      "pauseSec": 0.85,
+      "gaze": "camera"
     },
     {
       "id": "sub-50",
@@ -1325,7 +1439,8 @@
       "romaji": "Tsuzuite dai nimon! Nihon no eki de \"deguchi\" no kanban wa, naniiro de touitsu sarete imasu ka? Gobyou de erabimashou!",
       "english": "Next is Quiz 2! What uniform color are official EXIT signs in Japanese train stations? Pick in 5 seconds!",
       "gesture": "thinking",
-      "pauseSec": 5.2
+      "pauseSec": 5.2,
+      "gaze": "camera"
     },
     {
       "id": "sub-51",
@@ -1335,7 +1450,8 @@
       "romaji": "Pinpoon! Seikai wa, B no \"kiiro\" desu! Mayottara, mazu ue o mite akarui kiiro no deguchi sain o sagashite kudasai ne!",
       "english": "Ding-ding! Correct answer is B: Bright Yellow (kiiro)! Whenever lost, look up first for those bright yellow EXIT signs!",
       "gesture": "celebrate",
-      "pauseSec": 0.85
+      "pauseSec": 0.85,
+      "gaze": "camera"
     },
     {
       "id": "sub-52",
@@ -1345,7 +1461,8 @@
       "romaji": "Dondon ikimasu, dai sanmon! Zenbu no eki ni tomarazu, shuyoueki dake hayaku tomaru densha wa dore desu ka? Gobyou sutaato!",
       "english": "Keep going—Quiz 3! Which train skips minor stations and stops quickly at major stations? 5 seconds, start!",
       "gesture": "thinking",
-      "pauseSec": 5.2
+      "pauseSec": 5.2,
+      "gaze": "camera"
     },
     {
       "id": "sub-53",
@@ -1355,7 +1472,8 @@
       "romaji": "Seikai wa, C no \"kaisoku\" desu! Futsuu densha yori zutto hayakute, tsuika ryoukin mo kakaranai tanomoshii densha desu yo.",
       "english": "Correct answer is C: Kaisoku (Rapid Train)! Much faster than a Local train and no extra express surcharge required.",
       "gesture": "celebrate",
-      "pauseSec": 0.85
+      "pauseSec": 0.85,
+      "gaze": "camera"
     },
     {
       "id": "sub-54",
@@ -1365,17 +1483,19 @@
       "romaji": "Saigo no kuizu, dai yonmon! Densha no naka de sumaatofon o shizuka ni suru settei wa nan to yobimasu ka? Gobyou charenji!",
       "english": "Final question—Quiz 4! What do you call the setting to keep your smartphone silent inside a Japanese train? 5-second challenge!",
       "gesture": "thinking",
-      "pauseSec": 5.2
+      "pauseSec": 5.2,
+      "gaze": "camera"
     },
     {
       "id": "sub-55",
       "sectionId": "sec-quiz-4",
       "speaker": "Maria",
-      "japanese": "正解[せいかい]はDの「マナーモード」です！今日[きょう]学[まな]んだフレーズを使[つか]って、日本[にほん]の電車旅[でんしゃたび]を自信[じしん]をもって楽[たの]しんでくださいね！",
-      "romaji": "Seikai wa D no \"manaa moodo\" desu! Kyou mananda fureezu o tsukatte, Nihon no densha tabi o jishin o motte tanoshinde kudasai ne!",
+      "japanese": "正解[せいかい]は、Dの「マナーモード」です！今日[きょう]学[まな]んだフレーズを使[つか]って、日本[にほん]の電車旅[でんしゃたび]を自信[じしん]をもって楽[たの]しんでくださいね！",
+      "romaji": "Seikai wa, D no \"manaa moodo\" desu! Kyou mananda fureezu o tsukatte, Nihon no densha tabi o jishin o motte tanoshinde kudasai ne!",
       "english": "Correct answer is D: Manaa Moodo (Manner Mode)! Use today's survival phrases to enjoy Japan's trains with total confidence!",
       "gesture": "celebrate",
-      "pauseSec": 0.9
+      "pauseSec": 0.9,
+      "gaze": "camera"
     }
   ]
 }

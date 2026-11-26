@@ -48,6 +48,20 @@ type ToonCharProps = {
 
 const INK = "#111827";
 
+export const STREET_LAYOUT_25D = {
+  BUILDING_BASE_Y: 250,
+  ROAD_TOP_Y: 250,
+  ROAD_FAR_LANE_Y: 256,
+  ROAD_NEAR_LANE_Y: 298,
+  ROAD_MAX_WHEEL_Y: 339,
+  ROAD_BOTTOM_Y: 346,
+  GUARDRAIL_TOP_Y: 326,
+  GUARDRAIL_BASE_Y: 352,
+  CURB_Y: 346,
+  SIDEWALK_TOP_Y: 360,
+  SIDEWALK_FEET_Y: 418,
+} as const;
+
 const clamp01 = (v: number): number => Math.max(0, Math.min(1, v));
 
 const degToRad = (deg: number): number => (deg * Math.PI) / 180;
@@ -634,6 +648,23 @@ const WalkToStationRealJapan25D: React.FC<{
     ? cycleExpression(localSec, 1, ["surprised", "amazed", "surprised"])
     : cycleExpression(localSec, 1, ["happy", "focused", "proud"]);
 
+  const {
+    BUILDING_BASE_Y,
+    ROAD_TOP_Y,
+    ROAD_FAR_LANE_Y,
+    ROAD_NEAR_LANE_Y,
+    ROAD_BOTTOM_Y,
+    GUARDRAIL_TOP_Y,
+    GUARDRAIL_BASE_Y,
+    CURB_Y,
+    SIDEWALK_TOP_Y,
+    SIDEWALK_FEET_Y,
+  } = STREET_LAYOUT_25D;
+
+  const heroFootY = SIDEWALK_FEET_Y - bob;
+  const heroCenterY = heroFootY - 56 * 1.04;
+  const companionCenterY = SIDEWALK_FEET_Y - 4 - 56 * 0.84;
+
   return (
     <g>
       {/* Layer 0: Bright Saturated Sky + Drifting Clouds + Mt. Fuji + Distant Skyline (0.2x parallax) */}
@@ -645,22 +676,22 @@ const WalkToStationRealJapan25D: React.FC<{
             <stop offset="100%" stopColor="#fde68a" />
           </linearGradient>
         </defs>
-        <rect x="-180" y="-40" width="1320" height="360" fill="url(#sky-japan-day)" />
+        <rect x="-180" y="-40" width="1320" height={BUILDING_BASE_Y + 50} fill="url(#sky-japan-day)" />
         {[0, 1, 2].map((i) => {
           const cx = ((i * 340 + cloudShift) % 1080) - 80;
           return (
-            <g key={i} transform={`translate(${cx}, ${42 + (i % 2) * 28})`} opacity="0.92">
+            <g key={i} transform={`translate(${cx}, ${28 + (i % 2) * 24})`} opacity="0.92">
               <ellipse cx="40" cy="20" rx="38" ry="16" fill="#ffffff" stroke={INK} strokeWidth="2.2" />
               <ellipse cx="70" cy="18" rx="28" ry="14" fill="#f8fafc" stroke={INK} strokeWidth="2" />
             </g>
           );
         })}
         {/* Mt. Fuji */}
-        <path d="M 380 286 L 510 156 L 570 156 L 700 286 Z" fill="#4f46e5" stroke={INK} strokeWidth="2.8" />
-        <path d="M 484 182 L 510 156 L 570 156 L 596 182 L 568 192 L 540 180 L 512 192 Z" fill="#ffffff" />
-        {/* Tokyo Towers & Apartment Blocks */}
+        <path d="M 380 250 L 508 118 L 572 118 L 700 250 Z" fill="#4f46e5" stroke={INK} strokeWidth="2.8" />
+        <path d="M 484 144 L 508 118 L 572 118 L 596 144 L 568 154 L 540 142 L 512 154 Z" fill="#ffffff" />
+        {/* Tokyo Towers & Apartment Blocks (strictly behind y <= 250) */}
         {[30, 125, 220, 310, 740, 840].map((bx, i) => (
-          <g key={bx} transform={`translate(${bx}, ${134 + (i % 3) * 20})`}>
+          <g key={bx} transform={`translate(${bx}, ${96 + (i % 3) * 18})`}>
             <rect width="74" height="156" rx="5" fill={i % 2 === 0 ? "#334155" : "#475569"} stroke={INK} strokeWidth="2.5" />
             {[16, 40, 64, 88].map((wy) => (
               <g key={wy}>
@@ -672,11 +703,11 @@ const WalkToStationRealJapan25D: React.FC<{
         ))}
       </g>
 
-      {/* Layer 1: Midground Japanese House, Konbini 24h, Drink Machine & Station Building (0.55x parallax) */}
+      {/* Layer 1: Midground Japanese House, Konbini 24h, Drink Machine & Station Building (y <= BUILDING_BASE_Y = 250) */}
       <g transform={`translate(${camGlideX * 0.55}, 0)`}>
         {/* Traditional Tiled House with Chimney Steam */}
-        <g transform="translate(26, 178)">
-          <SteamPuffs originX={34} originY={-10} localSec={localSec} driftX={24} riseY={38} scale={0.95} />
+        <g transform={`translate(26, ${BUILDING_BASE_Y - 138})`}>
+          <SteamPuffs originX={34} originY={-10} localSec={localSec} driftX={24} riseY={34} scale={0.9} />
           <rect x="24" y="-8" width="16" height="24" fill="#94a3b8" stroke={INK} strokeWidth="2.4" />
           <polygon points="-10,32 72,-8 154,32" fill="#dc2626" stroke={INK} strokeWidth="3.2" />
           <rect x="6" y="32" width="132" height="106" rx="4" fill="#fef3c7" stroke={INK} strokeWidth="3" />
@@ -687,97 +718,76 @@ const WalkToStationRealJapan25D: React.FC<{
         </g>
 
         {/* Glowing Japanese 24h Convenience Store (コンビニ) */}
-        <g transform="translate(192, 186)">
-          <rect x="0" y="0" width="176" height="130" rx="6" fill="#f8fafc" stroke={INK} strokeWidth="3.2" />
+        <g transform={`translate(192, ${BUILDING_BASE_Y - 128})`}>
+          <rect x="0" y="0" width="176" height="128" rx="6" fill="#f8fafc" stroke={INK} strokeWidth="3.2" />
           <rect x="0" y="0" width="176" height="28" rx="4" fill="#10b981" stroke={INK} strokeWidth="2.8" />
           <rect x="0" y="24" width="176" height="8" fill="#f97316" />
           <text x="88" y="20" textAnchor="middle" fill="#ffffff" fontSize="14.5" fontWeight="900">
             24h コンビニ SHOP
           </text>
-          <rect x="18" y="44" width="84" height="62" rx="4" fill="#fde68a" stroke={INK} strokeWidth="2.4" />
-          <rect x="114" y="44" width="46" height="86" rx="4" fill="#bae6fd" stroke={INK} strokeWidth="2.4" />
+          <rect x="18" y="42" width="84" height="60" rx="4" fill="#fde68a" stroke={INK} strokeWidth="2.4" />
+          <rect x="114" y="42" width="46" height="86" rx="4" fill="#bae6fd" stroke={INK} strokeWidth="2.4" />
         </g>
 
         {/* Classic Japanese Drink Vending Machine (自販機) */}
-        <g transform="translate(384, 218)">
-          <rect x="0" y="0" width="54" height="98" rx="6" fill="#ef4444" stroke={INK} strokeWidth="2.8" />
+        <g transform={`translate(384, ${BUILDING_BASE_Y - 96})`}>
+          <rect x="0" y="0" width="54" height="96" rx="6" fill="#ef4444" stroke={INK} strokeWidth="2.8" />
           <rect x="7" y="10" width="40" height="42" rx="4" fill="#e0f2fe" stroke={INK} strokeWidth="2" />
           <rect x="12" y="16" width="9" height="12" rx="1.5" fill="#38bdf8" />
           <rect x="24" y="16" width="9" height="12" rx="1.5" fill="#34d399" />
           <rect x="36" y="16" width="8" height="12" rx="1.5" fill="#f59e0b" />
-          <rect x="12" y="68" width="30" height="14" rx="2.5" fill="#1e293b" stroke={INK} strokeWidth="1.6" />
+          <rect x="12" y="66" width="30" height="14" rx="2.5" fill="#1e293b" stroke={INK} strokeWidth="1.6" />
         </g>
 
-        {/* Grand Japanese Train Station Building on Right */}
-        <g transform="translate(556, 118)">
-          <rect x="0" y="44" width="364" height="156" rx="10" fill="#f1f5f9" stroke={INK} strokeWidth="3.4" />
-          <path d="M -14 48 L 378 48 L 364 18 L 0 18 Z" fill="#10b981" stroke={INK} strokeWidth="3.2" />
-          <rect x="72" y="-12" width="220" height="44" rx="8" fill="#064e3b" stroke={INK} strokeWidth="3.2" />
-          <text x="182" y="18" textAnchor="middle" fill="#ffffff" fontSize="22" fontWeight="900">
+        {/* Grand Japanese Train Station Building on Right (bottom at BUILDING_BASE_Y = 250) */}
+        <g transform={`translate(556, ${BUILDING_BASE_Y - 166})`}>
+          <rect x="0" y="28" width="364" height="138" rx="10" fill="#f1f5f9" stroke={INK} strokeWidth="3.4" />
+          <path d="M -14 32 L 378 32 L 364 4 L 0 4 Z" fill="#10b981" stroke={INK} strokeWidth="3.2" />
+          <rect x="72" y="-14" width="220" height="36" rx="8" fill="#064e3b" stroke={INK} strokeWidth="3.2" />
+          <text x="182" y="10" textAnchor="middle" fill="#ffffff" fontSize="20" fontWeight="900">
             {isHook ? "新宿駅 SHINJUKU" : "駅 STATION"}
           </text>
-          <rect x="112" y="88" width="140" height="112" rx="6" fill="#fef08a" stroke={INK} strokeWidth="3" />
-          <line x1="182" y1="88" x2="182" y2="200" stroke={INK} strokeWidth="2.8" />
-          <rect x="104" y="58" width="156" height="24" rx="5" fill="#148c53" stroke={INK} strokeWidth="2.2" />
-          <text x="182" y="75" textAnchor="middle" fill="#ffffff" fontSize="13.5" fontWeight="900">
+          <rect x="104" y="34" width="156" height="24" rx="5" fill="#148c53" stroke={INK} strokeWidth="2.2" />
+          <text x="182" y="51" textAnchor="middle" fill="#ffffff" fontSize="13" fontWeight="900">
             入口 ENTRANCE
           </text>
+          <rect x="112" y="66" width="140" height="100" rx="6" fill="#fef08a" stroke={INK} strokeWidth="3" />
+          <line x1="182" y1="66" x2="182" y2="166" stroke={INK} strokeWidth="2.8" />
         </g>
-      </g>
 
-      {/* Layer 2: Asphalt Road, White Crosswalk Stripes (横断歩道), Moving Cars & Reactors (0.9x) */}
-      <g transform={`translate(${camGlideX * 0.9}, 0)`}>
-        {/* Far Sidewalk + Tactile Strip */}
-        <rect x="-180" y="310" width="1320" height="24" fill="#94a3b8" stroke={INK} strokeWidth="2.6" />
-        {/* Two-lane Japanese Asphalt Road */}
-        <rect x="-180" y="334" width="1320" height="160" fill="#334155" stroke={INK} strokeWidth="3" />
-        {/* Dashed white center line */}
-        {Array.from({ length: 16 }, (_, i) => (
-          <rect key={i} x={i * 70} y="392" width="38" height="6" rx="2" fill="#f8fafc" />
-        ))}
-        {/* Authentic White Crosswalk (横断歩道) */}
-        {[350, 366, 382, 398, 414, 430].map((cy) => (
-          <rect key={cy} x="392" y={cy} width="96" height="10" rx="2" fill="#ffffff" opacity="0.92" />
-        ))}
-
-        {/* Traffic Moving Across Lanes */}
-        <JapaneseVehicle x={busX} y={322} kind="bus" scale={0.92} />
-        <JapaneseVehicle x={taxiX} y={388} kind="taxi" scale={1.0} />
-        <JapaneseVehicle x={keiX} y={338} kind="kei" scale={0.82} />
-
-        {/* Overhead 4-Exit Directional Gantry or Hook Chaos Board */}
+        {/* Overhead 4-Exit Directional Gantry or Hook Chaos Board (cleanly above station) */}
         {isHook ? (
-          <g transform="translate(566, 14)">
-            <rect x="0" y="0" width="340" height="92" rx="12" fill="#1e293b" stroke="#fbbf24" strokeWidth="3.6" />
-            <text x="170" y="36" textAnchor="middle" fill="#fde047" fontSize="24" fontWeight="900">
+          <g transform="translate(566, -12)">
+            <rect x="0" y="0" width="340" height="76" rx="12" fill="#1e293b" stroke="#fbbf24" strokeWidth="3.6" />
+            <text x="170" y="31" textAnchor="middle" fill="#fde047" fontSize="22" fontWeight="900">
               200+ EXITS?! 😱
             </text>
-            <text x="170" y="66" textAnchor="middle" fill="#ffffff" fontSize="14.5" fontWeight="800">
+            <text x="170" y="56" textAnchor="middle" fill="#ffffff" fontSize="13.5" fontWeight="800">
               ← 北口 · 南口 · 東口 · 西口 · 中央口 →
             </text>
           </g>
         ) : (
-          <g transform="translate(604, 10)">
-            <rect x="0" y="0" width="276" height="104" rx="12" fill="#1e293b" stroke={INK} strokeWidth="3.4" />
+          <g transform="translate(604, -14)">
+            <rect x="0" y="0" width="276" height="82" rx="12" fill="#1e293b" stroke={INK} strokeWidth="3.4" />
             {exits.map((ex) => {
               const isLit = ex.key === effectiveKey;
               return (
-                <g key={ex.key} transform={`translate(${ex.x}, ${ex.y})`}>
+                <g key={ex.key} transform={`translate(${ex.x}, ${ex.y === 58 ? 44 : 8})`}>
                   <rect
                     x="0"
                     y="0"
                     width="116"
-                    height="36"
-                    rx="8"
+                    height="30"
+                    rx="7"
                     fill={isLit ? ex.color : "#0f172a"}
                     stroke={isLit ? "#ffffff" : "#475569"}
-                    strokeWidth={isLit ? "3.2" : "1.8"}
+                    strokeWidth={isLit ? "3" : "1.8"}
                     opacity={isLit ? 1 : 0.65}
                   />
-                  <text x="58" y="17" textAnchor="middle" fill={isLit ? INK : "#cbd5e1"} fontSize="15.5" fontWeight="900">
+                  <text x="58" y="14" textAnchor="middle" fill={isLit ? INK : "#cbd5e1"} fontSize="13.5" fontWeight="900">
                     {ex.jp}
                   </text>
-                  <text x="58" y="31" textAnchor="middle" fill={isLit ? INK : "#94a3b8"} fontSize="10.5" fontWeight="800">
+                  <text x="58" y="26" textAnchor="middle" fill={isLit ? INK : "#94a3b8"} fontSize="9.5" fontWeight="800">
                     {ex.en} Exit
                   </text>
                 </g>
@@ -785,13 +795,104 @@ const WalkToStationRealJapan25D: React.FC<{
             })}
           </g>
         )}
+      </g>
 
-        {/* Background Commuters / Reactors (Ensures 3+ Characters on Screen!) */}
+      {/* Layer 2: Asphalt Road Lanes (ROAD_TOP_Y = 250 .. ROAD_BOTTOM_Y = 346) & Moving Vehicles */}
+      <g transform={`translate(${camGlideX * 0.78}, 0)`}>
+        <rect
+          x="-180"
+          y={ROAD_TOP_Y}
+          width="1320"
+          height={ROAD_BOTTOM_Y - ROAD_TOP_Y}
+          fill="#334155"
+          stroke={INK}
+          strokeWidth="3"
+        />
+        {/* Dashed white lane divider */}
+        {Array.from({ length: 18 }, (_, i) => (
+          <rect key={i} x={-120 + i * 70} y="294" width="38" height="5" rx="2" fill="#f8fafc" opacity="0.88" />
+        ))}
+        {/* Authentic White Crosswalk Stripes inside Road Bounds (y = 256..336) */}
+        {[256, 272, 288, 304, 320, 334].map((cy) => (
+          <rect key={cy} x="392" y={cy} width="96" height="8" rx="2" fill="#ffffff" opacity="0.9" />
+        ))}
+
+        {/* Traffic Strictly Inside Road Lanes Behind Guardrail */}
+        <JapaneseVehicle x={busX} y={ROAD_FAR_LANE_Y} kind="bus" scale={0.68} />
+        <JapaneseVehicle x={keiX} y={ROAD_FAR_LANE_Y + 8} kind="kei" scale={0.66} />
+        <JapaneseVehicle x={taxiX} y={ROAD_NEAR_LANE_Y} kind="taxi" scale={0.82} />
+      </g>
+
+      {/* Layer 3: Raised Concrete Curb + White Japanese Pedestrian Guardrail (ガードレール) */}
+      <g transform={`translate(${camGlideX * 0.9}, 0)`}>
+        <rect x="-180" y={CURB_Y} width="1320" height="14" fill="#cbd5e1" stroke={INK} strokeWidth="2.6" />
+        <rect x="-180" y={CURB_Y} width="1320" height="4" fill="#e2e8f0" />
+        {/* White Steel Guardrail Posts & Dual Horizontal Rails Separating Road from Sidewalk */}
+        {Array.from({ length: 15 }, (_, i) => (
+          <rect
+            key={`post-${i}`}
+            x={-130 + i * 86}
+            y={GUARDRAIL_TOP_Y - 2}
+            width="8"
+            height={GUARDRAIL_BASE_Y - GUARDRAIL_TOP_Y + 4}
+            rx="2"
+            fill="#e2e8f0"
+            stroke={INK}
+            strokeWidth="2.2"
+          />
+        ))}
+        <rect
+          x="-180"
+          y={GUARDRAIL_TOP_Y}
+          width="1320"
+          height="7"
+          fill="#ffffff"
+          stroke={INK}
+          strokeWidth="2.4"
+        />
+        <rect
+          x="-180"
+          y={GUARDRAIL_TOP_Y + 12}
+          width="1320"
+          height="7"
+          fill="#ffffff"
+          stroke={INK}
+          strokeWidth="2.4"
+        />
+      </g>
+
+      {/* Layer 4: Foreground Pedestrian Sidewalk (歩道 y >= 360) & Characters (NEVER overlap cars!) */}
+      <g transform={`translate(${camGlideX}, 0)`}>
+        <rect
+          x="-180"
+          y={SIDEWALK_TOP_Y}
+          width="1320"
+          height="130"
+          fill="#94a3b8"
+          stroke={INK}
+          strokeWidth="2.8"
+        />
+        {/* Subtle sidewalk paving tile joints & yellow tactile warning edge */}
+        <rect x="-180" y={SIDEWALK_TOP_Y + 8} width="1320" height="7" fill="#facc15" stroke={INK} strokeWidth="1.6" />
+        {Array.from({ length: 18 }, (_, i) => (
+          <line
+            key={`tile-${i}`}
+            x1={-120 + i * 74}
+            y1={SIDEWALK_TOP_Y + 16}
+            x2={-150 + i * 74}
+            y2={475}
+            stroke="#64748b"
+            strokeWidth="1.8"
+            opacity="0.55"
+          />
+        ))}
+
+        {/* Background Commuters / Reactors Walking on Foreground Sidewalk */}
         <ToonCharacter2D
-          x={526 + Math.sin(localSec * 1.6) * 14}
-          y={278}
+          x={536 + Math.sin(localSec * 1.6) * 14}
+          y={companionCenterY}
           facing={-1}
-          scale={0.86}
+          scale={0.84}
           seed={2}
           jacketColor="#3f6fb5"
           hairOrBandColor="#f59e0b"
@@ -802,7 +903,7 @@ const WalkToStationRealJapan25D: React.FC<{
         />
         <ToonCharacter2D
           x={822 - Math.cos(localSec * 1.3) * 12}
-          y={278}
+          y={companionCenterY}
           facing={-1}
           scale={0.84}
           seed={3}
@@ -812,12 +913,12 @@ const WalkToStationRealJapan25D: React.FC<{
           blink={computeBlink(frame, 3)}
         />
 
-        {/* Hero Traveler */}
+        {/* Hero Traveler Strictly on Foreground Sidewalk */}
         <ToonCharacter2D
           x={stickX}
-          y={282 - bob}
+          y={heroCenterY}
           facing={1}
-          scale={1.16}
+          scale={1.04}
           seed={1}
           jacketColor="#148c53"
           hairOrBandColor={activeExit.color}
@@ -839,17 +940,17 @@ const WalkToStationRealJapan25D: React.FC<{
         />
 
         <SceneSpeechTag
-          x={stickX - 10}
-          y={178 - bob}
+          x={stickX - 8}
+          y={heroCenterY - 96}
           jp={isHook ? "出口が200以上？！" : `${activeExit.jp}はどこですか？`}
           en={isHook ? "200+ Exits at Shinjuku?!" : `Where is ${activeExit.en} Exit?`}
           accent={activeExit.color}
         />
       </g>
 
-      {/* Layer 3: Foreground Parallax Streetlight Pole (1.18x) */}
+      {/* Layer 5: Foreground Parallax Streetlight Pole (1.18x) */}
       <g transform={`translate(${camGlideX * 1.18}, 0)`}>
-        <rect x="44" y="88" width="12" height="372" fill="#1e293b" stroke={INK} strokeWidth="2.6" />
+        <rect x="44" y="88" width="12" height="390" fill="#1e293b" stroke={INK} strokeWidth="2.6" />
         <rect x="34" y="76" width="54" height="22" rx="8" fill="#fbbf24" stroke={INK} strokeWidth="2.4" />
         <text x="61" y="91" textAnchor="middle" fill={INK} fontSize="11" fontWeight="900">
           JR 駅
@@ -956,84 +1057,100 @@ const BuyTicketIcRealJapan25D: React.FC<{
         </text>
       </g>
 
-      {/* Main Detailed Hero 券売機 Ticket Vending Machine */}
-      <g transform={`translate(${466 + camGlideX * 0.85}, 62)`}>
-        <rect x="10" y="10" width="246" height="298" rx="14" fill="rgba(17,24,39,0.4)" />
-        <rect x="0" y="0" width="246" height="298" rx="14" fill="#0284c7" stroke={INK} strokeWidth="3.6" />
-        <rect x="14" y="12" width="218" height="36" rx="7" fill="#064e3b" stroke={INK} strokeWidth="2.6" />
-        <text x="123" y="36" textAnchor="middle" fill="#ffffff" fontSize="16.5" fontWeight="900">
+      {/* Main Detailed Hero 券売機 Ticket Vending Machine (Widened & Clip-Path Protected) */}
+      <g transform={`translate(${452 + camGlideX * 0.85}, 56)`}>
+        <defs>
+          <clipPath id="ticket-screen-clip">
+            <rect x="16" y="56" width="166" height="122" rx="8" />
+          </clipPath>
+          <clipPath id="ticket-slot-clip">
+            <rect x="24" y="196" width="226" height="52" rx="8" />
+          </clipPath>
+        </defs>
+        <rect x="10" y="10" width="274" height="304" rx="14" fill="rgba(17,24,39,0.4)" />
+        <rect x="0" y="0" width="274" height="304" rx="14" fill="#0284c7" stroke={INK} strokeWidth="3.6" />
+        <rect x="14" y="12" width="246" height="36" rx="7" fill="#064e3b" stroke={INK} strokeWidth="2.6" />
+        <text x="137" y="36" textAnchor="middle" fill="#ffffff" fontSize="16" fontWeight="900">
           きっぷ 券売機・チャージ
         </text>
 
         <rect
-          x="18"
-          y="60"
-          width="144"
-          height="114"
+          x="16"
+          y="56"
+          width="166"
+          height="122"
           rx="8"
           fill="#0f172a"
           stroke={isMachine || isFare ? "#fde047" : INK}
           strokeWidth="3.2"
         />
-        <rect x="26" y="68" width="128" height="22" rx="4" fill="#148c53" />
-        <text x="90" y="83" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="900">
-          {isCharge ? "Suica チャージ" : isTicket ? "片道 / 往復 切符" : "English Guide [EN]"}
-        </text>
+        <g clipPath="url(#ticket-screen-clip)">
+          <rect x="22" y="64" width="154" height="22" rx="4" fill="#148c53" />
+          <text x="99" y="79" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="900">
+            {isCharge ? "Suica チャージ" : isTicket ? "きっぷ購入 TICKETS" : "TICKET MENU"}
+          </text>
 
-        {isCharge ? (
-          <g>
-            <rect x="30" y="104" width="120" height="18" rx="9" fill="#1e293b" stroke="#38bdf8" strokeWidth="1.6" />
-            <rect x="32" y="106" width={Math.round(116 * chargeFill)} height="14" rx="7" fill="#34d399" />
-            <text x="90" y="148" textAnchor="middle" fill="#fde047" fontSize="17" fontWeight="900">
-              +¥1,000 OK!
-            </text>
-          </g>
-        ) : (
-          <g>
-            <rect x="28" y="100" width="58" height="30" rx="5" fill="#10b981" stroke="#a7f3d0" strokeWidth="1.6" />
-            <text x="57" y="120" textAnchor="middle" fill="#ffffff" fontSize="12.5" fontWeight="900">
-              片道 ¥200
-            </text>
-            <rect x="92" y="100" width="58" height="30" rx="5" fill="#38bdf8" stroke="#bae6fd" strokeWidth="1.6" />
-            <text x="121" y="120" textAnchor="middle" fill={INK} fontSize="12.5" fontWeight="900">
-              往復 ¥400
-            </text>
-            <rect x="28" y="138" width="122" height="26" rx="5" fill="#f59e0b" />
-            <text x="89" y="155" textAnchor="middle" fill={INK} fontSize="12" fontWeight="900">
-              EN Button · チャージ
-            </text>
-          </g>
-        )}
+          {isCharge ? (
+            <g>
+              <rect x="26" y="102" width="146" height="18" rx="9" fill="#1e293b" stroke="#38bdf8" strokeWidth="1.6" />
+              <rect x="28" y="104" width={Math.round(142 * chargeFill)} height="14" rx="7" fill="#34d399" />
+              <text x="99" y="148" textAnchor="middle" fill="#fde047" fontSize="17" fontWeight="900">
+                +¥1,000 OK!
+              </text>
+            </g>
+          ) : (
+            <g>
+              <rect x="22" y="94" width="74" height="32" rx="5" fill="#10b981" stroke="#a7f3d0" strokeWidth="1.6" />
+              <text x="59" y="114" textAnchor="middle" fill="#ffffff" fontSize="11.5" fontWeight="900">
+                片道 ¥200
+              </text>
+              <rect x="102" y="94" width="74" height="32" rx="5" fill="#38bdf8" stroke="#bae6fd" strokeWidth="1.6" />
+              <text x="139" y="114" textAnchor="middle" fill={INK} fontSize="11.5" fontWeight="900">
+                往復 ¥400
+              </text>
+              <rect x="22" y="136" width="74" height="28" rx="5" fill="#f59e0b" />
+              <text x="59" y="154" textAnchor="middle" fill={INK} fontSize="10.5" fontWeight="900">
+                ICチャージ
+              </text>
+              <rect x="102" y="136" width="74" height="28" rx="5" fill="#6366f1" />
+              <text x="139" y="154" textAnchor="middle" fill="#ffffff" fontSize="10.5" fontWeight="900">
+                ENGLISH
+              </text>
+            </g>
+          )}
+        </g>
 
-        <rect x="172" y="64" width="56" height="42" rx="6" fill="#fbbf24" stroke={INK} strokeWidth="2.4" />
-        <text x="200" y="83" textAnchor="middle" fill={INK} fontSize="11.5" fontWeight="900">
+        <rect x="194" y="60" width="64" height="44" rx="6" fill="#fbbf24" stroke={INK} strokeWidth="2.4" />
+        <text x="226" y="79" textAnchor="middle" fill={INK} fontSize="11.5" fontWeight="900">
           硬貨
         </text>
-        <rect x="184" y="89" width="32" height="7" rx="3" fill={INK} />
+        <rect x="210" y="86" width="32" height="7" rx="3" fill={INK} />
 
         <rect
-          x="170"
-          y="118"
-          width="60"
-          height="56"
+          x="192"
+          y="116"
+          width="68"
+          height="58"
           rx="8"
           fill={isCharge ? "#0284c7" : "#0c4a6e"}
           stroke={isCharge ? "#34d399" : INK}
           strokeWidth="2.8"
         />
-        <text x="200" y="152" textAnchor="middle" fill="#ffffff" fontSize="16.5" fontWeight="900">
+        <text x="226" y="151" textAnchor="middle" fill="#ffffff" fontSize="16.5" fontWeight="900">
           IC
         </text>
         {isCharge ? (
-          <circle cx="200" cy="146" r={rippleR} fill="none" stroke="#34d399" strokeWidth="3.2" opacity={rippleA} />
+          <circle cx="226" cy="145" r={rippleR} fill="none" stroke="#34d399" strokeWidth="3.2" opacity={rippleA} />
         ) : null}
 
-        <rect x="30" y="200" width="186" height="46" rx="8" fill="#0f172a" stroke={INK} strokeWidth="2.8" />
-        <g transform={`translate(56, ${isTicket ? 202 : 214})`}>
-          <rect x="0" y="0" width="58" height="28" rx="4" fill="#fde68a" stroke={INK} strokeWidth="2.4" />
-          <text x="29" y="18" textAnchor="middle" fill={INK} fontSize="12.5" fontWeight="900">
-            切符 ¥200
-          </text>
+        <rect x="24" y="196" width="226" height="52" rx="8" fill="#0f172a" stroke={INK} strokeWidth="2.8" />
+        <g clipPath="url(#ticket-slot-clip)">
+          <g transform={`translate(82, ${isTicket ? 204 : 208})`}>
+            <rect x="0" y="0" width="110" height="30" rx="5" fill="#fde68a" stroke={INK} strokeWidth="2.4" />
+            <text x="55" y="20" textAnchor="middle" fill={INK} fontSize="13" fontWeight="900">
+              切符 ¥200
+            </text>
+          </g>
         </g>
 
         <YenCoin x={-36} y={182 + (coinDropY % 26)} label="¥500" gold sparklePhase={localSec * 4.2} />
@@ -1223,6 +1340,11 @@ const TapTicketGateRealJapan25D: React.FC<{
 
       {/* Bright Yellow Fare Adjustment Machine (精算機) */}
       <g transform={`translate(${752 + camGlideX * 0.9}, 102)`}>
+        <defs>
+          <clipPath id="adjust-screen-clip">
+            <rect x="16" y="58" width="116" height="68" rx="7" />
+          </clipPath>
+        </defs>
         <rect
           x="0"
           y="0"
@@ -1238,14 +1360,24 @@ const TapTicketGateRealJapan25D: React.FC<{
           精算機
         </text>
         <rect x="16" y="58" width="116" height="68" rx="7" fill="#0f172a" stroke={INK} strokeWidth="2.4" />
-        <text x="74" y="86" textAnchor="middle" fill={isAdjust ? "#34d399" : "#fde047"} fontSize="14.5" fontWeight="900">
-          {isAdjust ? "精算完了 ✓" : "不足 +¥180"}
-        </text>
-        <text x="74" y="109" textAnchor="middle" fill="#e2e8f0" fontSize="12" fontWeight="800">
-          Fare Adjust
-        </text>
+        <g clipPath="url(#adjust-screen-clip)">
+          <text x="74" y="86" textAnchor="middle" fill={isAdjust ? "#34d399" : "#fde047"} fontSize="14.5" fontWeight="900">
+            {isAdjust ? "精算完了 ✓" : "不足 +¥180"}
+          </text>
+          <text x="74" y="109" textAnchor="middle" fill="#e2e8f0" fontSize="12" fontWeight="800">
+            Fare Adjust
+          </text>
+        </g>
         <rect x="34" y="144" width="80" height="18" rx="4" fill="#1e293b" />
-        <rect x="34" y="182" width="80" height="40" rx="6" fill="#1e293b" stroke={INK} strokeWidth="2" />
+        <rect x="28" y="180" width="92" height="44" rx="6" fill="#1e293b" stroke={INK} strokeWidth="2" />
+        {isAdjust ? (
+          <g transform="translate(36, 189)">
+            <rect x="0" y="0" width="76" height="24" rx="4" fill="#fde68a" stroke={INK} strokeWidth="2" />
+            <text x="38" y="16" textAnchor="middle" fill={INK} fontSize="10.5" fontWeight="900">
+              精算券 OK
+            </text>
+          </g>
+        ) : null}
         {isAdjust ? <YenCoin x={-16} y={48 + ((localSec * 22) % 24)} label="¥100" gold sparklePhase={localSec * 4.2} /> : null}
       </g>
 

@@ -1,3 +1,5 @@
+import { interpolate } from "remotion";
+
 export type StudioMode = "solo" | "dual";
 
 export type LayoutMode = "auto" | "studio_wide" | "board_focus";
@@ -73,6 +75,8 @@ export type HostGestureType =
   | "thinking"
   | "none";
 
+export type HostGazeMode = "camera" | "partner" | "board";
+
 export type KanjiExampleWord = {
   readonly word: string;
   readonly reading: string;
@@ -147,6 +151,7 @@ export type SubtitleCue = {
   readonly romaji: string;
   readonly english: string;
   readonly gesture?: HostGestureType;
+  readonly gaze?: HostGazeMode;
   readonly wordTimings?: readonly WordTiming[];
   readonly imageUrl?: string;
   readonly imageCaption?: string;
@@ -277,6 +282,136 @@ export const resolveCueGesture = (
   }
 
   return !forGuest ? (section?.gesture ?? "none") : "none";
+};
+
+const CAMERA_GAZE_KEYWORDS = [
+  "みなさん",
+  "こんにちは",
+  "こんばんは",
+  "知っていますか",
+  "今日は",
+  "一緒に",
+  "覚えて",
+  "楽しんで",
+  "クイズ",
+  "五秒",
+  "正解は",
+  "タイムアップ",
+  "ピンポーン",
+  "did you know",
+  "hello everyone",
+  "today let",
+  "quiz",
+  "time's up",
+];
+
+const PARTNER_GAZE_KEYWORDS = [
+  "いい質問",
+  "その通り",
+  "そうですね",
+  "先生、",
+  "マリア",
+  "sensei,",
+  "great question",
+  "good question",
+  "exactly!",
+];
+
+/**
+ * Resolves whether hosts should address the front camera (`"camera"`), converse
+ * with their co-host (`"partner"`), or focus on the blackboard (`"board"`).
+ */
+export const resolveCueGaze = (
+  cue: SubtitleCue,
+  section?: EpisodeSection,
+  nextCue?: SubtitleCue,
+): HostGazeMode => {
+  if (cue.gaze) {
+    return cue.gaze;
+  }
+  const jp = cue.japanese;
+  const en = cue.english.toLowerCase();
+  const hasKeyword = (list: readonly string[]) =>
+    list.some((kw) => jp.includes(kw) || en.includes(kw));
+
+  if (section?.type === "intro" || section?.type === "quiz" || hasKeyword(CAMERA_GAZE_KEYWORDS)) {
+    return "camera";
+  }
+  if (
+    section?.type === "dialogue" ||
+    hasKeyword(PARTNER_GAZE_KEYWORDS) ||
+    isAddressingCoHost(cue, nextCue)
+  ) {
+    return "partner";
+  }
+  if (resolveCueGesture(cue, section, isGuestSpeaker(cue.speaker)) === "point_board") {
+    return "board";
+  }
+  if (section?.type === "station_guide" || section?.type === "kanji_lesson" || section?.type === "vocabulary") {
+    return "board";
+  }
+  return "camera";
+};
+
+/**
+ * Computes smooth `0..1` weights across `camera`, `partner`, and `board` gaze targets
+ * so both 3D hosts turn cleanly toward the viewer on greetings, openers, and quizzes.
+ */
+export const computeHostGazeWeights = (
+  sections: readonly EpisodeSection[],
+  subtitles: readonly SubtitleCue[] | undefined,
+  timeSec: number,
+): { readonly camera: number; readonly partner: number; readonly board: number } => {
+  if (!subtitles || subtitles.length === 0) {
+    return { camera: 1, partner: 0, board: 0 };
+  }
+
+  let cameraW = 0;
+  let partnerW = 0;
+  let boardW = 0;
+  const secAt = (t: number) => getActiveSection(sections, t);
+
+  for (let i = 0; i < subtitles.length; i++) {
+    const cue = subtitles[i];
+    const enter = interpolate(timeSec, [cue.startSec - 0.25, cue.startSec + 0.18], [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    });
+    const exit = interpolate(timeSec, [cue.endSec - 0.12, cue.endSec + 0.28], [1, 0], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    });
+    const w = Math.min(enter, exit);
+    if (w <= 0.001) {
+      continue;
+    }
+    const mode = resolveCueGaze(cue, secAt((cue.startSec + cue.endSec) * 0.5), subtitles[i + 1]);
+    if (mode === "camera") {
+      cameraW += w;
+    } else if (mode === "partner") {
+      partnerW += w;
+    } else {
+      boardW += w;
+    }
+  }
+
+  const activeSec = secAt(timeSec);
+  const total = cameraW + partnerW + boardW;
+  if (total <= 0.001) {
+    if (activeSec.type === "dialogue") {
+      return { camera: 0.2, partner: 0.8, board: 0 };
+    }
+    if (activeSec.type === "station_guide" || activeSec.type === "vocabulary") {
+      return { camera: 0.5, partner: 0, board: 0.5 };
+    }
+    return { camera: 1, partner: 0, board: 0 };
+  }
+
+  return {
+    camera: cameraW / total,
+    partner: partnerW / total,
+    board: boardW / total,
+  };
 };
 
 export type VocabCardData = {

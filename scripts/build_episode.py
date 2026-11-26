@@ -35,19 +35,22 @@ import numpy as np
 from qa_engine import (
     align_word_timings,
     audit_script_morphology,
+    build_tts_text,
     compare_phonetics,
     decode_mp3_to_pcm16k,
+    find_slurred_low_conf_words,
     furigana_tokens_to_tts_text,
     japanese_to_spoken_kana,
+    normalize_kana_phonetic,
     parse_furigana_markup,
     transcribe_clip_whisper,
 )
 
 VOICE_PROFILE_MAP: dict[str, tuple[str, str, str]] = {
-    "sensei": ("ja-JP-KeitaNeural", "-16%", "-2Hz"),
-    "junggo": ("ja-JP-KeitaNeural", "-16%", "-2Hz"),
-    "maria": ("ja-JP-NanamiNeural", "-16%", "+0Hz"),
-    "yuki": ("ja-JP-NanamiNeural", "-16%", "+0Hz"),
+    "sensei": ("ja-JP-KeitaNeural", "-8%", "-2Hz"),
+    "junggo": ("ja-JP-KeitaNeural", "-8%", "-2Hz"),
+    "maria": ("ja-JP-NanamiNeural", "-8%", "+0Hz"),
+    "yuki": ("ja-JP-NanamiNeural", "-8%", "+0Hz"),
 }
 
 # MPEG Layer III lookup tables
@@ -531,8 +534,9 @@ async def _synthesize_and_verify_line(
     whisper_model: str,
 ) -> tuple[Mp3StreamInfo, Any, list[dict[str, Any]] | None]:
     """
-    Synthesizes a cue clip with Edge-TTS (`rate="-16%"`), checks it blindly with
-    `faster-whisper`, and auto-retries using canonical spoken hiragana if similarity < 0.88.
+    Synthesizes a cue clip with Edge-TTS (`rate="-8%"`), checks it blindly with
+    `faster-whisper`, and auto-retries with phonetic separation if similarity < 0.88
+    or any spoken content word falls below probability 0.68.
     """
     voice, rate, pitch = _resolve_voice_profile(line.get("speaker", "Sensei"))
     rate = line.get("rate") or default_rate or rate
@@ -540,7 +544,7 @@ async def _synthesize_and_verify_line(
     pause_in_line = float(line.get("microPauseSec", micro_pause_sec))
 
     display_jp, parsed_tokens = parse_furigana_markup(str(line["japanese"]))
-    auto_tts = furigana_tokens_to_tts_text(parsed_tokens)
+    auto_tts = build_tts_text(display_jp, parsed_tokens) or furigana_tokens_to_tts_text(parsed_tokens)
     line["japanese"] = display_jp
     line["_furigana_tokens"] = parsed_tokens
     primary_text = str(line.get("ttsText") or auto_tts)
@@ -555,13 +559,28 @@ async def _synthesize_and_verify_line(
     pcm = decode_mp3_to_pcm16k(stream.frames_bytes)
     whisper_res = transcribe_clip_whisper(pcm, model_size=whisper_model)
     sim = compare_phonetics(primary_text, whisper_res.transcript)
+    exp_norm_kana = normalize_kana_phonetic(japanese_to_spoken_kana(primary_text))
+    avg_prob, slurred_words = find_slurred_low_conf_words(
+        whisper_res.words, exp_norm_kana, min_word_prob=0.68
+    )
 
-    if sim < 0.88:
-        auto_kana = auto_tts or japanese_to_spoken_kana(display_jp)
+    if sim < 0.88 or avg_prob < 0.72 or slurred_words:
+        auto_kana = re.sub(
+            r"([わおえ])([がぎぐげござじずぜぞだぢづでどばびぶべぼ])",
+            r"\1、\2",
+            auto_tts or japanese_to_spoken_kana(display_jp),
+        )
+        reason = (
+            f"sim={sim:.2%}"
+            if sim < 0.88
+            else f"slurred={slurred_words[0].word!r}({slurred_words[0].prob:.2f})"
+            if slurred_words
+            else f"avg_prob={avg_prob:.2f}"
+        )
         print(
-            f"[QA AUTO-FIX] {line.get('id')}: low Whisper similarity ({sim:.2%}) "
+            f"[QA AUTO-FIX] {line.get('id')}: {reason} "
             f"| expected={japanese_to_spoken_kana(primary_text)} vs heard={whisper_res.kana}. "
-            f"Retrying with pure kana ttsText..."
+            f"Retrying with separated kana ttsText..."
         )
         retry_stream = await _tts_line_with_micro_pauses(
             text=auto_kana,
@@ -573,7 +592,10 @@ async def _synthesize_and_verify_line(
         retry_pcm = decode_mp3_to_pcm16k(retry_stream.frames_bytes)
         retry_whisper = transcribe_clip_whisper(retry_pcm, model_size=whisper_model)
         retry_sim = compare_phonetics(primary_text, retry_whisper.transcript)
-        if retry_sim > sim:
+        retry_avg_p, retry_slurred = find_slurred_low_conf_words(
+            retry_whisper.words, exp_norm_kana, min_word_prob=0.68
+        )
+        if retry_sim > sim or (len(retry_slurred) < len(slurred_words) and retry_sim >= 0.88) or retry_avg_p > avg_prob:
             stream = retry_stream
             pcm = retry_pcm
             whisper_res = retry_whisper
@@ -774,7 +796,7 @@ async def build_episode(
     jlpt_level: str = raw_script.get("jlptLevel", "JLPT N4")
     raw_studio_mode: str = str(raw_script.get("studioMode", "solo")).strip().lower()
     studio_mode: str = raw_studio_mode if raw_studio_mode in ("solo", "dual") else "solo"
-    speech_rate: str = str(raw_script.get("speechRate", "-16%"))
+    speech_rate: str = str(raw_script.get("speechRate", "-8%"))
     lead_in_target: float = float(raw_script.get("leadInSec", 0.45))
     outro_target: float = float(raw_script.get("outroSec", 0.75))
     micro_pause_sec: float = float(raw_script.get("sentenceMicroPauseSec", 0.45))
@@ -867,6 +889,8 @@ async def build_episode(
             cue_obj["ttsText"] = line["ttsText"]
         if line.get("gesture"):
             cue_obj["gesture"] = line["gesture"]
+        if line.get("gaze"):
+            cue_obj["gaze"] = line["gaze"]
         if line.get("imageUrl"):
             cue_obj["imageUrl"] = line["imageUrl"]
         elif line.get("visualPrompt"):

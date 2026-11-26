@@ -5,6 +5,7 @@ import {
   EpisodeSection,
   PodcastSectionType,
   SubtitleCue,
+  computeHostGazeWeights,
   getActiveSubtitle,
   isAddressingCoHost,
   isGuestSpeaker,
@@ -637,37 +638,38 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
       : 0;
   const blinkAmount = Math.max(primaryBlink, doubleBlink);
 
-  // Smart cross-character gaze (~22deg / -0.38 rad left toward Sensei) & board tracking
+  // Smart 3-target social gaze: camera (audience), partner (Sensei), or board (right presentation)
+  const gaze = computeHostGazeWeights(sections, subtitles, timeSec);
   const lookAtSenseiWeight = clamp01(
-    Math.max(
-      senseiSpeakingWeight * (1 - senseiPointWeight * 0.85),
-      addressSenseiWeight,
-    ),
+    Math.max(gaze.partner, addressSenseiWeight * 0.65),
   );
   const lookAtBoardWeight = clamp01(
-    Math.max(
-      senseiPointWeight * 0.9,
-      mariaPointWeight,
-      kanjiOrVocabWeight * 0.45 * (1 - lookAtSenseiWeight),
-      quizWeight * 0.55,
-    ),
+    Math.max(gaze.board, mariaPointWeight, senseiPointWeight * 0.5),
   );
-  const greetCameraWeight =
-    introWeight * mariaSpeakingWeight * (1 - addressSenseiWeight);
+  void senseiSpeakingWeight;
+  void introWeight;
+  void kanjiOrVocabWeight;
+  void mariaSpeakingWeight;
 
-  const baseHeadYaw = lerp(-0.14, -0.38, lookAtSenseiWeight);
-  const speakingHeadYaw = lerp(baseHeadYaw, 0.08, greetCameraWeight);
+  const camHeadYaw = 0.16; // cancels root rotation [0, -0.26, 0] + camTorsoYaw (0.10) => world 0.00!
+  const partnerHeadYaw = -0.26;
+  const boardHeadYaw = isMariaSpeaking
+    ? 0.36
+    : 0.14 + 0.14 * Math.sin(timeSec * 0.85);
   const headYaw =
-    lerp(speakingHeadYaw, 0.36, lookAtBoardWeight) +
-    Math.sin(timeSec * 0.95 + 0.8) * 0.026 * (1 - lookAtBoardWeight * 0.4);
+    gaze.camera * camHeadYaw +
+    gaze.partner * partnerHeadYaw +
+    gaze.board * boardHeadYaw +
+    Math.sin(timeSec * 0.95 + 0.8) * 0.022 * (1 - lookAtBoardWeight * 0.4);
 
+  const boardPupilX = isMariaSpeaking
+    ? 0.014
+    : 0.007 * Math.sin(timeSec * 0.85);
   const pupilOffsetX =
-    lerp(
-      lerp(-0.004, -0.0135, lookAtSenseiWeight),
-      0.0145,
-      lookAtBoardWeight,
-    ) +
-    Math.sin(timeSec * 0.8 + 1.4) * 0.0014;
+    gaze.camera * 0.0 +
+    gaze.partner * -0.012 +
+    gaze.board * boardPupilX +
+    Math.sin(timeSec * 0.8 + 1.4) * 0.0012;
   const pupilOffsetY =
     Math.cos(timeSec * 1.25 + 0.6) * 0.0014 +
     quizWeight * 0.003 +
@@ -675,11 +677,13 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
 
   // Breathing, posture & attentive listening nods
   const breathY = Math.sin(timeSec * 2.3 + 1.2) * 0.01;
-  const torsoYaw = lerp(
-    lerp(-0.06, -0.14, lookAtSenseiWeight),
-    0.1,
-    lookAtBoardWeight,
-  );
+  const camTorsoYaw = 0.10;
+  const partnerTorsoYaw = -0.10;
+  const boardTorsoYaw = isMariaSpeaking ? 0.16 : 0.06;
+  const torsoYaw =
+    gaze.camera * camTorsoYaw +
+    gaze.partner * partnerTorsoYaw +
+    gaze.board * boardTorsoYaw;
   const torsoPitch = voiceEnergy * 0.022;
 
   const speakBobY = isMariaSpeaking ? voiceEnergy * 0.011 : 0;
@@ -688,7 +692,8 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
     : 0;
   const activeListeningNod =
     lookAtSenseiWeight *
-    (0.03 + 0.055 * Math.max(0, Math.sin(timeSec * 4.1)) * (0.4 + audio.volume));
+    (0.03 + 0.055 * Math.max(0, Math.sin(timeSec * 4.1)) * (0.4 + audio.volume)) *
+    (isMariaSpeaking ? 0 : 1);
   const mariaEncourageNod = mariaNodWeight * Math.sin(timeSec * 6.4) * 0.075;
   const headPitch =
     Math.sin(timeSec * 1.45 + 0.9) * 0.018 +

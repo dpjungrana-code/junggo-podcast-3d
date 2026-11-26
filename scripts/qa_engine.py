@@ -14,6 +14,8 @@ Provides:
 from __future__ import annotations
 
 import difflib
+import hashlib
+import json
 import re
 import shutil
 import subprocess
@@ -100,6 +102,8 @@ STATION_READING_OVERRIDES: dict[str, tuple[str, str]] = {
     "通話": ("つうわ", "tsuuwa"),
     "自販機": ("じはんき", "jihanki"),
     "じはんき": ("ジハンキ", "jihanki"),
+    "100": ("ひゃく", "hyaku"),
+    "1000": ("せん", "sen"),
 }
 
 _SORTED_OVERRIDES = sorted(
@@ -379,6 +383,27 @@ def parse_furigana_markup(raw_text: str) -> tuple[str, list[dict[str, str | None
     return display_text, merged
 
 
+_VOICED_KANA_CHARS = frozenset(
+    "がぎぐげござじずぜぞだぢづでどばびぶべぼ"
+    "ガギグゲゴザジズゼゾダヂヅデドバビブベボ"
+)
+
+
+def _replace_non_kanji_terms_for_tts(txt: str) -> str:
+    txt = (
+        txt.replace("JungGo", "ジュンゴ")
+        .replace("PASMO", "パスモ")
+        .replace("Suica", "スイカ")
+        .replace("N4", "エヌよん")
+        .replace("N3", "エヌさん")
+    )
+    txt = re.sub(r"(?<![A-Za-z])A(?![A-Za-z])", "エー", txt)
+    txt = re.sub(r"(?<![A-Za-z])B(?![A-Za-z])", "ビー", txt)
+    txt = re.sub(r"(?<![A-Za-z])C(?![A-Za-z])", "しー", txt)
+    txt = re.sub(r"(?<![A-Za-z])D(?![A-Za-z])", "ディー", txt)
+    return txt
+
+
 def furigana_tokens_to_tts_text(tokens: list[dict[str, str | None]]) -> str:
     """
     Builds exact `ttsText` from Furigana tokens so `edge-tts` speaks EVERY bracketed
@@ -389,20 +414,75 @@ def furigana_tokens_to_tts_text(tokens: list[dict[str, str | None]]) -> str:
         if tok.get("furigana"):
             parts.append(str(tok["furigana"]))
         else:
-            txt = str(tok.get("text", ""))
-            txt = (
-                txt.replace("JungGo", "ジュンゴ")
-                .replace("PASMO", "パスモ")
-                .replace("Suica", "スイカ")
-                .replace("N4", "エヌよん")
-                .replace("N3", "エヌさん")
-            )
-            txt = re.sub(r"(?<![A-Za-z])A(?![A-Za-z])", "エー", txt)
-            txt = re.sub(r"(?<![A-Za-z])B(?![A-Za-z])", "ビー", txt)
-            txt = re.sub(r"(?<![A-Za-z])C(?![A-Za-z])", "しー", txt)
-            txt = re.sub(r"(?<![A-Za-z])D(?![A-Za-z])", "ディー", txt)
-            parts.append(txt)
+            parts.append(_replace_non_kanji_terms_for_tts(str(tok.get("text", ""))))
     return "".join(parts)
+
+
+def build_tts_text(display_jp: str, tokens: list[dict[str, str | None]]) -> str:
+    """
+    Builds crystal-clear Edge-TTS `ttsText` from display Japanese & parsed Furigana tokens:
+    1. Resolves every grammatical particle `は` (`助詞`) explicitly to `わ` via UniDic.
+    2. Inserts a subtle comma pause (`わ、`) whenever particle `は` precedes a voiced
+       consonant (`が/ざ/だ/ば` rows) so `edge-tts` never slurs transitions like `は現金`.
+    """
+    if not display_jp:
+        return furigana_tokens_to_tts_text(tokens)
+
+    tagger = _get_tagger()
+    wa_indices: set[int] = set()
+    pos = 0
+    for m in tagger(display_jp):
+        surf = m.surface
+        idx = display_jp.find(surf, pos)
+        if idx < 0:
+            idx = pos
+        if surf == "は" and getattr(m.feature, "pos1", "") == "助詞":
+            wa_indices.add(idx)
+        pos = idx + len(surf)
+
+    chunks: list[tuple[str, bool]] = []
+    tok_cursor = 0
+    for tok in tokens:
+        surf = str(tok.get("text", ""))
+        furi = tok.get("furigana")
+        if furi:
+            chunks.append((str(furi), False))
+            tok_cursor += len(surf)
+            continue
+
+        local_start = 0
+        for rel_i, ch in enumerate(surf):
+            abs_i = tok_cursor + rel_i
+            if ch == "は" and abs_i in wa_indices:
+                if rel_i > local_start:
+                    chunks.append((_replace_non_kanji_terms_for_tts(surf[local_start:rel_i]), False))
+                chunks.append(("わ", True))
+                local_start = rel_i + 1
+        if local_start < len(surf):
+            chunks.append((_replace_non_kanji_terms_for_tts(surf[local_start:]), False))
+        tok_cursor += len(surf)
+
+    out_parts: list[str] = []
+    for i, (chunk_txt, is_wa) in enumerate(chunks):
+        if not is_wa:
+            out_parts.append(chunk_txt)
+            continue
+
+        # Peek at next meaningful character (stop if punctuation already creates a pause)
+        next_char = ""
+        for j in range(i + 1, len(chunks)):
+            nxt = chunks[j][0].lstrip("「『（(")
+            if not nxt:
+                continue
+            next_char = nxt[0]
+            break
+
+        if next_char and next_char not in "、。！？!?,." and next_char in _VOICED_KANA_CHARS:
+            out_parts.append("わ、")
+        else:
+            out_parts.append("わ")
+
+    return "".join(out_parts)
 
 
 def furigana_tokens_to_expected_kana(tokens: list[dict[str, str | None]]) -> str:
@@ -798,21 +878,50 @@ class WhisperClipResult:
     words: list[WhisperWord]
 
 
+_WHISPER_CACHE_DIR = ROOT_DIR / ".cache" / "whisper_asr"
+
+
 def transcribe_clip_whisper(
     pcm_16k: np.ndarray,
     model_size: str = "small",
 ) -> WhisperClipResult:
     """
     Runs blind Japanese Whisper ASR (`language="ja"`, `word_timestamps=True`,
-    `vad_filter=False`, no initial_prompt) to audit real TTS pronunciation and word timings.
+    `vad_filter=False`, no initial_prompt, cached by PCM SHA256) to audit real TTS
+    pronunciation and word timings.
     """
+    beam_size = 3
+    pcm_bytes = np.ascontiguousarray(pcm_16k, dtype=np.float32).tobytes()
+    cache_key = hashlib.sha256(
+        f"{model_size}|b{beam_size}|{len(pcm_bytes)}|".encode("utf-8") + pcm_bytes
+    ).hexdigest()[:24]
+    cache_file = _WHISPER_CACHE_DIR / f"{cache_key}.json"
+    if cache_file.exists():
+        try:
+            cached = json.loads(cache_file.read_text(encoding="utf-8"))
+            return WhisperClipResult(
+                transcript=str(cached["transcript"]),
+                kana=str(cached["kana"]),
+                words=[
+                    WhisperWord(
+                        word=str(w["word"]),
+                        start=float(w["start"]),
+                        end=float(w["end"]),
+                        prob=float(w["prob"]),
+                    )
+                    for w in cached["words"]
+                ],
+            )
+        except Exception:
+            pass
+
     model = get_whisper_model(model_size)
     segments, _ = model.transcribe(
         pcm_16k,
         language="ja",
         word_timestamps=True,
         vad_filter=False,
-        beam_size=5,
+        beam_size=beam_size,
         condition_on_previous_text=False,
     )
     texts: list[str] = []
@@ -834,11 +943,61 @@ def transcribe_clip_whisper(
                     )
                 )
     full_text = "".join(texts)
+    full_kana = japanese_to_spoken_kana(full_text)
+
+    _WHISPER_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(
+        json.dumps(
+            {
+                "transcript": full_text,
+                "kana": full_kana,
+                "words": [
+                    {"word": w.word, "start": w.start, "end": w.end, "prob": w.prob}
+                    for w in words
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
     return WhisperClipResult(
         transcript=full_text,
-        kana=japanese_to_spoken_kana(full_text),
+        kana=full_kana,
         words=words,
     )
+
+
+def find_slurred_low_conf_words(
+    words: list[WhisperWord],
+    expected_kana: str,
+    min_word_prob: float = 0.68,
+) -> tuple[float, list[WhisperWord]]:
+    """
+    Computes mean content-word Whisper probability and returns any content word that
+    BOTH has low confidence (< `min_word_prob`) AND deviates phonetically from
+    `expected_kana` (avoiding false positives on benign 200 vs 二百 orthographic splits).
+    """
+    content_words = [
+        w
+        for w in words
+        if len(re.sub(r"[^\u3040-\u30ff\u4e00-\u9fafA-Za-z0-9]", "", w.word)) >= 2
+    ]
+    if not content_words:
+        return 1.0, []
+    avg_prob = sum(w.prob for w in content_words) / len(content_words)
+    flagged: list[WhisperWord] = []
+    for w in content_words:
+        if w.prob < min_word_prob:
+            w_clean = re.sub(r"[\s。、！？!?「」『』()（）・.,]+", "", w.word)
+            # If Whisper emitted pure kana (no kanji), keep its literal kana rather than UniDic guessing noun dakuten (e.g. 'わか' -> 'わが')
+            if w_clean and not _KANJI_RE.search(w_clean) and not re.search(r"[0-9A-Za-z]", w_clean):
+                w_kana = normalize_kana_phonetic(katakana_to_hiragana(w_clean))
+            else:
+                w_kana = normalize_kana_phonetic(japanese_to_spoken_kana(w.word))
+                w_kana = w_kana.replace("にっぽん", "にほん")
+            if w_kana and w_kana not in expected_kana:
+                flagged.append(w)
+    return avg_prob, flagged
 
 
 @dataclass(frozen=True)

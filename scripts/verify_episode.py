@@ -28,6 +28,7 @@ from qa_engine import (
     compute_segment_rms,
     decode_mp3_to_pcm16k,
     find_nepali_violations,
+    find_slurred_low_conf_words,
     furigana_tokens_to_expected_kana,
     normalize_kana_phonetic,
     transcribe_clip_whisper,
@@ -73,6 +74,70 @@ def _audit_furigana_tokens(
     return errs
 
 
+def _audit_25d_layout_invariants(root_dir: Path) -> list[str]:
+    """
+    Verifies 2.5D street depth separation (road cars behind guardrail & foreground
+    sidewalk) and <clipPath> protection on vending/fare-adjustment screens.
+    """
+    errs: list[str] = []
+    player_path = root_dir / "src" / "components" / "StickmanScenePlayer.tsx"
+    if not player_path.exists():
+        return [f"Missing scene player for 2.5D invariant check: {player_path}"]
+
+    src = player_path.read_text(encoding="utf-8")
+    m = re.search(r"export const STREET_LAYOUT_25D\s*=\s*\{(.*?)\}\s*as const;", src, re.DOTALL)
+    if not m:
+        return ["Missing STREET_LAYOUT_25D layout constants in StickmanScenePlayer.tsx"]
+
+    consts: dict[str, float] = {}
+    for key, val in re.findall(r"([A-Z0-9_]+)\s*:\s*(-?\d+(?:\.\d+)?)", m.group(1)):
+        consts[key] = float(val)
+
+    required = (
+        "BUILDING_BASE_Y",
+        "ROAD_TOP_Y",
+        "ROAD_FAR_LANE_Y",
+        "ROAD_NEAR_LANE_Y",
+        "ROAD_MAX_WHEEL_Y",
+        "ROAD_BOTTOM_Y",
+        "GUARDRAIL_TOP_Y",
+        "GUARDRAIL_BASE_Y",
+        "CURB_Y",
+        "SIDEWALK_TOP_Y",
+        "SIDEWALK_FEET_Y",
+    )
+    missing = [k for k in required if k not in consts]
+    if missing:
+        errs.append(f"STREET_LAYOUT_25D missing keys: {', '.join(missing)}")
+        return errs
+
+    if not (
+        consts["BUILDING_BASE_Y"] <= consts["ROAD_TOP_Y"]
+        < consts["ROAD_FAR_LANE_Y"]
+        < consts["ROAD_NEAR_LANE_Y"]
+        < consts["ROAD_MAX_WHEEL_Y"]
+        < consts["CURB_Y"]
+        < consts["SIDEWALK_TOP_Y"]
+        < consts["SIDEWALK_FEET_Y"]
+    ):
+        errs.append(f"STREET_LAYOUT_25D invalid Y-depth hierarchy: {consts}")
+
+    if not (consts["GUARDRAIL_TOP_Y"] < consts["GUARDRAIL_BASE_Y"] <= consts["SIDEWALK_TOP_Y"]):
+        errs.append(f"STREET_LAYOUT_25D invalid guardrail separation: {consts}")
+
+    idx_road = src.find("{/* Layer 2: Asphalt Road Lanes")
+    idx_guard = src.find("{/* Layer 3: Raised Concrete Curb")
+    idx_sidewalk = src.find("{/* Layer 4: Foreground Pedestrian Sidewalk")
+    if idx_road < 0 or idx_guard < 0 or idx_sidewalk < 0 or not (idx_road < idx_guard < idx_sidewalk):
+        errs.append("WalkToStationRealJapan25D does not enforce Road -> Guardrail -> Sidewalk Z-order")
+
+    for clip_id in ("ticket-screen-clip", "adjust-screen-clip"):
+        if f'id="{clip_id}"' not in src:
+            errs.append(f"Missing SVG <clipPath id={clip_id!r}> in StickmanScenePlayer.tsx")
+
+    return errs
+
+
 def verify_episode(
     script_path: Path,
     episode_path: Path,
@@ -81,11 +146,16 @@ def verify_episode(
     whisper_model: str = "small",
     min_phonetic_sim: float = 0.88,
     min_duration_sec: float = 420.0,
+    min_word_prob: float = 0.68,
 ) -> int:
     raw_script = json.loads(script_path.read_text(encoding="utf-8"))
     episode = json.loads(episode_path.read_text(encoding="utf-8"))
 
     errors: list[str] = []
+
+    # 0. Permanent 2.5D street depth separation & clipPath UI guard
+    root_dir = Path(__file__).resolve().parent.parent
+    errors.extend(_audit_25d_layout_invariants(root_dir))
 
     # 1. Zero Nepali across both files
     errors.extend(find_nepali_violations(raw_script, "script"))
@@ -186,11 +256,11 @@ def verify_episode(
         f"Episode : {episode.get('episodeNumber')} — {episode.get('title')} ({episode.get('jlptLevel')})"
     )
     print(f"Duration: {episode.get('durationSec')}s | Cues: {len(subtitles)} | Model: {whisper_model}")
-    print("-" * 86)
+    print("-" * 94)
     print(
-        f"{'ID':<7} {'Spk':<7} {'Span':<13} {'Words':>5} {'TTS%':>7} {'Furi%':>7} {'GapRMS':>8}  Status & Whisper ASR"
+        f"{'ID':<7} {'Spk':<7} {'Span':<13} {'Words':>5} {'TTS%':>7} {'Furi%':>7} {'AvgP':>6} {'GapRMS':>8}  Status & Whisper ASR"
     )
-    print("-" * 86)
+    print("-" * 94)
 
     for idx, cue in enumerate(subtitles):
         cid = cue["id"]
@@ -246,9 +316,22 @@ def verify_episode(
                         f"{cid}->next pause [{e_sec:.2f}s..{next_s:.2f}s] is NOT silent (RMS={gap_rms:.4f})"
                     )
 
+        # Check Whisper word confidence on spoken content words (catches slurred TTS clusters)
+        avg_prob, slurred_words = find_slurred_low_conf_words(
+            wres.words, exp_furi_kana, min_word_prob=min_word_prob
+        )
+        for lw in slurred_words:
+            errors.append(
+                f"{cid}: slurred/low-conf Whisper word ({lw.word!r} prob={lw.prob:.2f} < {min_word_prob:.2f})"
+            )
+        if avg_prob < 0.72:
+            errors.append(f"{cid}: mean Whisper word confidence {avg_prob:.2f} < 0.72")
+
         ok = (
             sim >= min_phonetic_sim
             and furi_sim >= min_phonetic_sim
+            and avg_prob >= 0.72
+            and not slurred_words
             and (idx == len(subtitles) - 1 or gap_rms < 0.01)
         )
         if sim < min_phonetic_sim:
@@ -265,10 +348,10 @@ def verify_episode(
         status_str = "PASS" if ok else "FAIL"
         print(
             f"{cid:<7} {spk:<7} {s_sec:5.2f}-{e_sec:5.2f}s {len(wt):>5} "
-            f"{sim*100:6.1f}% {furi_sim*100:6.1f}% {gap_rms:8.4f}  [{status_str}] {wres.transcript}"
+            f"{sim*100:6.1f}% {furi_sim*100:6.1f}% {avg_prob:6.2f} {gap_rms:8.4f}  [{status_str}] {wres.transcript}"
         )
 
-    print("-" * 86)
+    print("-" * 94)
     print(f"TOTAL FURIGANA / PRONUNCIATION / TIMING ERRORS: {len(errors)}")
     if errors:
         print("\nERROR DETAILS:")
@@ -291,6 +374,7 @@ def main() -> None:
     parser.add_argument("--public", type=Path, default=root / "public")
     parser.add_argument("--whisper-model", type=str, default="small")
     parser.add_argument("--min-duration-sec", type=float, default=420.0)
+    parser.add_argument("--min-word-prob", type=float, default=0.68)
     args = parser.parse_args()
 
     code = verify_episode(
@@ -300,6 +384,7 @@ def main() -> None:
         public_dir=args.public,
         whisper_model=args.whisper_model,
         min_duration_sec=args.min_duration_sec,
+        min_word_prob=args.min_word_prob,
     )
     sys.exit(code)
 
