@@ -4,19 +4,23 @@ Standalone Automated QA Audit for JungGo Podcast Studio (`scripts/verify_episode
 
 Checks:
 1. Zero Nepali characters / keys across script & built JSON
-2. Morphological & Romaji consistency (`fugashi` + `pykakasi`)
-3. Blind `faster-whisper` (`language="ja"`, `word_timestamps=True`) back-transcription
-   on every cue slice directly from the combined `public/audio/current_episode.mp3`
-4. Monotonic `wordTimings` bounds & inter-cue silence RMS verification (`RMS < 0.01`)
-5. Generated SVG asset presence check
+2. Zero leaked `[...]` Furigana brackets in built display fields + complete Kanji Furigana tokens
+3. Morphological & Romaji consistency (`fugashi` + `pykakasi`)
+4. Blind `faster-whisper` (`language="ja"`, `word_timestamps=True`) Audio-vs-Furigana triple-check
+   on every cue slice directly from `public/audio/current_episode.mp3`
+5. Monotonic `wordTimings` bounds & inter-cue silence RMS verification (`RMS < 0.01`)
+6. Generated SVG & procedural SFX asset presence check
 """
 
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
+import re
 import sys
 from pathlib import Path
+from typing import Any
 
 from qa_engine import (
     audit_script_morphology,
@@ -24,8 +28,49 @@ from qa_engine import (
     compute_segment_rms,
     decode_mp3_to_pcm16k,
     find_nepali_violations,
+    furigana_tokens_to_expected_kana,
+    normalize_kana_phonetic,
     transcribe_clip_whisper,
 )
+
+_KANJI_RE = re.compile(r"[\u4e00-\u9faf\u3005]")
+
+
+def _find_bracket_leaks(obj: Any, path: str = "episode") -> list[str]:
+    """Ensures no raw `[reading]` Furigana brackets leaked into rendered episode JSON text."""
+    leaks: list[str] = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            leaks.extend(_find_bracket_leaks(v, f"{path}.{k}"))
+    elif isinstance(obj, list):
+        for idx, item in enumerate(obj):
+            leaks.extend(_find_bracket_leaks(item, f"{path}[{idx}]"))
+    elif isinstance(obj, str):
+        if "[" in obj or "]" in obj:
+            leaks.append(f"{path}: leaked bracket in {obj!r}")
+    return leaks
+
+
+def _audit_furigana_tokens(
+    label: str,
+    display_text: str,
+    tokens: Any,
+) -> list[str]:
+    errs: list[str] = []
+    if not isinstance(tokens, list) or not tokens:
+        errs.append(f"{label}: missing furigana tokens for {display_text!r}")
+        return errs
+    joined = "".join(str(t.get("text", "")) for t in tokens if isinstance(t, dict))
+    if joined != display_text:
+        errs.append(f"{label}: furigana tokens concat {joined!r} != display {display_text!r}")
+    for t_idx, t in enumerate(tokens):
+        txt = str(t.get("text", ""))
+        furi = t.get("furigana")
+        if _KANJI_RE.search(txt) and not furi:
+            errs.append(f"{label}.tok[{t_idx}]({txt}): Kanji missing furigana")
+        if not _KANJI_RE.search(txt) and furi is not None:
+            errs.append(f"{label}.tok[{t_idx}]({txt}): non-Kanji token should have furigana=None, got {furi!r}")
+    return errs
 
 
 def verify_episode(
@@ -45,30 +90,56 @@ def verify_episode(
     errors.extend(find_nepali_violations(raw_script, "script"))
     errors.extend(find_nepali_violations(episode, "currentEpisode"))
 
-    # 2. Morphological & Romaji audit
+    # 2. Zero leaked Furigana brackets in rendered JSON
+    errors.extend(_find_bracket_leaks(episode, "currentEpisode"))
+
+    # 3. Morphological & Romaji audit
     errors.extend(audit_script_morphology(raw_script))
 
-    # 3. Verify generated SVGs exist
+    # 4. Verify generated SVGs, subTopic Furigana tokens, and SFX WAV files exist
     for sec in episode.get("sections", []):
         img = sec.get("imageUrl") or (sec.get("stationGuide") or {}).get("imageUrl")
         if img and not img.startswith("http"):
             svg_path = public_dir / img
             if not svg_path.exists():
                 errors.append(f"Missing visual asset for {sec.get('id')}: {svg_path}")
+        sg = sec.get("stationGuide") or {}
+        for st_idx, st in enumerate(sg.get("subTopics", [])):
+            errors.extend(
+                _audit_furigana_tokens(
+                    f"{sec.get('id')}.subTopics[{st_idx}].jp",
+                    str(st.get("jp", "")),
+                    st.get("jpTokens"),
+                )
+            )
+            errors.extend(
+                _audit_furigana_tokens(
+                    f"{sec.get('id')}.subTopics[{st_idx}].exampleJp",
+                    str(st.get("exampleJp", "")),
+                    st.get("exampleTokens"),
+                )
+            )
 
-    # 4. Load final MP3 PCM & run blind Whisper back-transcription + RMS silence checks
+    for ev in episode.get("sfxEvents", []):
+        sfx_path = public_dir / str(ev.get("src", ""))
+        if not sfx_path.exists():
+            errors.append(f"Missing SFX asset: {sfx_path}")
+
+    # 5. Load final MP3 PCM & run blind Whisper Audio-vs-Furigana triple-check + RMS silence check
     pcm = decode_mp3_to_pcm16k(audio_path)
     subtitles = episode.get("subtitles", [])
     sr = 16000
 
-    print("\n================ JUNGGO EPISODE WHISPER QA AUDIT SUMMARY ================")
+    print("\n================ JUNGGO AUDIO-VS-FURIGANA WHISPER QA REPORT ================")
     print(
         f"Episode : {episode.get('episodeNumber')} — {episode.get('title')} ({episode.get('jlptLevel')})"
     )
     print(f"Duration: {episode.get('durationSec')}s | Cues: {len(subtitles)} | Model: {whisper_model}")
-    print("-" * 74)
-    print(f"{'ID':<7} {'Spk':<7} {'Span':<14} {'Words':>5} {'Match':>7} {'GapRMS':>8}  Status & Whisper ASR")
-    print("-" * 74)
+    print("-" * 86)
+    print(
+        f"{'ID':<7} {'Spk':<7} {'Span':<13} {'Words':>5} {'TTS%':>7} {'Furi%':>7} {'GapRMS':>8}  Status & Whisper ASR"
+    )
+    print("-" * 86)
 
     for idx, cue in enumerate(subtitles):
         cid = cue["id"]
@@ -76,12 +147,28 @@ def verify_episode(
         s_sec = float(cue["startSec"])
         e_sec = float(cue["endSec"])
         expected_tts = str(cue.get("ttsText") or cue["japanese"])
+        furi_tokens = cue.get("furiganaTokens")
+
+        errors.extend(_audit_furigana_tokens(f"{cid}.japanese", str(cue.get("japanese", "")), furi_tokens))
 
         i0 = max(0, int(round(s_sec * sr)))
         i1 = min(len(pcm), int(round(e_sec * sr)))
         clip_pcm = pcm[i0:i1]
         wres = transcribe_clip_whisper(clip_pcm, model_size=whisper_model)
         sim = compare_phonetics(expected_tts, wres.transcript)
+
+        # Direct Audio-vs-Furigana verification
+        exp_furi_kana = (
+            furigana_tokens_to_expected_kana(furi_tokens)
+            if isinstance(furi_tokens, list) and furi_tokens
+            else ""
+        )
+        obs_kana = normalize_kana_phonetic(wres.kana)
+        furi_sim = (
+            difflib.SequenceMatcher(None, exp_furi_kana, obs_kana).ratio()
+            if exp_furi_kana and obs_kana
+            else 0.0
+        )
 
         # Check wordTimings monotonic & valid bounds
         wt = cue.get("wordTimings") or []
@@ -108,34 +195,45 @@ def verify_episode(
                         f"{cid}->next pause [{e_sec:.2f}s..{next_s:.2f}s] is NOT silent (RMS={gap_rms:.4f})"
                     )
 
-        ok = sim >= min_phonetic_sim and (idx == len(subtitles) - 1 or gap_rms < 0.01)
+        ok = (
+            sim >= min_phonetic_sim
+            and furi_sim >= min_phonetic_sim
+            and (idx == len(subtitles) - 1 or gap_rms < 0.01)
+        )
         if sim < min_phonetic_sim:
             errors.append(
                 f"{cid}: Whisper phonetic match {sim:.2%} < {min_phonetic_sim:.0%} "
                 f"(expected={expected_tts!r}, heard={wres.transcript!r})"
             )
+        if furi_sim < min_phonetic_sim:
+            errors.append(
+                f"{cid}: Audio-vs-Furigana match {furi_sim:.2%} < {min_phonetic_sim:.0%} "
+                f"(furigana_kana={exp_furi_kana!r}, heard_kana={obs_kana!r})"
+            )
 
         status_str = "PASS" if ok else "FAIL"
         print(
-            f"{cid:<7} {spk:<7} {s_sec:5.2f}-{e_sec:5.2f}s {len(wt):>5} {sim*100:6.1f}% "
-            f"{gap_rms:8.4f}  [{status_str}] {wres.transcript}"
+            f"{cid:<7} {spk:<7} {s_sec:5.2f}-{e_sec:5.2f}s {len(wt):>5} "
+            f"{sim*100:6.1f}% {furi_sim*100:6.1f}% {gap_rms:8.4f}  [{status_str}] {wres.transcript}"
         )
 
-    print("-" * 74)
-    print(f"TOTAL PRONUNCIATION / READING / TIMING ERRORS: {len(errors)}")
+    print("-" * 86)
+    print(f"TOTAL FURIGANA / PRONUNCIATION / TIMING ERRORS: {len(errors)}")
     if errors:
         print("\nERROR DETAILS:")
         for err in errors:
             print(f"  * {err}")
     else:
-        print("ALL QA CHECKS PASSED CLEANLY WITH 0 ERRORS.")
-    print("=" * 74 + "\n")
+        print("ALL FURIGANA & AUDIO CHECKS PASSED CLEANLY WITH 0 ERRORS.")
+    print("=" * 86 + "\n")
     return 0 if not errors else 1
 
 
 def main() -> None:
     root = Path(__file__).resolve().parent.parent
-    parser = argparse.ArgumentParser(description="Verify built episode audio & JSON against Japanese linguistic & Whisper ASR checks.")
+    parser = argparse.ArgumentParser(
+        description="Verify built episode audio & Furigana JSON against Japanese linguistic & Whisper ASR checks."
+    )
     parser.add_argument("--script", type=Path, default=root / "scripts" / "episode_script.json")
     parser.add_argument("--episode", type=Path, default=root / "src" / "data" / "currentEpisode.json")
     parser.add_argument("--audio", type=Path, default=root / "public" / "audio" / "current_episode.mp3")

@@ -1119,80 +1119,79 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
             rotation={[0.24, 0, 0]}
           >
             {mouthOpen > 0.05 ? (
-              <group>
-                {/* Gentle calm oral cavity calibrated for polite teacher speaking */}
-                <mesh
-                  position={[0, 0.001 - Math.min(0.68, mouthOpen * 0.74) * 0.02, -0.001]}
-                  scale={[
-                    mouthWidth * 0.96,
-                    0.24 + Math.min(0.68, mouthOpen * 0.74) * 0.68,
-                    0.26,
-                  ]}
-                >
-                  <sphereGeometry args={[0.06, 16, 12]} />
-                  <meshStandardMaterial color="#521220" roughness={0.7} />
-                </mesh>
+              (() => {
+                // Soft joyful mouth curve keeping Sensei warm and relaxed
+                const softOpen = Math.min(0.48, mouthOpen * 0.58);
+                const smileWidth = Math.max(0.95, mouthWidth * 1.05);
+                return (
+                  <group>
+                    {/* Gentle calm oral cavity */}
+                    <mesh
+                      position={[0, 0.002 - softOpen * 0.018, -0.001]}
+                      scale={[
+                        smileWidth * 0.96,
+                        0.21 + softOpen * 0.58,
+                        0.26,
+                      ]}
+                    >
+                      <sphereGeometry args={[0.058, 16, 12]} />
+                      <meshStandardMaterial color="#521220" roughness={0.7} />
+                    </mesh>
 
-                {/* Crisp ivory upper teeth arch */}
-                <mesh
-                  position={[0, 0.011, 0.01]}
-                  scale={[mouthWidth * 0.9, 1, 1]}
-                >
-                  <boxGeometry args={[0.072, 0.013, 0.01]} />
-                  <meshStandardMaterial
-                    color="#ffffff"
-                    emissive="#fff6ed"
-                    emissiveIntensity={0.14}
-                    roughness={0.18}
-                  />
-                </mesh>
+                    {/* Crisp ivory upper teeth arch */}
+                    <mesh
+                      position={[0, 0.011, 0.01]}
+                      scale={[smileWidth * 0.9, 1, 1]}
+                    >
+                      <boxGeometry args={[0.072, 0.012, 0.01]} />
+                      <meshStandardMaterial
+                        color="#ffffff"
+                        emissive="#fff6ed"
+                        emissiveIntensity={0.14}
+                        roughness={0.18}
+                      />
+                    </mesh>
 
-                {/* Soft coral-pink curved tongue */}
-                <mesh
-                  position={[
-                    0,
-                    -0.01 - Math.min(0.68, mouthOpen * 0.74) * 0.02,
-                    0.009,
-                  ]}
-                  scale={[mouthWidth * 0.84, 0.42, 0.42]}
-                >
-                  <sphereGeometry args={[0.036, 12, 10]} />
-                  <meshStandardMaterial
-                    color="#f4788c"
-                    emissive="#541622"
-                    emissiveIntensity={0.25}
-                    roughness={0.42}
-                  />
-                </mesh>
+                    {/* Soft coral-pink curved tongue */}
+                    <mesh
+                      position={[0, -0.008 - softOpen * 0.018, 0.009]}
+                      scale={[smileWidth * 0.82, 0.38, 0.4]}
+                    >
+                      <sphereGeometry args={[0.035, 12, 10]} />
+                      <meshStandardMaterial
+                        color="#f4788c"
+                        emissive="#541622"
+                        emissiveIntensity={0.25}
+                        roughness={0.42}
+                      />
+                    </mesh>
 
-                {/* Upward-smiling gentle upper lip contour */}
-                <mesh
-                  position={[0, 0.02, 0.01]}
-                  rotation={[0, 0, Math.PI * 1.24]}
-                  scale={[mouthWidth * 1.02, 0.24, 0.56]}
-                >
-                  <torusGeometry args={[0.056, 0.0046, 6, 16, Math.PI * 0.52]} />
-                  <meshStandardMaterial color="#e6a488" roughness={0.46} />
-                </mesh>
+                    {/* Upward-smiling gentle upper lip contour */}
+                    <mesh
+                      position={[0, 0.019, 0.01]}
+                      rotation={[0, 0, Math.PI * 1.22]}
+                      scale={[smileWidth * 1.02, 0.25, 0.56]}
+                    >
+                      <torusGeometry args={[0.056, 0.0046, 6, 16, Math.PI * 0.56]} />
+                      <meshStandardMaterial color="#e6a488" roughness={0.46} />
+                    </mesh>
 
-                {/* Dynamic smiling lower lip rim */}
-                <mesh
-                  position={[
-                    0,
-                    -0.01 - Math.min(0.68, mouthOpen * 0.74) * 0.036,
-                    0.009,
-                  ]}
-                  rotation={[0, 0, Math.PI * 1.11]}
-                  scale={[
-                    mouthWidth * 0.98,
-                    0.56 + Math.min(0.68, mouthOpen * 0.74) * 0.36,
-                    0.62,
-                  ]}
-                >
-                  <torusGeometry args={[0.054, 0.0048, 6, 16, Math.PI * 0.78]} />
-                  <meshStandardMaterial color="#dd9279" roughness={0.46} />
-                </mesh>
-              </group>
+                    {/* Dynamic smiling lower lip rim */}
+                    <mesh
+                      position={[0, -0.008 - softOpen * 0.033, 0.009]}
+                      rotation={[0, 0, Math.PI * 1.11]}
+                      scale={[
+                        smileWidth * 0.98,
+                        0.56 + softOpen * 0.32,
+                        0.62,
+                      ]}
+                    >
+                      <torusGeometry args={[0.054, 0.0048, 6, 16, Math.PI * 0.78]} />
+                      <meshStandardMaterial color="#dd9279" roughness={0.46} />
+                    </mesh>
+                  </group>
+                );
+              })()
             ) : (
               /* Warm cheerful welcoming Pixar closed smile */
               <mesh

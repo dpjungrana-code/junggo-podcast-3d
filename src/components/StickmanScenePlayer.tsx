@@ -6,6 +6,8 @@ export type StickmanScenePlayerProps = {
   readonly scene: StickmanSceneId;
   readonly sectionStartSec: number;
   readonly sectionEndSec: number;
+  readonly activeSubTopicKey?: string;
+  readonly activeSubTopicLabel?: string;
   readonly caption?: string;
   readonly width?: number | string;
   readonly height?: number;
@@ -29,10 +31,13 @@ type StickmanPoseProps = {
   readonly hasBackpack?: boolean;
   readonly holdCardHand?: "right" | "left" | null;
   readonly holdTicketHand?: "right" | "left" | null;
+  readonly holdCoinHand?: "right" | "left" | null;
   readonly expression?: "neutral" | "happy" | "surprised" | "focused";
   readonly sweatDrop?: boolean;
   readonly accentColor?: string;
 };
+
+const INK = "#111827";
 
 const clamp01 = (v: number): number => Math.max(0, Math.min(1, v));
 
@@ -69,8 +74,8 @@ const lerpRange = (
 };
 
 /**
- * Clean 2D articulated stickman rig inspired by `stickman-video-director`.
- * Angles are specified in degrees clockwise from straight downward (+Y) when facing=+1.
+ * Dual-pass 2.5D stylized Stickman rig with bold `#111827` cartoon ink outlines,
+ * bright highlights, JungGo ninja headband, colorful backpack, and hand props.
  */
 const StickmanFigure: React.FC<StickmanPoseProps> = ({
   x,
@@ -90,16 +95,17 @@ const StickmanFigure: React.FC<StickmanPoseProps> = ({
   hasBackpack = false,
   holdCardHand = null,
   holdTicketHand = null,
+  holdCoinHand = null,
   expression = "neutral",
   sweatDrop = false,
   accentColor = "#34d399",
 }) => {
-  const torsoLen = 40;
-  const upperArmLen = 22;
-  const forearmLen = 20;
-  const thighLen = 25;
-  const calfLen = 25;
-  const headRadius = 14;
+  const torsoLen = 46;
+  const upperArmLen = 25;
+  const forearmLen = 23;
+  const thighLen = 29;
+  const calfLen = 28;
+  const headRadius = 17.5;
 
   const hip = { x: 0, y: 0 };
   const leanRad = degToRad(leanDeg);
@@ -129,38 +135,47 @@ const StickmanFigure: React.FC<StickmanPoseProps> = ({
   const rKnee = polarEnd(hip.x, hip.y, thighLen, rightThighDeg);
   const rFoot = polarEnd(rKnee.x, rKnee.y, calfLen, rightCalfDeg);
 
-  const renderHandProp = (hand: { readonly x: number; readonly y: number }, side: "right" | "left") => (
+  const renderHandProp = (
+    hand: { readonly x: number; readonly y: number },
+    side: "right" | "left",
+  ) => (
     <g key={`prop-${side}`}>
       {holdCardHand === side ? (
-        <g transform={`translate(${hand.x + 2}, ${hand.y - 5}) rotate(-14)`}>
+        <g transform={`translate(${hand.x + 2}, ${hand.y - 7}) rotate(-14)`}>
           <rect
             x="0"
             y="0"
-            width="18"
-            height="12"
-            rx="2.5"
+            width="24"
+            height="15"
+            rx="3.5"
             fill="#10b981"
-            stroke="#a7f3d0"
-            strokeWidth="1.5"
+            stroke={INK}
+            strokeWidth="2.4"
           />
-          <rect x="2.5" y="3" width="6" height="3" rx="0.8" fill="#fef08a" />
-          <line x1="10.5" y1="8.5" x2="15.5" y2="8.5" stroke="#ecfdf5" strokeWidth="1.4" />
+          <rect x="3.5" y="4" width="7.5" height="4" rx="1" fill="#fde047" />
+          <line x1="13" y1="10.5" x2="20" y2="10.5" stroke="#ecfdf5" strokeWidth="1.8" />
         </g>
       ) : null}
       {holdTicketHand === side ? (
-        <g transform={`translate(${hand.x + 1}, ${hand.y - 8}) rotate(-18)`}>
+        <g transform={`translate(${hand.x + 1}, ${hand.y - 10}) rotate(-16)`}>
           <rect
             x="0"
             y="0"
-            width="16"
-            height="10"
-            rx="2"
+            width="22"
+            height="13"
+            rx="2.5"
             fill="#fde68a"
-            stroke="#f59e0b"
-            strokeWidth="1.4"
+            stroke={INK}
+            strokeWidth="2.2"
           />
-          <circle cx="5" cy="5" r="1.5" fill="#92400e" />
-          <line x1="8.5" y1="5" x2="13.5" y2="5" stroke="#92400e" strokeWidth="1.5" />
+          <circle cx="6.5" cy="6.5" r="2" fill="#d97706" />
+          <line x1="11" y1="6.5" x2="18" y2="6.5" stroke="#92400e" strokeWidth="2" />
+        </g>
+      ) : null}
+      {holdCoinHand === side ? (
+        <g transform={`translate(${hand.x + 6}, ${hand.y - 4})`}>
+          <circle cx="0" cy="0" r="7.5" fill="#fbbf24" stroke={INK} strokeWidth="2.2" />
+          <circle cx="0" cy="0" r="2.2" fill="#fef3c7" stroke={INK} strokeWidth="1.2" />
         </g>
       ) : null}
     </g>
@@ -168,144 +183,184 @@ const StickmanFigure: React.FC<StickmanPoseProps> = ({
 
   return (
     <g transform={`translate(${x}, ${y}) scale(${facing * scale}, ${scale})`}>
-      {/* Ground shadow */}
-      <ellipse cx="0" cy={49} rx="18" ry="4.5" fill="rgba(52, 211, 153, 0.14)" />
+      {/* Soft grounded 2.5D contact shadow */}
+      <ellipse cx="2" cy={57} rx="24" ry="6" fill="rgba(17, 24, 39, 0.45)" />
 
-      {/* Back arm (left) */}
+      {/* Back arm (left): ink outline + cool slate fill */}
+      <path
+        d={`M ${shoulder.x} ${shoulder.y} L ${lElbow.x} ${lElbow.y} L ${lHand.x} ${lHand.y}`}
+        fill="none"
+        stroke={INK}
+        strokeWidth="9.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
       <path
         d={`M ${shoulder.x} ${shoulder.y} L ${lElbow.x} ${lElbow.y} L ${lHand.x} ${lHand.y}`}
         fill="none"
         stroke="#cbd5e1"
-        strokeWidth="4.2"
+        strokeWidth="4.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx={lHand.x} cy={lHand.y} r="3" fill="#cbd5e1" />
+      <circle cx={lHand.x} cy={lHand.y} r="4.4" fill="#cbd5e1" stroke={INK} strokeWidth="2" />
       {renderHandProp(lHand, "left")}
 
-      {/* Optional traveler backpack */}
+      {/* Traveler backpack with dark cartoon outline */}
       {hasBackpack ? (
         <g
-          transform={`translate(${shoulder.x - 15}, ${shoulder.y + 3}) rotate(${leanDeg})`}
+          transform={`translate(${shoulder.x - 19}, ${shoulder.y + 3}) rotate(${leanDeg})`}
         >
           <rect
             x="0"
             y="0"
-            width="13"
-            height="25"
-            rx="5"
-            fill="#1e293b"
-            stroke={accentColor}
-            strokeWidth="2.2"
+            width="17"
+            height="31"
+            rx="6.5"
+            fill="#0f766e"
+            stroke={INK}
+            strokeWidth="2.8"
           />
-          <line x1="3" y1="8" x2="10" y2="8" stroke={accentColor} strokeWidth="1.8" />
+          <rect x="2.5" y="4" width="12" height="9" rx="3" fill="#14b8a6" />
+          <line x1="3" y1="18" x2="14" y2="18" stroke="#fde047" strokeWidth="2.2" />
         </g>
       ) : null}
 
       {/* Back leg (left) */}
       <path
-        d={`M ${hip.x} ${hip.y} L ${lKnee.x} ${lKnee.y} L ${lFoot.x} ${lFoot.y}`}
+        d={`M ${hip.x} ${hip.y} L ${lKnee.x} ${lKnee.y} L ${lFoot.x} ${lFoot.y} L ${lFoot.x + 10} ${lFoot.y}`}
         fill="none"
-        stroke="#cbd5e1"
-        strokeWidth="4.6"
+        stroke={INK}
+        strokeWidth="9.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <line
-        x1={lFoot.x}
-        y1={lFoot.y}
-        x2={lFoot.x + 7}
-        y2={lFoot.y}
+      <path
+        d={`M ${hip.x} ${hip.y} L ${lKnee.x} ${lKnee.y} L ${lFoot.x} ${lFoot.y} L ${lFoot.x + 10} ${lFoot.y}`}
+        fill="none"
         stroke="#cbd5e1"
-        strokeWidth="4.4"
+        strokeWidth="5.2"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
 
-      {/* Torso */}
+      {/* Torso (bright white core inside dark ink outline) */}
       <line
         x1={hip.x}
         y1={hip.y}
         x2={neck.x}
         y2={neck.y}
-        stroke="#f8fafc"
-        strokeWidth="5.4"
+        stroke={INK}
+        strokeWidth="11.2"
         strokeLinecap="round"
       />
+      <line
+        x1={hip.x}
+        y1={hip.y}
+        x2={neck.x}
+        y2={neck.y}
+        stroke="#ffffff"
+        strokeWidth="6.2"
+        strokeLinecap="round"
+      />
+      {/* Colorful JungGo Hoodie Scarf Accent */}
+      <circle cx={neck.x} cy={neck.y + 4} r="6.2" fill={accentColor} stroke={INK} strokeWidth="2.2" />
 
       {/* Front leg (right) */}
       <path
-        d={`M ${hip.x} ${hip.y} L ${rKnee.x} ${rKnee.y} L ${rFoot.x} ${rFoot.y}`}
+        d={`M ${hip.x} ${hip.y} L ${rKnee.x} ${rKnee.y} L ${rFoot.x} ${rFoot.y} L ${rFoot.x + 11} ${rFoot.y}`}
         fill="none"
-        stroke="#f8fafc"
-        strokeWidth="4.8"
+        stroke={INK}
+        strokeWidth="10.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <line
-        x1={rFoot.x}
-        y1={rFoot.y}
-        x2={rFoot.x + 8}
-        y2={rFoot.y}
-        stroke="#f8fafc"
-        strokeWidth="4.6"
+      <path
+        d={`M ${hip.x} ${hip.y} L ${rKnee.x} ${rKnee.y} L ${rFoot.x} ${rFoot.y} L ${rFoot.x + 11} ${rFoot.y}`}
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="5.6"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
 
-      {/* Head */}
+      {/* Head with crisp warm light reflection + dark outline */}
       <circle
         cx={headCenter.x}
         cy={headCenter.y}
         r={headRadius}
-        fill="#0b1319"
-        stroke="#f8fafc"
-        strokeWidth="4.2"
-      />
-      {/* Headband hint connecting to JungGo ninja mascot */}
-      <path
-        d={`M ${headCenter.x - 12} ${headCenter.y - 6} Q ${headCenter.x} ${headCenter.y - 9} ${headCenter.x + 12} ${headCenter.y - 6}`}
-        fill="none"
-        stroke={accentColor}
+        fill="#fff8f0"
+        stroke={INK}
         strokeWidth="3.2"
+      />
+      {/* Emerald Ninja Headband + Ribbon Tail */}
+      <path
+        d={`M ${headCenter.x - 16} ${headCenter.y - 6} Q ${headCenter.x} ${headCenter.y - 10} ${headCenter.x + 16} ${headCenter.y - 6}`}
+        fill="none"
+        stroke={INK}
+        strokeWidth="7.5"
         strokeLinecap="round"
       />
+      <path
+        d={`M ${headCenter.x - 16} ${headCenter.y - 6} Q ${headCenter.x} ${headCenter.y - 10} ${headCenter.x + 16} ${headCenter.y - 6}`}
+        fill="none"
+        stroke={accentColor}
+        strokeWidth="4.4"
+        strokeLinecap="round"
+      />
+      <path
+        d={`M ${headCenter.x - 15} ${headCenter.y - 6} L ${headCenter.x - 25} ${headCenter.y - 11} L ${headCenter.x - 23} ${headCenter.y - 2} Z`}
+        fill={accentColor}
+        stroke={INK}
+        strokeWidth="1.8"
+      />
 
-      {/* Minimal expressive eyes & mouth facing +X */}
-      <circle cx={headCenter.x + 5.2} cy={headCenter.y - 0.5} r="1.8" fill="#f8fafc" />
-      <circle cx={headCenter.x + 10.2} cy={headCenter.y - 0.5} r="1.5" fill="#f8fafc" />
+      {/* Rosy cheek + Expressive eyes & mouth */}
+      <ellipse
+        cx={headCenter.x + 6}
+        cy={headCenter.y + 4.5}
+        rx="4"
+        ry="2.4"
+        fill="rgba(251, 113, 133, 0.45)"
+      />
+      <circle cx={headCenter.x + 5.5} cy={headCenter.y - 0.5} r="2.3" fill={INK} />
+      <circle cx={headCenter.x + 11.5} cy={headCenter.y - 0.5} r="2" fill={INK} />
+      <circle cx={headCenter.x + 6.2} cy={headCenter.y - 1.3} r="0.8" fill="#ffffff" />
+      <circle cx={headCenter.x + 12} cy={headCenter.y - 1.3} r="0.7" fill="#ffffff" />
+
       {expression === "happy" ? (
         <path
-          d={`M ${headCenter.x + 4} ${headCenter.y + 5} Q ${headCenter.x + 7.5} ${headCenter.y + 8.5} ${headCenter.x + 11} ${headCenter.y + 4.5}`}
+          d={`M ${headCenter.x + 4.5} ${headCenter.y + 6} Q ${headCenter.x + 8.5} ${headCenter.y + 10.5} ${headCenter.x + 12.5} ${headCenter.y + 5.5}`}
           fill="none"
-          stroke={accentColor}
-          strokeWidth="2"
+          stroke={INK}
+          strokeWidth="2.3"
           strokeLinecap="round"
         />
       ) : expression === "surprised" ? (
         <circle
-          cx={headCenter.x + 7.5}
-          cy={headCenter.y + 6}
-          r="2.4"
+          cx={headCenter.x + 8.5}
+          cy={headCenter.y + 7.5}
+          r="3.2"
           fill="#fb7185"
+          stroke={INK}
+          strokeWidth="1.8"
         />
       ) : (
-        <line
-          x1={headCenter.x + 5}
-          y1={headCenter.y + 5.5}
-          x2={headCenter.x + 10}
-          y2={headCenter.y + 5.5}
-          stroke="#94a3b8"
-          strokeWidth="1.8"
+        <path
+          d={`M ${headCenter.x + 5.5} ${headCenter.y + 7} Q ${headCenter.x + 8.5} ${headCenter.y + 8.5} ${headCenter.x + 11.5} ${headCenter.y + 6.8}`}
+          fill="none"
+          stroke={INK}
+          strokeWidth="2"
           strokeLinecap="round"
         />
       )}
 
-      {/* Manga sweat drop when startled */}
       {sweatDrop ? (
         <path
-          d={`M ${headCenter.x - 16} ${headCenter.y - 11} C ${headCenter.x - 19} ${headCenter.y - 4}, ${headCenter.x - 13} ${headCenter.y - 4}, ${headCenter.x - 16} ${headCenter.y - 11} Z`}
+          d={`M ${headCenter.x - 20} ${headCenter.y - 14} C ${headCenter.x - 24} ${headCenter.y - 5}, ${headCenter.x - 16} ${headCenter.y - 5}, ${headCenter.x - 20} ${headCenter.y - 14} Z`}
           fill="#38bdf8"
-          stroke="#bae6fd"
-          strokeWidth="1"
+          stroke={INK}
+          strokeWidth="1.8"
         />
       ) : null}
 
@@ -313,99 +368,146 @@ const StickmanFigure: React.FC<StickmanPoseProps> = ({
       <path
         d={`M ${shoulder.x} ${shoulder.y} L ${rElbow.x} ${rElbow.y} L ${rHand.x} ${rHand.y}`}
         fill="none"
-        stroke="#f8fafc"
-        strokeWidth="4.4"
+        stroke={INK}
+        strokeWidth="9.8"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx={rHand.x} cy={rHand.y} r="3.2" fill={accentColor} />
+      <path
+        d={`M ${shoulder.x} ${shoulder.y} L ${rElbow.x} ${rElbow.y} L ${rHand.x} ${rHand.y}`}
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="5.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx={rHand.x} cy={rHand.y} r="4.6" fill={accentColor} stroke={INK} strokeWidth="2.1" />
       {renderHandProp(rHand, "right")}
     </g>
   );
 };
 
-const HudBeatBadge: React.FC<{
-  readonly beatLabel: string;
-  readonly accent?: string;
-}> = ({ beatLabel, accent = "#34d399" }) => (
-  <g transform="translate(14, 14)">
-    <rect
-      x="0"
-      y="0"
-      width="216"
-      height="26"
-      rx="13"
-      fill="rgba(13, 20, 26, 0.9)"
-      stroke={accent}
-      strokeWidth="1.3"
-      strokeOpacity="0.65"
-    />
-    <circle cx="14" cy="13" r="4" fill={accent} />
-    <text
-      x="24"
-      y="17"
-      fill="#e2f5ec"
-      fontSize="11.5"
-      fontWeight="800"
-      letterSpacing="0.03em"
-    >
-      {beatLabel}
-    </text>
+/** Soft drifting cartoon smoke/steam puff cluster for chimneys & train air-brakes */
+const SteamPuffs: React.FC<{
+  readonly originX: number;
+  readonly originY: number;
+  readonly localSec: number;
+  readonly driftX?: number;
+  readonly riseY?: number;
+  readonly scale?: number;
+}> = ({ originX, originY, localSec, driftX = 28, riseY = 42, scale = 1 }) => (
+  <g>
+    {[0, 1, 2].map((i) => {
+      const phase = ((localSec * 0.6 + i * 0.33) % 1);
+      const px = originX + phase * driftX;
+      const py = originY - phase * riseY;
+      const r = (7 + phase * 11) * scale;
+      const alpha = Math.sin(phase * Math.PI) * 0.72;
+      return (
+        <circle
+          key={i}
+          cx={px}
+          cy={py}
+          r={r}
+          fill="#f8fafc"
+          stroke="#cbd5e1"
+          strokeWidth="1.5"
+          opacity={alpha}
+        />
+      );
+    })}
   </g>
 );
 
-const SpeechBubble: React.FC<{
+/** Crisp sparkling yen coin icon with shine star */
+const YenCoin: React.FC<{
   readonly x: number;
   readonly y: number;
-  readonly text: string;
-  readonly subtext?: string;
+  readonly label?: string;
+  readonly gold?: boolean;
+  readonly sparklePhase: number;
+}> = ({ x, y, label = "¥100", gold = false, sparklePhase }) => (
+  <g transform={`translate(${x}, ${y})`}>
+    <circle
+      cx="0"
+      cy="0"
+      r="16"
+      fill={gold ? "#fbbf24" : "#e2e8f0"}
+      stroke={INK}
+      strokeWidth="2.8"
+    />
+    <circle
+      cx="0"
+      cy="0"
+      r="11.5"
+      fill="none"
+      stroke={gold ? "#f59e0b" : "#94a3b8"}
+      strokeWidth="1.5"
+    />
+    <text
+      x="0"
+      y="4"
+      textAnchor="middle"
+      fill={INK}
+      fontSize="9.5"
+      fontWeight="900"
+    >
+      {label}
+    </text>
+    {/* Twinkling sparkle */}
+    <path
+      d={`M 13 -13 L 15 -19 L 17 -13 L 23 -11 L 17 -9 L 15 -3 L 13 -9 L 7 -11 Z`}
+      fill="#fef08a"
+      stroke={INK}
+      strokeWidth="1"
+      opacity={0.45 + 0.55 * Math.abs(Math.sin(sparklePhase))}
+    />
+  </g>
+);
+
+const SceneSpeechTag: React.FC<{
+  readonly x: number;
+  readonly y: number;
+  readonly jp: string;
+  readonly en?: string;
   readonly accent?: string;
-  readonly opacity?: number;
-}> = ({ x, y, text, subtext, accent = "#34d399", opacity = 1 }) => {
-  if (opacity <= 0.02) {
-    return null;
-  }
-  const boxW = Math.max(106, text.length * 14 + 28);
-  const boxH = subtext ? 46 : 32;
+}> = ({ x, y, jp, en, accent = "#34d399" }) => {
+  const w = Math.max(138, jp.length * 16 + 34);
+  const h = en ? 50 : 34;
   return (
-    <g transform={`translate(${x}, ${y})`} opacity={opacity}>
+    <g transform={`translate(${x}, ${y})`}>
       <rect
-        x={-boxW / 2}
-        y={-boxH}
-        width={boxW}
-        height={boxH}
-        rx="12"
-        fill="#101c24"
-        stroke={accent}
-        strokeWidth="1.8"
+        x={-w / 2}
+        y={-h}
+        width={w}
+        height={h}
+        rx="13"
+        fill="#ffffff"
+        stroke={INK}
+        strokeWidth="3"
       />
-      <polygon
-        points="-6,0 6,0 0,9"
-        fill="#101c24"
-        stroke={accent}
-        strokeWidth="1.5"
-      />
-      <rect x={-boxW / 2 + 2} y={-5} width={boxW - 4} height="5" fill="#101c24" />
+      <polygon points="-7,-1 7,-1 0,10" fill="#ffffff" stroke={INK} strokeWidth="2.6" />
+      <rect x={-w / 2 + 4} y={-6} width={w - 8} height="6" fill="#ffffff" />
       <text
         x="0"
-        y={subtext ? -24 : -11}
+        y={en ? -27 : -12}
         textAnchor="middle"
-        fill="#ffffff"
-        fontSize="14.5"
-        fontWeight="800"
+        fill={INK}
+        fontSize="16.5"
+        fontWeight="900"
       >
-        {text}
+        {jp}
       </text>
-      {subtext ? (
+      {en ? (
         <text
           x="0"
-          y="-9"
+          y="-10"
           textAnchor="middle"
-          fill={accent}
-          fontSize="10.5"
-          fontWeight="700"
+          fill={accent === "#facc15" ? "#b45309" : "#047857"}
+          fontSize="12"
+          fontWeight="800"
         >
-          {subtext}
+          {en}
         </text>
       ) : null}
     </g>
@@ -413,902 +515,990 @@ const SpeechBubble: React.FC<{
 };
 
 /**
- * Scene 1: Walking along a Tokyo sidewalk -> Spotting 駅 (Station) -> Pointing to 北口/南口 Exits
+ * Scene 1 (Layered 2.5D): Sunset Tokyo neighborhood -> glowing cozy houses & shops ->
+ * colorful Station building -> live highlighted 北口 / 南口 / 東口 / 西口 exit sign!
  */
-const WalkToStationScene: React.FC<{
+const WalkToStation25D: React.FC<{
   readonly localSec: number;
   readonly progress: number;
-}> = ({ localSec, progress }) => {
-  const beatIndex = progress < 0.34 ? 1 : progress < 0.67 ? 2 : 3;
-  const beatLabel =
-    beatIndex === 1
-      ? "BEAT 1/3 · 駅を探す (Find Station)"
-      : beatIndex === 2
-        ? "BEAT 2/3 · 入口 (Station Sign)"
-        : "BEAT 3/3 · 北口・南口 (Directions)";
+  readonly activeKey: string;
+}> = ({ localSec, progress, activeKey }) => {
+  const effectiveKey =
+    activeKey ||
+    (progress < 0.25
+      ? "north"
+      : progress < 0.5
+        ? "south"
+        : progress < 0.75
+          ? "east"
+          : "west");
 
-  const stickX =
-    progress < 0.34
-      ? lerpRange(progress, 0.0, 0.34, 72, 168)
-      : progress < 0.67
-        ? lerpRange(progress, 0.34, 0.45, 168, 178)
-        : lerpRange(progress, 0.67, 1.0, 178, 226);
+  const camPan = Math.sin(localSec * 0.45) * 14;
+  const stride = Math.sin(localSec * 6.5) * 23;
+  const bob = Math.abs(Math.cos(localSec * 6.5)) * 3.5;
 
-  const isWalking =
-    progress < 0.32 || (progress > 0.78 && progress < 0.96);
-  const stridePhase = localSec * 6.8;
-  const walkAmp = isWalking ? 1 : 0;
-  const stride = Math.sin(stridePhase) * 26 * walkAmp;
-  const bob = isWalking ? Math.abs(Math.cos(stridePhase)) * 3.5 : 0;
+  const stickX = lerpRange(progress, 0.0, 0.4, 92, 232);
+  const isNorth = effectiveKey === "north";
+  const isSouth = effectiveKey === "south";
+  const isEast = effectiveKey === "east";
+  const isWest = effectiveKey === "west";
 
-  // Arm transitions smoothly from walking swing -> pointing up at Station/Directions sign
-  const pointBlend =
-    progress >= 0.4 && progress < 0.67
-      ? lerpRange(progress, 0.4, 0.48, 0, 1) * (1 - lerpRange(progress, 0.62, 0.67, 0, 0.4))
-      : progress >= 0.67
-        ? lerpRange(progress, 0.67, 0.74, 0.6, 1)
-        : 0;
+  const exits: {
+    readonly key: string;
+    readonly jp: string;
+    readonly en: string;
+    readonly x: number;
+    readonly y: number;
+    readonly color: string;
+  }[] = [
+    { key: "north", jp: "北口", en: "North", x: 14, y: 12, color: "#34d399" },
+    { key: "south", jp: "南口", en: "South", x: 122, y: 12, color: "#38bdf8" },
+    { key: "east", jp: "東口", en: "East", x: 14, y: 54, color: "#fbbf24" },
+    { key: "west", jp: "西口", en: "West", x: 122, y: 54, color: "#fb7185" },
+  ];
 
-  const rightUpperArmDeg = pointBlend * 116 + (1 - pointBlend) * (-stride * 0.75 + 14);
-  const rightForearmDeg = pointBlend * 124 + (1 - pointBlend) * (-stride * 0.55 + 32);
-  const headTiltDeg = pointBlend > 0.25 ? -15 * pointBlend : -3;
-
-  const signReveal = clamp01((progress - 0.24) / 0.12);
-  const exitBoardReveal = clamp01((progress - 0.62) / 0.1);
-  const scrollOffset = isWalking ? (localSec * 52) % 60 : 0;
+  const activeExit = exits.find((e) => e.key === effectiveKey) ?? exits[0];
 
   return (
     <g>
-      {/* Night sky & Tokyo skyline silhouettes */}
-      <rect x="0" y="255" width="480" height="105" fill="#0d171f" />
-      <line x1="0" y1="255" x2="480" y2="255" stroke="#34d399" strokeWidth="2" strokeOpacity="0.6" />
-      {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => {
-        const dashX = ((i * 60 - scrollOffset + 540) % 540) - 40;
-        return (
-          <rect
-            key={i}
-            x={dashX}
-            y="296"
-            width="28"
-            height="4"
-            rx="2"
-            fill="rgba(148, 163, 184, 0.24)"
-          />
-        );
-      })}
-
-      {/* Stylized station building silhouette on the right */}
-      <g transform={`translate(285, 118)`} opacity={0.35 + signReveal * 0.65}>
-        <rect
-          x="0"
-          y="38"
-          width="162"
-          height="99"
-          rx="6"
-          fill="#101b24"
-          stroke="#334155"
-          strokeWidth="2"
-        />
-        {/* Station glass entrance arch */}
-        <rect
-          x="48"
-          y="76"
-          width="66"
-          height="61"
-          rx="4"
-          fill="#091319"
-          stroke="#34d399"
-          strokeWidth="2"
-        />
-        <line x1="81" y1="76" x2="81" y2="137" stroke="#34d399" strokeWidth="1.5" strokeOpacity="0.6" />
-        {/* JR-style overhead station fascia */}
-        <rect
-          x="16"
-          y="16"
-          width="130"
-          height="32"
-          rx="6"
-          fill="#14532d"
-          stroke="#34d399"
-          strokeWidth="2.2"
-        />
-        <text x="81" y="36" textAnchor="middle" fill="#ffffff" fontSize="16" fontWeight="900">
-          駅 STATION
-        </text>
-        <text x="81" y="68" textAnchor="middle" fill="#34d399" fontSize="11.5" fontWeight="800">
-          入口 ENTRANCE
-        </text>
+      {/* Layer 0: Warm Japanese twilight sky + Distant Mt. Fuji + City Skyline (0.25x parallax) */}
+      <g transform={`translate(${camPan * 0.25}, 0)`}>
+        <defs>
+          <linearGradient id="sky-walk-25d" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#1e1b4b" />
+            <stop offset="55%" stopColor="#3b2f6e" />
+            <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.65" />
+          </linearGradient>
+        </defs>
+        <rect x="-40" y="-20" width="720" height="360" fill="url(#sky-walk-25d)" />
+        {/* Warm setting sun */}
+        <circle cx="515" cy="148" r="46" fill="#fde047" opacity="0.28" />
+        <circle cx="515" cy="148" r="30" fill="#fbbf24" opacity="0.55" />
+        {/* Distant Mt. Fuji silhouette */}
+        <path d="M 380 280 L 490 176 L 540 176 L 650 280 Z" fill="#312e81" stroke={INK} strokeWidth="2.5" />
+        <path d="M 468 197 L 490 176 L 540 176 L 562 197 L 540 205 L 515 196 L 490 205 Z" fill="#f8fafc" />
+        {/* Distant apartment silhouettes with tiny glowing windows */}
+        {[35, 110, 185, 250].map((bx, i) => (
+          <g key={bx} transform={`translate(${bx}, ${160 + (i % 2) * 24})`}>
+            <rect width="58" height="120" rx="4" fill="#1e293b" stroke={INK} strokeWidth="2.2" />
+            {[14, 34, 54].map((wy) => (
+              <g key={wy}>
+                <rect x="10" y={wy} width="12" height="10" rx="2" fill={i % 2 === 0 ? "#fde047" : "#7dd3fc"} opacity="0.7" />
+                <rect x="34" y={wy} width="12" height="10" rx="2" fill="#fde047" opacity="0.5" />
+              </g>
+            ))}
+          </g>
+        ))}
       </g>
 
-      {/* Directional North / South Signboard (Beat 3) */}
-      {exitBoardReveal > 0.02 ? (
-        <g
-          transform={`translate(274, ${60 - (1 - exitBoardReveal) * 14})`}
-          opacity={exitBoardReveal}
-        >
+      {/* Layer 1: Midground Cozy Houses, Glowing Café Window, Drink Vending Machine & JR Station (0.6x parallax) */}
+      <g transform={`translate(${camPan * 0.6}, 0)`}>
+        {/* Cozy Neighborhood House on Left */}
+        <g transform="translate(22, 198)">
+          <SteamPuffs originX={28} originY={-10} localSec={localSec} driftX={22} riseY={36} scale={0.95} />
+          <rect x="20" y="-8" width="14" height="24" fill="#94a3b8" stroke={INK} strokeWidth="2.5" />
+          <polygon points="-8,30 62,-6 132,30" fill="#dc2626" stroke={INK} strokeWidth="3" />
+          <rect x="6" y="30" width="112" height="114" rx="4" fill="#fef3c7" stroke={INK} strokeWidth="3" />
+          {/* Warm glowing windows */}
+          <rect x="18" y="48" width="36" height="30" rx="4" fill="#fbbf24" stroke={INK} strokeWidth="2.5" />
+          <line x1="36" y1="48" x2="36" y2="78" stroke={INK} strokeWidth="2" />
+          <line x1="18" y1="63" x2="54" y2="63" stroke={INK} strokeWidth="2" />
+          {/* Striped awning & door */}
+          <rect x="68" y="58" width="40" height="86" rx="3" fill="#0f766e" stroke={INK} strokeWidth="2.6" />
+          <path d="M 64 56 L 112 56 L 116 68 L 60 68 Z" fill="#10b981" stroke={INK} strokeWidth="2.4" />
+        </g>
+
+        {/* Classic Japanese Red Street Vending Machine */}
+        <g transform="translate(160, 250)">
+          <rect x="0" y="0" width="46" height="92" rx="5" fill="#ef4444" stroke={INK} strokeWidth="2.8" />
+          <rect x="6" y="10" width="34" height="36" rx="3" fill="#e0f2fe" stroke={INK} strokeWidth="2" />
+          <rect x="10" y="15" width="8" height="10" rx="1.5" fill="#38bdf8" />
+          <rect x="21" y="15" width="8" height="10" rx="1.5" fill="#34d399" />
+          <rect x="10" y="30" width="18" height="8" rx="1.5" fill="#facc15" />
+          <rect x="10" y="64" width="26" height="14" rx="2" fill="#1e293b" stroke={INK} strokeWidth="1.6" />
+        </g>
+
+        {/* Colorful Japanese Train Station Building on Right */}
+        <g transform="translate(348, 126)">
+          <rect x="0" y="42" width="266" height="176" rx="10" fill="#e2e8f0" stroke={INK} strokeWidth="3.4" />
+          {/* Emerald JR-inspired canopy */}
+          <path d="M -12 48 L 278 48 L 266 20 L 0 20 Z" fill="#10b981" stroke={INK} strokeWidth="3.2" />
+          {/* Illuminated 駅 STATION Header Sign */}
+          <rect x="42" y="-12" width="182" height="44" rx="8" fill="#064e3b" stroke={INK} strokeWidth="3.2" />
+          <text x="133" y="18" textAnchor="middle" fill="#ffffff" fontSize="22" fontWeight="900">
+            駅 STATION
+          </text>
+          {/* Large Glass Sliding Entrance + Glowing Interior */}
+          <rect x="74" y="94" width="118" height="124" rx="6" fill="#fef08a" stroke={INK} strokeWidth="3" opacity="0.88" />
+          <line x1="133" y1="94" x2="133" y2="218" stroke={INK} strokeWidth="2.8" />
+          <rect x="92" y="62" width="82" height="24" rx="5" fill="#148c53" stroke={INK} strokeWidth="2.2" />
+          <text x="133" y="79" textAnchor="middle" fill="#ffffff" fontSize="13.5" fontWeight="900">
+            入口 ENTRANCE
+          </text>
+        </g>
+      </g>
+
+      {/* Layer 2: Foreground Pavement & Dynamic 4-Exit Directional Gantry + Stickman (1.0x) */}
+      <g transform={`translate(${camPan}, 0)`}>
+        {/* Sidewalk & Road */}
+        <rect x="-40" y="340" width="720" height="128" fill="#334155" stroke={INK} strokeWidth="3" />
+        <rect x="-40" y="340" width="720" height="18" fill="#64748b" stroke={INK} strokeWidth="2.5" />
+        {/* Tactile yellow curb dots */}
+        {Array.from({ length: 18 }, (_, i) => (
+          <rect
+            key={i}
+            x={-20 + i * 40}
+            y="344"
+            width="24"
+            height="6"
+            rx="2"
+            fill="#facc15"
+            stroke={INK}
+            strokeWidth="1.2"
+          />
+        ))}
+
+        {/* Overhead 4-Exit Gantry Board (Lights up active 北口 / 南口 / 東口 / 西口 dynamically!) */}
+        <g transform="translate(362, 18)">
+          <rect
+            x="0"
+            y="0"
+            width="234"
+            height="100"
+            rx="12"
+            fill="#1e293b"
+            stroke={INK}
+            strokeWidth="3.4"
+          />
+          {exits.map((ex) => {
+            const isLit = ex.key === effectiveKey;
+            return (
+              <g key={ex.key} transform={`translate(${ex.x}, ${ex.y})`}>
+                <rect
+                  x="0"
+                  y="0"
+                  width="98"
+                  height="34"
+                  rx="8"
+                  fill={isLit ? ex.color : "#0f172a"}
+                  stroke={isLit ? "#ffffff" : "#475569"}
+                  strokeWidth={isLit ? "3" : "1.8"}
+                  opacity={isLit ? 1 : 0.6}
+                />
+                <text
+                  x="49"
+                  y="16"
+                  textAnchor="middle"
+                  fill={isLit ? INK : "#cbd5e1"}
+                  fontSize="14.5"
+                  fontWeight="900"
+                >
+                  {ex.jp}
+                </text>
+                <text
+                  x="49"
+                  y="29"
+                  textAnchor="middle"
+                  fill={isLit ? INK : "#94a3b8"}
+                  fontSize="10"
+                  fontWeight="800"
+                >
+                  {ex.en} Exit
+                </text>
+              </g>
+            );
+          })}
+          {/* Post */}
+          <line x1="117" y1="100" x2="117" y2="124" stroke="#64748b" strokeWidth="6" />
+        </g>
+
+        {/* Expressive 2.5D Stickman pointing to active Exit Sign */}
+        <StickmanFigure
+          x={stickX}
+          y={292 - bob}
+          facing={1}
+          scale={1.16}
+          leanDeg={6}
+          headTiltDeg={-12}
+          leftUpperArmDeg={stride * 0.6 - 14}
+          leftForearmDeg={stride * 0.4 + 14}
+          rightUpperArmDeg={isNorth || isWest ? 122 : isSouth || isEast ? 104 : 115}
+          rightForearmDeg={132}
+          leftThighDeg={-stride * 0.75}
+          leftCalfDeg={-stride * 0.45 - 5}
+          rightThighDeg={stride * 0.75}
+          rightCalfDeg={stride * 0.45}
+          hasBackpack
+          expression="happy"
+          accentColor={activeExit.color}
+        />
+
+        {/* Crisp Comic Speech Tag echoing active Exit */}
+        <SceneSpeechTag
+          x={stickX - 18}
+          y={192 - bob}
+          jp={`${activeExit.jp}はどこ？`}
+          en={`Where is ${activeExit.en} Exit?`}
+          accent={activeExit.color}
+        />
+      </g>
+    </g>
+  );
+};
+
+/**
+ * Scene 2 (Layered 2.5D): Bright Concourse + Colorful 券売機 Ticket Machine +
+ * Sparkling Yen Coins + Glowing Green Suica IC Top-Up + Printed Ticket!
+ */
+const BuyTicketIc25D: React.FC<{
+  readonly localSec: number;
+  readonly progress: number;
+  readonly activeKey: string;
+}> = ({ localSec, progress, activeKey }) => {
+  const effectiveKey =
+    activeKey ||
+    (progress < 0.28
+      ? "machine"
+      : progress < 0.54
+        ? "ticket"
+        : progress < 0.78
+          ? "fare"
+          : "charge");
+
+  const camPan = Math.sin(localSec * 0.4) * 10;
+  const isMachine = effectiveKey === "machine";
+  const isTicket = effectiveKey === "ticket";
+  const isFare = effectiveKey === "fare";
+  const isCharge = effectiveKey === "charge";
+
+  const coinDropY = ((localSec * 38) % 52);
+  const chargeFill = isCharge ? 0.45 + 0.5 * clamp01((localSec % 2.4) / 2.0) : 0.75;
+  const rippleR = ((localSec * 36) % 28) + 6;
+  const rippleA = 1 - (rippleR - 6) / 28;
+  const stickX = 210 + Math.sin(localSec * 1.1) * 8;
+
+  return (
+    <g>
+      {/* Layer 0: Bright Station Concourse Back Wall & Warm Ceiling Lamps */}
+      <g transform={`translate(${camPan * 0.35}, 0)`}>
+        <defs>
+          <linearGradient id="wall-ticket-25d" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#0f293a" />
+            <stop offset="100%" stopColor="#1e3a4c" />
+          </linearGradient>
+        </defs>
+        <rect x="-30" y="-20" width="700" height="390" fill="url(#wall-ticket-25d)" />
+        {/* Warm recessed ceiling light fixtures */}
+        {[95, 320, 545].map((lx) => (
+          <g key={lx}>
+            <ellipse cx={lx} cy="72" rx="75" ry="52" fill="#fde68a" opacity="0.14" />
+            <rect x={lx - 44} y="14" width="88" height="12" rx="6" fill="#fef3c7" stroke={INK} strokeWidth="2.4" />
+          </g>
+        ))}
+
+        {/* Overhead Fare Map Poster on Left Wall (Lights up when 運賃 Fare is active!) */}
+        <g transform="translate(36, 74)">
           <rect
             x="0"
             y="0"
             width="184"
-            height="54"
-            rx="9"
-            fill="#1e293b"
-            stroke="#facc15"
-            strokeWidth="2.2"
+            height="136"
+            rx="10"
+            fill="#f8fafc"
+            stroke={isFare ? "#fbbf24" : INK}
+            strokeWidth={isFare ? "4.5" : "3"}
           />
-          <rect x="0" y="0" width="184" height="24" rx="8" fill="#facc15" />
-          <text x="92" y="16" textAnchor="middle" fill="#0f172a" fontSize="12" fontWeight="900">
-            ← 北口 North ｜ 南口 South →
+          <rect x="0" y="0" width="184" height="28" rx="8" fill={isFare ? "#f59e0b" : "#0f766e"} stroke={INK} strokeWidth="2.4" />
+          <text x="92" y="19" textAnchor="middle" fill="#ffffff" fontSize="13.5" fontWeight="900">
+            運賃表 FARE MAP
           </text>
-          <text x="92" y="42" textAnchor="middle" fill="#e2e8f0" fontSize="11.5" fontWeight="700">
-            東口 East ・ 西口 West
-          </text>
-          {/* Sign post */}
-          <line x1="92" y1="54" x2="92" y2="74" stroke="#94a3b8" strokeWidth="3" />
+          {/* Mini colorful route line with prices */}
+          <line x1="22" y1="74" x2="162" y2="74" stroke="#10b981" strokeWidth="5" strokeLinecap="round" />
+          {[
+            { cx: 36, price: "¥180", name: "渋谷" },
+            { cx: 92, price: "¥200", name: "新宿" },
+            { cx: 148, price: "¥320", name: "東京" },
+          ].map((st) => (
+            <g key={st.name}>
+              <circle cx={st.cx} cy="74" r="8" fill="#ffffff" stroke={INK} strokeWidth="2.5" />
+              <text x={st.cx} y="56" textAnchor="middle" fill={INK} fontSize="11.5" fontWeight="900">
+                {st.name}
+              </text>
+              <rect x={st.cx - 20} y="88" width="40" height="20" rx="5" fill={isFare ? "#fde047" : "#e2e8f0"} stroke={INK} strokeWidth="1.8" />
+              <text x={st.cx} y="102" textAnchor="middle" fill={INK} fontSize="11" fontWeight="900">
+                {st.price}
+              </text>
+            </g>
+          ))}
         </g>
-      ) : null}
+      </g>
 
-      {/* Emerald recognition spark when spotting station */}
-      {progress >= 0.36 && progress <= 0.65 ? (
-        <g transform={`translate(${stickX + 22}, ${148 - bob})`}>
-          <circle cx="0" cy="0" r="11" fill="#148c53" stroke="#34d399" strokeWidth="1.8" />
-          <text x="0" y="4.5" textAnchor="middle" fill="#ffffff" fontSize="14" fontWeight="900">
-            !
-          </text>
-        </g>
-      ) : null}
+      {/* Floor */}
+      <rect x="-30" y="362" width="700" height="110" fill="#334155" stroke={INK} strokeWidth="3" />
+      <rect x="-30" y="362" width="700" height="14" fill="#475569" />
 
-      {/* Stickman traveler */}
-      <StickmanFigure
-        x={stickX}
-        y={206 - bob}
-        facing={1}
-        leanDeg={isWalking ? 7 : 1}
-        headTiltDeg={headTiltDeg}
-        leftUpperArmDeg={stride * 0.8 - 10}
-        leftForearmDeg={stride * 0.55 + 16}
-        rightUpperArmDeg={rightUpperArmDeg}
-        rightForearmDeg={rightForearmDeg}
-        leftThighDeg={-stride}
-        leftCalfDeg={-stride * 0.65 - (isWalking ? 8 : 2)}
-        rightThighDeg={stride}
-        rightCalfDeg={stride * 0.65 - (isWalking ? 4 : 0)}
-        hasBackpack
-        expression={progress > 0.42 ? "happy" : "focused"}
-      />
-
-      {/* Japanese speech prompt bubbles */}
-      <SpeechBubble
-        x={stickX + 8}
-        y={138 - bob}
-        text="駅はどこですか？"
-        subtext="Where is the station?"
-        opacity={
-          clamp01((progress - 0.05) / 0.08) *
-          (1 - clamp01((progress - 0.38) / 0.08))
-        }
-      />
-      <SpeechBubble
-        x={stickX + 12}
-        y={138 - bob}
-        text="あ！北口です！"
-        subtext="North Exit!"
-        opacity={clamp01((progress - 0.72) / 0.08)}
-      />
-
-      <HudBeatBadge beatLabel={beatLabel} />
-    </g>
-  );
-};
-
-/**
- * Scene 2: Japanese Ticket Vending Machine (券売機) — Screen Tap -> IC Charge -> Ticket Pickup
- */
-const BuyTicketIcScene: React.FC<{
-  readonly localSec: number;
-  readonly progress: number;
-}> = ({ localSec, progress }) => {
-  const beatIndex = progress < 0.35 ? 1 : progress < 0.72 ? 2 : 3;
-  const beatLabel =
-    beatIndex === 1
-      ? "BEAT 1/3 · 券売機 (Select Fare)"
-      : beatIndex === 2
-        ? "BEAT 2/3 · チャージ (IC Top-Up)"
-        : "BEAT 3/3 · 切符 (Take Ticket)";
-
-  const stickX = lerpRange(progress, 0.0, 0.22, 86, 174);
-  const walkPhase = clamp01(1 - progress / 0.22);
-  const stride = Math.sin(localSec * 6.5) * 20 * walkPhase;
-
-  const isTouchScreen = progress >= 0.18 && progress < 0.42;
-  const isTapCard = progress >= 0.42 && progress < 0.72;
-  const isTakeTicket = progress >= 0.72;
-
-  const armReachY = isTouchScreen ? 102 : isTapCard ? 74 : isTakeTicket ? 116 : 30;
-  const chargeFill = clamp01((progress - 0.44) / 0.24);
-  const ticketDrop = clamp01((progress - 0.72) / 0.14);
-
-  const rippleRadius = ((localSec * 28) % 22) + 5;
-  const rippleAlpha = 1 - (rippleRadius - 5) / 22;
-
-  return (
-    <g>
-      <rect x="0" y="275" width="480" height="85" fill="#0d171f" />
-      <line x1="0" y1="275" x2="480" y2="275" stroke="#34d399" strokeWidth="2" strokeOpacity="0.6" />
-
-      {/* Japanese Ticket Vending Machine (券売機) */}
-      <g transform="translate(262, 74)">
+      {/* Layer 1: Detailed Colorful 2.5D Japanese Ticket Vending Machine (券売機) */}
+      <g transform={`translate(${328 + camPan * 0.85}, 66)`}>
+        {/* Drop shadow */}
+        <rect x="10" y="10" width="234" height="296" rx="14" fill="rgba(17,24,39,0.45)" />
+        {/* Machine Cabinet */}
         <rect
           x="0"
           y="0"
-          width="156"
-          height="201"
-          rx="10"
-          fill="#17232e"
-          stroke="#475569"
-          strokeWidth="2.5"
+          width="234"
+          height="296"
+          rx="14"
+          fill="#0284c7"
+          stroke={INK}
+          strokeWidth="3.6"
         />
-        {/* Header sign */}
-        <rect x="10" y="10" width="136" height="24" rx="5" fill="#148c53" />
-        <text x="78" y="26" textAnchor="middle" fill="#ffffff" fontSize="12.5" fontWeight="900">
+        <rect x="12" y="12" width="210" height="36" rx="7" fill="#064e3b" stroke={INK} strokeWidth="2.6" />
+        <text x="117" y="36" textAnchor="middle" fill="#ffffff" fontSize="16" fontWeight="900">
           きっぷ 券売機・チャージ
         </text>
 
-        {/* Illuminated touchscreen LCD */}
+        {/* Touchscreen Display */}
         <rect
-          x="16"
-          y="44"
-          width="88"
-          height="66"
-          rx="6"
-          fill="#0a1926"
-          stroke="#38bdf8"
-          strokeWidth="2"
+          x="18"
+          y="60"
+          width="136"
+          height="112"
+          rx="8"
+          fill="#0f172a"
+          stroke={isMachine || isFare ? "#fde047" : INK}
+          strokeWidth="3"
         />
-        <text x="60" y="61" textAnchor="middle" fill="#38bdf8" fontSize="10" fontWeight="800">
-          {isTapCard ? "Suica チャージ" : isTakeTicket ? "発券完了 OK!" : "片道 / 往復 [EN]"}
+        <rect x="26" y="68" width="120" height="22" rx="4" fill="#148c53" />
+        <text x="86" y="83" textAnchor="middle" fill="#ffffff" fontSize="11.5" fontWeight="900">
+          {isCharge ? "Suica チャージ" : isTicket ? "片道 / 往復 切符" : "English Guide [EN]"}
         </text>
-        {/* Route buttons or charge meter */}
-        {isTapCard ? (
+
+        {isCharge ? (
           <g>
-            <rect x="24" y="72" width="72" height="12" rx="6" fill="#1e293b" />
-            <rect
-              x="24"
-              y="72"
-              width={72 * chargeFill}
-              height="12"
-              rx="6"
-              fill="#34d399"
-            />
-            <text x="60" y="100" textAnchor="middle" fill="#a7f3d0" fontSize="11" fontWeight="900">
-              +¥1,000 {chargeFill > 0.9 ? "✓" : "..."}
+            <rect x="30" y="104" width="112" height="18" rx="9" fill="#1e293b" stroke="#38bdf8" strokeWidth="1.5" />
+            <rect x="32" y="106" width={Math.round(108 * chargeFill)} height="14" rx="7" fill="#34d399" />
+            <text x="86" y="146" textAnchor="middle" fill="#fde047" fontSize="16" fontWeight="900">
+              +¥1,000 OK!
             </text>
           </g>
         ) : (
           <g>
-            <rect x="22" y="69" width="34" height="16" rx="3" fill="#14532d" stroke="#34d399" strokeWidth="1.2" />
-            <text x="39" y="80" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
-              ¥200
+            <rect x="28" y="100" width="54" height="28" rx="5" fill="#10b981" stroke="#a7f3d0" strokeWidth="1.6" />
+            <text x="55" y="118" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="900">
+              片道 ¥200
             </text>
-            <rect x="62" y="69" width="34" height="16" rx="3" fill="#1e3a8a" stroke="#60a5fa" strokeWidth="1.2" />
-            <text x="79" y="80" textAnchor="middle" fill="#ffffff" fontSize="9.5" fontWeight="800">
-              ¥320
+            <rect x="88" y="100" width="54" height="28" rx="5" fill="#38bdf8" stroke="#bae6fd" strokeWidth="1.6" />
+            <text x="115" y="118" textAnchor="middle" fill={INK} fontSize="12" fontWeight="900">
+              往復 ¥400
             </text>
-            <rect x="22" y="90" width="74" height="12" rx="3" fill="#0f766e" />
-            <text x="59" y="99" textAnchor="middle" fill="#ecfdf5" fontSize="8.5" fontWeight="800">
-              English Guide
+            <rect x="28" y="136" width="114" height="24" rx="5" fill="#f59e0b" />
+            <text x="85" y="152" textAnchor="middle" fill={INK} fontSize="11.5" fontWeight="900">
+              IC チャージ Top-Up
             </text>
           </g>
         )}
 
-        {/* Coin slot & Card holder pad */}
+        {/* Coin Slot & Blue IC Card Reader Tray */}
         <rect
-          x="112"
-          y="46"
-          width="32"
-          height="24"
-          rx="4"
-          fill="#0c151d"
-          stroke="#fbbf24"
-          strokeWidth="1.5"
+          x="166"
+          y="64"
+          width="52"
+          height="42"
+          rx="6"
+          fill="#fbbf24"
+          stroke={INK}
+          strokeWidth="2.4"
         />
-        <text x="128" y="61" textAnchor="middle" fill="#fbbf24" fontSize="8.5" fontWeight="800">
+        <text x="192" y="83" textAnchor="middle" fill={INK} fontSize="11" fontWeight="900">
           硬貨
         </text>
-        {/* IC Card tray */}
+        <rect x="176" y="89" width="32" height="7" rx="3" fill={INK} />
+
+        {/* Blue IC Pad */}
         <rect
-          x="110"
-          y="80"
-          width="36"
-          height="32"
-          rx="5"
-          fill="#072238"
-          stroke={isTapCard ? "#38bdf8" : "#334155"}
-          strokeWidth="2"
-        />
-        <text x="128" y="99" textAnchor="middle" fill="#7dd3fc" fontSize="9.5" fontWeight="900">
-          IC
-        </text>
-
-        {/* RFID tap waves on Beat 2 */}
-        {isTapCard ? (
-          <g transform="translate(128, 96)">
-            <circle
-              cx="0"
-              cy="0"
-              r={rippleRadius}
-              fill="none"
-              stroke="#38bdf8"
-              strokeWidth="2"
-              opacity={rippleAlpha}
-            />
-          </g>
-        ) : null}
-
-        {/* Touch screen ripple on Beat 1 */}
-        {isTouchScreen ? (
-          <g transform="translate(46, 77)">
-            <circle
-              cx="0"
-              cy="0"
-              r={rippleRadius * 0.75}
-              fill="none"
-              stroke="#34d399"
-              strokeWidth="2"
-              opacity={rippleAlpha}
-            />
-          </g>
-        ) : null}
-
-        {/* Ticket dispenser slot */}
-        <rect x="24" y="138" width="108" height="24" rx="4" fill="#080d12" stroke="#334155" strokeWidth="1.5" />
-        <line x1="36" y1="150" x2="120" y2="150" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" />
-
-        {/* Emerging paper ticket (切符) */}
-        {ticketDrop > 0.05 ? (
-          <g transform={`translate(56, ${147 - ticketDrop * 12})`}>
-            <rect
-              x="0"
-              y="0"
-              width="34"
-              height="18"
-              rx="3"
-              fill="#fde68a"
-              stroke="#f59e0b"
-              strokeWidth="1.8"
-            />
-            <text x="17" y="12" textAnchor="middle" fill="#78350f" fontSize="9.5" fontWeight="900">
-              切符
-            </text>
-          </g>
-        ) : null}
-      </g>
-
-      {/* Stickman interacting with machine */}
-      <StickmanFigure
-        x={stickX}
-        y={226}
-        facing={1}
-        leanDeg={isTakeTicket ? -2 : 4}
-        headTiltDeg={isTouchScreen ? -6 : 2}
-        leftUpperArmDeg={-16}
-        leftForearmDeg={-6}
-        rightUpperArmDeg={armReachY}
-        rightForearmDeg={armReachY + 12}
-        leftThighDeg={-stride - 6}
-        leftCalfDeg={-stride * 0.4 - 4}
-        rightThighDeg={stride + 6}
-        rightCalfDeg={stride * 0.4 + 2}
-        hasBackpack
-        holdCardHand={isTapCard ? "right" : null}
-        holdTicketHand={progress > 0.8 ? "right" : null}
-        expression={isTakeTicket ? "happy" : "focused"}
-      />
-
-      {/* Victory checkmark bubble in Beat 3 */}
-      {progress > 0.8 ? (
-        <SpeechBubble
-          x={stickX + 8}
-          y={154}
-          text="切符・チャージ OK!"
-          subtext="Ready for the gate"
-          opacity={clamp01((progress - 0.8) / 0.1)}
-        />
-      ) : null}
-
-      <HudBeatBadge beatLabel={beatLabel} />
-    </g>
-  );
-};
-
-/**
- * Scene 3: Automatic Ticket Gate (改札口) Tap & Low-Balance 精算機 (Fare Adjustment)
- */
-const TapTicketGateScene: React.FC<{
-  readonly localSec: number;
-  readonly progress: number;
-}> = ({ localSec, progress }) => {
-  const beatIndex = progress < 0.44 ? 1 : progress < 0.72 ? 2 : 3;
-  const beatLabel =
-    beatIndex === 1
-      ? "BEAT 1/3 · 改札口 (IC Card Tap)"
-      : beatIndex === 2
-        ? "BEAT 2/3 · 残高不足 (Low Balance!)"
-        : "BEAT 3/3 · 精算機 (Fare Adjust OK)";
-
-  // Beat 1: approach & pass cleanly through gate
-  // Beat 2: red alert at gate -> lean back with sweat drop
-  // Beat 3: walk right to yellow 精算機 and top up!
-  const stickX =
-    progress < 0.44
-      ? progress < 0.2
-        ? lerpRange(progress, 0.0, 0.2, 68, 170)
-        : progress < 0.28
-          ? 170
-          : lerpRange(progress, 0.28, 0.44, 170, 290)
-      : progress < 0.72
-        ? lerpRange(progress, 0.44, 0.56, 134, 170)
-        : lerpRange(progress, 0.72, 0.88, 170, 326);
-
-  const walkingNow =
-    progress < 0.19 ||
-    (progress > 0.29 && progress < 0.43) ||
-    (progress > 0.44 && progress < 0.55) ||
-    (progress > 0.72 && progress < 0.87);
-
-  const stride = walkingNow ? Math.sin(localSec * 7.2) * 24 : 0;
-  const bob = walkingNow ? Math.abs(Math.cos(localSec * 7.2)) * 3 : 0;
-
-  const tapGateGreen = progress >= 0.18 && progress <= 0.3;
-  const tapGateRed = progress >= 0.54 && progress <= 0.72;
-  const payYellowMachine = progress >= 0.84;
-
-  const flapOpenAmount =
-    progress < 0.44
-      ? clamp01((progress - 0.21) / 0.08)
-      : 0; // closed during Beat 2 red alert!
-
-  const pulseRadius = ((localSec * 36) % 28) + 6;
-  const pulseAlpha = 1 - (pulseRadius - 6) / 28;
-
-  const rightUpperArmDeg =
-    tapGateGreen || tapGateRed
-      ? 68
-      : payYellowMachine
-        ? 112
-        : -stride * 0.75 + 16;
-  const rightForearmDeg =
-    tapGateGreen || tapGateRed
-      ? 92
-      : payYellowMachine
-        ? 125
-        : -stride * 0.5 + 28;
-
-  return (
-    <g>
-      {/* Floor */}
-      <rect x="0" y="278" width="480" height="82" fill="#0d171f" />
-      <line x1="0" y1="278" x2="480" y2="278" stroke="#34d399" strokeWidth="2" strokeOpacity="0.6" />
-
-      {/* Automatic Ticket Gate (改札口) centered around x=200..268 */}
-      <g transform="translate(198, 168)">
-        {/* Gate body */}
-        <rect
-          x="0"
-          y="0"
-          width="74"
-          height="110"
+          x="164"
+          y="118"
+          width="56"
+          height="54"
           rx="8"
-          fill="#1b2936"
-          stroke={tapGateRed ? "#f43f5e" : "#475569"}
-          strokeWidth="2.5"
+          fill={isCharge ? "#0284c7" : "#0c4a6e"}
+          stroke={isCharge ? "#34d399" : INK}
+          strokeWidth="2.8"
         />
-        {/* Top stripe */}
-        <rect
-          x="0"
-          y="0"
-          width="74"
-          height="18"
-          rx="6"
-          fill={tapGateRed ? "#be123c" : "#14532d"}
-        />
-        <text x="37" y="12.5" textAnchor="middle" fill="#ffffff" fontSize="10.5" fontWeight="900">
-          改札口
-        </text>
-        {/* Glowing blue IC reader pad */}
-        <rect
-          x="10"
-          y="28"
-          width="30"
-          height="24"
-          rx="5"
-          fill={tapGateRed ? "#4c0519" : "#0c4a6e"}
-          stroke={tapGateRed ? "#fb7185" : "#38bdf8"}
-          strokeWidth="2"
-        />
-        <text x="25" y="43.5" textAnchor="middle" fill="#e0f2fe" fontSize="10" fontWeight="900">
+        <text x="192" y="151" textAnchor="middle" fill="#ffffff" fontSize="16" fontWeight="900">
           IC
         </text>
+        {isCharge ? (
+          <circle
+            cx="192"
+            cy="145"
+            r={rippleR}
+            fill="none"
+            stroke="#34d399"
+            strokeWidth="3"
+            opacity={rippleA}
+          />
+        ) : null}
 
-        {/* Animated gate flap bars */}
-        <g transform={`translate(56, 36) scale(${1 - flapOpenAmount * 0.75}, 1)`}>
+        {/* Ticket & Change Dispenser Tray */}
+        <rect x="30" y="200" width="174" height="44" rx="8" fill="#0f172a" stroke={INK} strokeWidth="2.8" />
+        {/* Emerging Printed Ticket */}
+        <g transform={`translate(56, ${isTicket ? 202 : 212})`}>
           <rect
             x="0"
             y="0"
-            width="28"
-            height="42"
+            width="52"
+            height="28"
             rx="4"
-            fill={tapGateRed ? "#e11d48" : "#34d399"}
-            fillOpacity={tapGateRed ? 0.85 : 0.75}
-            stroke="#ffffff"
-            strokeWidth="1.2"
+            fill="#fde68a"
+            stroke={INK}
+            strokeWidth="2.4"
           />
+          <text x="26" y="18" textAnchor="middle" fill={INK} fontSize="12" fontWeight="900">
+            切符 ¥200
+          </text>
         </g>
 
-        {/* Green Tap Ring & Soundwave (Beat 1) */}
-        {tapGateGreen ? (
-          <g transform="translate(25, 38)">
-            <circle
-              cx="0"
-              cy="0"
-              r={pulseRadius}
-              fill="none"
-              stroke="#34d399"
-              strokeWidth="2.4"
-              opacity={pulseAlpha}
-            />
-          </g>
-        ) : null}
-
-        {/* Red Low-Balance Flash Ring (Beat 2) */}
-        {tapGateRed ? (
-          <g transform="translate(25, 38)">
-            <circle
-              cx="0"
-              cy="0"
-              r={pulseRadius}
-              fill="none"
-              stroke="#f43f5e"
-              strokeWidth="2.6"
-              opacity={pulseAlpha}
-            />
-          </g>
-        ) : null}
-      </g>
-
-      {/* Bright Yellow Fare Adjustment Machine (精算機) on right (Beat 3 highlighted) */}
-      <g
-        transform="translate(366, 108)"
-        opacity={beatIndex === 3 ? 1 : 0.45}
-      >
-        <rect
-          x="0"
-          y="0"
-          width="94"
-          height="170"
-          rx="8"
-          fill="#facc15"
-          stroke={beatIndex === 3 ? "#fef08a" : "#ca8a04"}
-          strokeWidth="2.5"
+        {/* Floating Sparkling Yen Coins near Coin Tray (when Fare/Charge active) */}
+        <YenCoin
+          x={-30}
+          y={182 + (coinDropY % 28)}
+          label="¥500"
+          gold
+          sparklePhase={localSec * 4}
         />
-        <rect x="7" y="9" width="80" height="22" rx="4" fill="#1e293b" />
-        <text x="47" y="24" textAnchor="middle" fill="#facc15" fontSize="11.5" fontWeight="900">
-          精算機
-        </text>
-        <rect x="11" y="38" width="72" height="44" rx="5" fill="#0b151e" stroke="#334155" strokeWidth="1.5" />
-        <text
-          x="47"
-          y="56"
-          textAnchor="middle"
-          fill={payYellowMachine ? "#34d399" : "#fde047"}
-          fontSize="10"
-          fontWeight="800"
-        >
-          {payYellowMachine ? "精算完了 ✓" : "不足 +¥180"}
-        </text>
-        <text x="47" y="72" textAnchor="middle" fill="#e2e8f0" fontSize="9.5" fontWeight="700">
-          {payYellowMachine ? "OK! 出口へ" : "Fare Adjust"}
-        </text>
-        <rect x="20" y="96" width="54" height="12" rx="3" fill="#1e293b" />
-        <rect x="22" y="124" width="50" height="24" rx="4" fill="#1e293b" />
+        <YenCoin
+          x={-64}
+          y={202 + ((coinDropY + 14) % 24)}
+          label="¥100"
+          gold={false}
+          sparklePhase={localSec * 4 + 1.5}
+        />
       </g>
 
-      {/* Stickman */}
-      <StickmanFigure
-        x={stickX}
-        y={229 - bob}
-        facing={1}
-        leanDeg={tapGateRed ? -10 : walkingNow ? 7 : 3}
-        headTiltDeg={tapGateRed ? -12 : 4}
-        leftUpperArmDeg={stride * 0.7 - 12}
-        leftForearmDeg={stride * 0.5 + 14}
-        rightUpperArmDeg={rightUpperArmDeg}
-        rightForearmDeg={rightForearmDeg}
-        leftThighDeg={-stride}
-        leftCalfDeg={-stride * 0.55 - 4}
-        rightThighDeg={stride}
-        rightCalfDeg={stride * 0.55}
-        hasBackpack
-        holdCardHand={beatIndex <= 2 || payYellowMachine ? "right" : null}
-        expression={tapGateRed ? "surprised" : beatIndex === 3 && payYellowMachine ? "happy" : "focused"}
-        sweatDrop={tapGateRed}
-        accentColor={tapGateRed ? "#fb7185" : "#34d399"}
-      />
+      {/* Layer 2: Stickman interacting with Ticket Machine */}
+      <g transform={`translate(${camPan}, 0)`}>
+        <StickmanFigure
+          x={stickX}
+          y={305}
+          facing={1}
+          scale={1.2}
+          leanDeg={4}
+          headTiltDeg={-4}
+          leftUpperArmDeg={-18}
+          leftForearmDeg={-6}
+          rightUpperArmDeg={isCharge ? 78 : isTicket ? 114 : 96}
+          rightForearmDeg={isCharge ? 96 : isTicket ? 124 : 112}
+          leftThighDeg={-10}
+          leftCalfDeg={-4}
+          rightThighDeg={10}
+          rightCalfDeg={4}
+          hasBackpack
+          holdCardHand={isCharge ? "right" : null}
+          holdTicketHand={isTicket ? "right" : null}
+          holdCoinHand={isFare || isMachine ? "right" : null}
+          expression="happy"
+        />
 
-      {/* Soundwave & Feedback Badges */}
-      <SpeechBubble
-        x={224}
-        y={144}
-        text="ピッ！ ✓ OK"
-        subtext="Pass smoothly"
-        accent="#34d399"
-        opacity={tapGateGreen ? 1 : 0}
-      />
-      <SpeechBubble
-        x={208}
-        y={140}
-        text="✕ 残高不足！"
-        subtext="Use yellow 精算機"
-        accent="#f43f5e"
-        opacity={tapGateRed ? 1 : 0}
-      />
-      <SpeechBubble
-        x={stickX - 4}
-        y={152}
-        text="精算 OK! ✓"
-        subtext="Fare Adjusted"
-        accent="#34d399"
-        opacity={payYellowMachine ? clamp01((progress - 0.84) / 0.08) : 0}
-      />
-
-      <HudBeatBadge
-        beatLabel={beatLabel}
-        accent={beatIndex === 2 ? "#fb7185" : beatIndex === 3 ? "#facc15" : "#34d399"}
-      />
+        <SceneSpeechTag
+          x={stickX - 4}
+          y={205}
+          jp={isCharge ? "チャージします！" : isFare ? "東京駅までいくら？" : isTicket ? "切符を買いました！" : "券売機でピッ！"}
+          en={isCharge ? "Top up Suica!" : isFare ? "Check train fare" : isTicket ? "Got my ticket!" : "Tap English button"}
+          accent={isCharge ? "#34d399" : "#facc15"}
+        />
+      </g>
     </g>
   );
 };
 
 /**
- * Scene 4: Platform Yellow Line -> Train Arrival & Boarding -> Riding -> Exiting Under Yellow 出口 Sign
+ * Scene 3 (Layered 2.5D): Automatic Ticket Gate (改札口) + Bright Yellow Fare Adjustment (精算機)
+ * + Station Staff Booth (駅員), reacting cleanly to `gate | adjust | low_balance | staff`!
  */
-const RideAndExitTrainScene: React.FC<{
+const TapTicketGate25D: React.FC<{
   readonly localSec: number;
   readonly progress: number;
-}> = ({ localSec, progress }) => {
-  const beatIndex = progress < 0.34 ? 1 : progress < 0.67 ? 2 : 3;
-  const beatLabel =
-    beatIndex === 1
-      ? "BEAT 1/3 · 番線 (Platform Wait)"
-      : beatIndex === 2
-        ? "BEAT 2/3 · 乗車・乗り換え (Ride)"
-        : "BEAT 3/3 · 黄色い出口 (Exit Sign)";
+  readonly activeKey: string;
+}> = ({ localSec, progress, activeKey }) => {
+  const effectiveKey =
+    activeKey ||
+    (progress < 0.34
+      ? "gate"
+      : progress < 0.62
+        ? "low_balance"
+        : progress < 0.85
+          ? "adjust"
+          : "staff");
 
-  // Train X slides in from +360 to +78 during Beat 1, holds for boarding, cruises across Beat 2, settles Beat 3
-  const trainX =
-    progress < 0.24
-      ? lerpRange(progress, 0.0, 0.24, 340, 88)
-      : progress < 0.42
-        ? 88
-        : progress < 0.64
-          ? lerpRange(progress, 0.42, 0.64, 88, 72)
-          : 72;
+  const camPan = Math.sin(localSec * 0.4) * 10;
+  const isGate = effectiveKey === "gate";
+  const isLowBalance = effectiveKey === "low_balance";
+  const isAdjust = effectiveKey === "adjust";
+  const isStaff = effectiveKey === "staff";
 
-  const doorsOpen =
-    (progress >= 0.22 && progress < 0.4) || (progress >= 0.66 && progress <= 0.86);
-  const doorSlide = doorsOpen
-    ? progress < 0.5
-      ? lerpRange(progress, 0.22, 0.3, 0, 18) * (1 - lerpRange(progress, 0.36, 0.4, 0, 1))
-      : lerpRange(progress, 0.66, 0.72, 0, 18) * (1 - lerpRange(progress, 0.82, 0.86, 0, 1))
-    : 0;
-
-  // Stickman starts left on platform behind yellow line, boards into train window, then exits right toward yellow 出口!
-  const stickX =
-    progress < 0.26
-      ? lerpRange(progress, 0.0, 0.16, 68, 128)
-      : progress < 0.38
-        ? lerpRange(progress, 0.26, 0.38, 128, 224)
-        : progress < 0.68
-          ? 224
-          : lerpRange(progress, 0.68, 0.96, 232, 386);
-
-  const isInsideTrain = progress >= 0.38 && progress < 0.68;
-  const isWalking =
-    progress < 0.15 ||
-    (progress >= 0.26 && progress < 0.38) ||
-    (progress >= 0.68 && progress < 0.96);
-
-  const stride = isWalking ? Math.sin(localSec * 7.0) * 23 : 0;
-  const bob = isWalking ? Math.abs(Math.cos(localSec * 7.0)) * 3 : 0;
-  const cruiseScroll =
-    progress >= 0.42 && progress < 0.66 ? ((localSec * 140) % 120) : 0;
+  const stride = Math.sin(localSec * 6.8) * 20;
+  const stickX = isStaff ? 148 : isAdjust ? 416 : 210 + (isGate ? Math.sin(localSec * 1.4) * 18 : 0);
+  const pulseR = ((localSec * 38) % 32) + 6;
+  const pulseA = 1 - (pulseR - 6) / 32;
 
   return (
     <g>
-      {/* Track bed + Platform */}
-      <rect x="0" y="276" width="480" height="84" fill="#0d171f" />
-      <rect x="0" y="276" width="480" height="7" fill="#facc15" />
-      <text x="16" y="302" fill="#facc15" fontSize="11" fontWeight="800">
-        黄色い線の内側 (Behind Yellow Line)
-      </text>
+      {/* Concourse wall & floor */}
+      <rect x="-30" y="-20" width="700" height="390" fill="#132433" />
+      <rect x="-30" y="356" width="700" height="114" fill="#334155" stroke={INK} strokeWidth="3" />
+      <rect x="-30" y="356" width="700" height="14" fill="#475569" />
 
-      {/* Platform pillar sign: 3番線 */}
-      <g transform="translate(24, 96)">
-        <rect x="0" y="0" width="84" height="36" rx="6" fill="#0f172a" stroke="#38bdf8" strokeWidth="2" />
-        <text x="42" y="16" textAnchor="middle" fill="#38bdf8" fontSize="12" fontWeight="900">
-          3番線 快速
+      {/* Background Overhead Station Sign */}
+      <g transform={`translate(${188 + camPan * 0.4}, 22)`}>
+        <rect x="0" y="0" width="264" height="40" rx="8" fill="#064e3b" stroke={INK} strokeWidth="3" />
+        <text x="132" y="26" textAnchor="middle" fill="#ffffff" fontSize="16" fontWeight="900">
+          改札口 TICKET GATES
         </text>
-        <text x="42" y="30" textAnchor="middle" fill="#cbd5e1" fontSize="9.5" fontWeight="700">
-          新宿 Shinjuku
-        </text>
-        <line x1="42" y1="36" x2="42" y2="180" stroke="#334155" strokeWidth="3" />
       </g>
 
-      {/* Speed lines outside train during Beat 2 cruise */}
-      {progress >= 0.42 && progress < 0.65 ? (
-        <g>
-          {[0, 1, 2, 3].map((i) => {
-            const lx = ((i * 120 - cruiseScroll + 480) % 480) - 60;
-            return (
-              <line
-                key={i}
-                x1={lx}
-                y1={98 + (i % 2) * 32}
-                x2={lx + 44}
-                y2={98 + (i % 2) * 32}
-                stroke="#34d399"
-                strokeWidth="2.5"
-                strokeOpacity="0.45"
-                strokeLinecap="round"
-              />
-            );
-          })}
-        </g>
-      ) : null}
-
-      {/* Commuter Train Car */}
-      <g transform={`translate(${trainX}, 136)`}>
-        <rect
-          x="0"
-          y="0"
-          width="320"
-          height="136"
-          rx="14"
-          fill="#1e293b"
-          stroke="#94a3b8"
-          strokeWidth="2.5"
-        />
-        {/* Iconic JR/Metro emerald band */}
-        <rect x="0" y="84" width="320" height="14" fill="#10b981" />
-        {/* Headlight & destination LED */}
-        <rect x="14" y="14" width="110" height="22" rx="4" fill="#091319" stroke="#34d399" strokeWidth="1.4" />
-        <text x="69" y="29" textAnchor="middle" fill="#34d399" fontSize="11" fontWeight="900">
-          {beatIndex >= 2 ? "快速 · 新宿行" : "各駅 → 快速"}
-        </text>
-
-        {/* Train passenger window */}
-        <rect x="20" y="44" width="84" height="36" rx="5" fill="#0c1b26" stroke="#64748b" strokeWidth="1.5" />
-        <rect x="220" y="44" width="80" height="36" rx="5" fill="#0c1b26" stroke="#64748b" strokeWidth="1.5" />
-
-        {/* Train Center Sliding Doorway (x=126..196) */}
-        <rect x="126" y="24" width="70" height="106" rx="4" fill="#071016" stroke="#64748b" strokeWidth="1.5" />
-        {/* Stickman visible inside train window/door during Beat 2 */}
-        {isInsideTrain ? (
-          <g transform="translate(161, 86) scale(0.75)">
-            <circle cx="0" cy="-24" r="12" fill="#0b1319" stroke="#f8fafc" strokeWidth="3.5" />
-            <path d="M -9 -29 Q 0 -32 9 -29" fill="none" stroke="#34d399" strokeWidth="2.8" />
-            <circle cx="4" cy="-24" r="1.5" fill="#f8fafc" />
-            <circle cx="8" cy="-24" r="1.3" fill="#f8fafc" />
-            <line x1="0" y1="-12" x2="0" y2="18" stroke="#f8fafc" strokeWidth="4.5" strokeLinecap="round" />
-          </g>
-        ) : null}
-        {/* Left & Right Door Leaves */}
-        <rect
-          x={127 - doorSlide}
-          y="25"
-          width="33"
-          height="104"
-          rx="2"
-          fill="#263544"
-          fillOpacity={0.78}
-          stroke="#94a3b8"
-          strokeWidth="1.4"
-        />
-        <rect
-          x={162 + doorSlide}
-          y="25"
-          width="33"
-          height="104"
-          rx="2"
-          fill="#263544"
-          fillOpacity={0.78}
-          stroke="#94a3b8"
-          strokeWidth="1.4"
-        />
-      </g>
-
-      {/* Japan's standardized bright YELLOW overhead EXIT sign (Beat 3!) */}
+      {/* Layer 1: Station Staff Window Booth (駅員) on Left */}
       <g
-        transform="translate(292, 48)"
-        opacity={beatIndex === 3 ? 1 : 0.45}
+        transform={`translate(${24 + camPan * 0.7}, 126)`}
+        opacity={isStaff ? 1 : 0.7}
       >
-        <line x1="46" y1="-48" x2="46" y2="0" stroke="#64748b" strokeWidth="2.5" />
-        <line x1="126" y1="-48" x2="126" y2="0" stroke="#64748b" strokeWidth="2.5" />
         <rect
           x="0"
           y="0"
-          width="172"
-          height="46"
-          rx="7"
-          fill="#facc15"
-          stroke="#fef08a"
-          strokeWidth="2.2"
+          width="116"
+          height="230"
+          rx="10"
+          fill="#1e3a5f"
+          stroke={isStaff ? "#34d399" : INK}
+          strokeWidth={isStaff ? "4" : "3"}
         />
-        <text x="86" y="21" textAnchor="middle" fill="#090d12" fontSize="15.5" fontWeight="900">
-          出口 EXIT →
+        <rect x="12" y="14" width="92" height="24" rx="5" fill="#148c53" stroke={INK} strokeWidth="2" />
+        <text x="58" y="30" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="900">
+          駅員 Staff
         </text>
-        <text x="86" y="37" textAnchor="middle" fill="#1e293b" fontSize="10.5" fontWeight="800">
-          乗り換え Transfer
-        </text>
+        {/* Glowing Staff Window */}
+        <rect x="14" y="48" width="88" height="84" rx="6" fill="#fef3c7" stroke={INK} strokeWidth="2.6" />
+        {/* Friendly Station Attendant inside window */}
+        <circle cx="58" cy="84" r="16" fill="#fde68a" stroke={INK} strokeWidth="2.4" />
+        <rect x="42" y="64" width="32" height="11" rx="3" fill="#1d4ed8" stroke={INK} strokeWidth="2" />
+        <circle cx="53" cy="84" r="2" fill={INK} />
+        <circle cx="63" cy="84" r="2" fill={INK} />
+        <path d="M 52 91 Q 58 96 64 91" fill="none" stroke={INK} strokeWidth="2" strokeLinecap="round" />
+        <rect x="38" y="102" width="40" height="30" rx="6" fill="#1e40af" stroke={INK} strokeWidth="2.2" />
       </g>
 
-      {/* Stickman outside on platform (Beat 1 waiting/boarding, Beat 3 exiting under yellow sign) */}
-      {!isInsideTrain ? (
+      {/* Layer 1.5: Silver & Cobalt Automatic Ticket Gate (改札口) Center */}
+      <g
+        transform={`translate(${254 + camPan * 0.85}, 200)`}
+        opacity={isAdjust || isStaff ? 0.82 : 1}
+      >
+        <rect
+          x="0"
+          y="0"
+          width="110"
+          height="156"
+          rx="10"
+          fill="#cbd5e1"
+          stroke={isLowBalance ? "#f43f5e" : INK}
+          strokeWidth="3.6"
+        />
+        <rect x="0" y="0" width="110" height="28" rx="8" fill={isLowBalance ? "#be123c" : "#0284c7"} stroke={INK} strokeWidth="3" />
+        <text x="55" y="19" textAnchor="middle" fill="#ffffff" fontSize="13.5" fontWeight="900">
+          改札口
+        </text>
+        {/* Glowing Blue IC Pad */}
+        <rect
+          x="16"
+          y="42"
+          width="46"
+          height="36"
+          rx="7"
+          fill={isLowBalance ? "#4c0519" : "#0c4a6e"}
+          stroke={isLowBalance ? "#fb7185" : "#38bdf8"}
+          strokeWidth="2.8"
+        />
+        <text x="39" y="66" textAnchor="middle" fill="#e0f2fe" fontSize="14.5" fontWeight="900">
+          IC
+        </text>
+        {/* Animated Gate Flaps */}
+        <rect
+          x="84"
+          y="46"
+          width={isLowBalance ? 46 : 16}
+          height="58"
+          rx="5"
+          fill={isLowBalance ? "#e11d48" : "#10b981"}
+          stroke={INK}
+          strokeWidth="2.6"
+        />
+        {(isGate || isLowBalance) ? (
+          <circle
+            cx="39"
+            cy="60"
+            r={pulseR}
+            fill="none"
+            stroke={isLowBalance ? "#f43f5e" : "#34d399"}
+            strokeWidth="3.2"
+            opacity={pulseA}
+          />
+        ) : null}
+      </g>
+
+      {/* Bright Yellow Fare Adjustment Machine (精算機) on Right */}
+      <g
+        transform={`translate(${476 + camPan * 0.9}, 110)`}
+        opacity={isAdjust ? 1 : 0.72}
+      >
+        <rect
+          x="0"
+          y="0"
+          width="126"
+          height="246"
+          rx="12"
+          fill="#facc15"
+          stroke={isAdjust ? "#ffffff" : INK}
+          strokeWidth={isAdjust ? "4" : "3.4"}
+        />
+        <rect x="12" y="12" width="102" height="30" rx="6" fill="#1e293b" stroke={INK} strokeWidth="2.2" />
+        <text x="63" y="32" textAnchor="middle" fill="#facc15" fontSize="15" fontWeight="900">
+          精算機
+        </text>
+        <rect x="14" y="52" width="98" height="62" rx="7" fill="#0f172a" stroke={INK} strokeWidth="2.4" />
+        <text x="63" y="77" textAnchor="middle" fill={isAdjust ? "#34d399" : "#fde047"} fontSize="13.5" fontWeight="900">
+          {isAdjust ? "精算完了 ✓" : "不足 +¥180"}
+        </text>
+        <text x="63" y="98" textAnchor="middle" fill="#e2e8f0" fontSize="11.5" fontWeight="800">
+          Fare Adjust
+        </text>
+        <rect x="28" y="130" width="70" height="18" rx="4" fill="#1e293b" />
+        <rect x="28" y="168" width="70" height="36" rx="5" fill="#1e293b" stroke={INK} strokeWidth="2" />
+
+        {isAdjust ? (
+          <YenCoin
+            x={16}
+            y={46 + ((localSec * 22) % 24)}
+            label="¥100"
+            gold
+            sparklePhase={localSec * 4.2}
+          />
+        ) : null}
+      </g>
+
+      {/* Foreground Stickman */}
+      <g transform={`translate(${camPan}, 0)`}>
         <StickmanFigure
           x={stickX}
-          y={228 - bob}
-          facing={1}
-          leanDeg={isWalking ? 6 : 0}
-          headTiltDeg={beatIndex === 3 ? -10 : 0}
-          leftUpperArmDeg={stride * 0.8 - 10}
-          leftForearmDeg={stride * 0.5 + 14}
-          rightUpperArmDeg={beatIndex === 3 ? 98 : -stride * 0.8 + 16}
-          rightForearmDeg={beatIndex === 3 ? 108 : -stride * 0.5 + 26}
-          leftThighDeg={-stride}
-          leftCalfDeg={-stride * 0.55 - 4}
-          rightThighDeg={stride}
-          rightCalfDeg={stride * 0.55}
+          y={299}
+          facing={isStaff ? -1 : 1}
+          scale={1.18}
+          leanDeg={isLowBalance ? -10 : 5}
+          headTiltDeg={isLowBalance ? -12 : 2}
+          leftUpperArmDeg={stride * 0.35 - 12}
+          leftForearmDeg={16}
+          rightUpperArmDeg={isAdjust || isGate || isLowBalance ? 82 : 112}
+          rightForearmDeg={isAdjust || isGate || isLowBalance ? 98 : 122}
+          leftThighDeg={-8}
+          leftCalfDeg={-4}
+          rightThighDeg={8}
+          rightCalfDeg={4}
           hasBackpack
-          expression={beatIndex === 3 ? "happy" : "focused"}
+          holdCardHand={isGate || isLowBalance ? "right" : null}
+          holdCoinHand={isAdjust ? "right" : null}
+          expression={isLowBalance ? "surprised" : "happy"}
+          sweatDrop={isLowBalance}
+          accentColor={isLowBalance ? "#fb7185" : "#34d399"}
         />
-      ) : null}
 
-      {/* Contextual Japanese Prompts */}
-      <SpeechBubble
-        x={stickX + 8}
-        y={156 - bob}
-        text="新宿に行きますか？"
-        subtext="Does this go to Shinjuku?"
-        opacity={clamp01((progress - 0.04) / 0.08) * (1 - clamp01((progress - 0.3) / 0.06))}
-      />
-      <SpeechBubble
-        x={stickX - 18}
-        y={154 - bob}
-        text="黄色い出口！ →"
-        subtext="Follow yellow EXIT"
-        accent="#facc15"
-        opacity={clamp01((progress - 0.74) / 0.08)}
-      />
-
-      <HudBeatBadge
-        beatLabel={beatLabel}
-        accent={beatIndex === 3 ? "#facc15" : "#34d399"}
-      />
+        <SceneSpeechTag
+          x={stickX}
+          y={196}
+          jp={
+            isLowBalance
+              ? "✕ 残高不足！"
+              : isAdjust
+                ? "精算 OK! ✓"
+                : isStaff
+                  ? "すみません！"
+                  : "ピッ！ ✓ OK"
+          }
+          en={
+            isLowBalance
+              ? "Use yellow 精算機"
+              : isAdjust
+                ? "Fare Adjusted"
+                : isStaff
+                  ? "Ask station staff"
+                  : "Pass smoothly"
+          }
+          accent={isLowBalance ? "#f43f5e" : isAdjust ? "#facc15" : "#34d399"}
+        />
+      </g>
     </g>
   );
 };
 
 /**
- * Reusable pure-Remotion animated stickman director component (`480x360` chalkboard stage)
- * synchronized deterministically to `useCurrentFrame()` across each lesson section.
+ * Scene 4 (Layered 2.5D): Elevated Twilight Platform -> Commuter Train with Air-Brake Steam Puffs
+ * -> City Windows -> Dynamic Train-Type Badges & Bright Yellow 出口 EXIT Sign!
+ */
+const RideAndExitTrain25D: React.FC<{
+  readonly localSec: number;
+  readonly progress: number;
+  readonly activeKey: string;
+}> = ({ localSec, progress, activeKey }) => {
+  const effectiveKey = activeKey || (progress < 0.5 ? "rapid" : "exit");
+  const camPan = Math.sin(localSec * 0.42) * 12;
+
+  const isTrainType =
+    effectiveKey === "local" ||
+    effectiveKey === "rapid" ||
+    effectiveKey === "express" ||
+    effectiveKey === "limited";
+  const isTransfer = effectiveKey === "transfer";
+  const isLastTrain = effectiveKey === "last_train";
+  const isExitOrGuide = effectiveKey === "exit" || effectiveKey === "guide";
+
+  const trainBadge =
+    effectiveKey === "local"
+      ? { jp: "各駅停車", en: "Local", color: "#38bdf8" }
+      : effectiveKey === "express"
+        ? { jp: "急行", en: "Express", color: "#fbbf24" }
+        : effectiveKey === "limited"
+          ? { jp: "特急", en: "Ltd. Exp.", color: "#f43f5e" }
+          : { jp: "快速", en: "Rapid", color: "#34d399" };
+
+  const trainCruiseX = isTrainType
+    ? -16 + Math.sin(localSec * 0.9) * 14
+    : 0;
+  const doorOpen = isExitOrGuide ? 22 : 8;
+  const bgScroll = isTrainType ? (localSec * 90) % 140 : 0;
+
+  return (
+    <g>
+      {/* Layer 0: Twilight City Skyline & Warm Lit Windows Scrolling Past Tracks */}
+      <g transform={`translate(${camPan * 0.3}, 0)`}>
+        <defs>
+          <linearGradient id="sky-train-25d" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#0f172a" />
+            <stop offset="100%" stopColor="#1e293b" />
+          </linearGradient>
+        </defs>
+        <rect x="-40" y="-20" width="720" height="390" fill="url(#sky-train-25d)" />
+        {[0, 1, 2, 3, 4, 5].map((i) => {
+          const bx = ((i * 140 - bgScroll + 840) % 840) - 90;
+          return (
+            <g key={i} transform={`translate(${bx}, ${118 + (i % 2) * 26})`}>
+              <rect width="74" height="150" rx="5" fill="#1e293b" stroke={INK} strokeWidth="2.5" />
+              {[18, 44, 70].map((wy) => (
+                <g key={wy}>
+                  <rect x="12" y={wy} width="16" height="14" rx="2" fill="#fde047" opacity="0.72" />
+                  <rect x="42" y={wy} width="16" height="14" rx="2" fill="#fde047" opacity="0.45" />
+                </g>
+              ))}
+            </g>
+          );
+        })}
+      </g>
+
+      {/* Layer 1: Overhead Gantries (3番線 / Clock for 終電 / Yellow 出口 EXIT / 乗り換え Transfer) */}
+      <g transform={`translate(${camPan * 0.65}, 0)`}>
+        {/* Platform 3 & Train-Type LED Sign (clear of top-left LIVE pill) */}
+        <g transform="translate(26, 56)">
+          <rect
+            x="0"
+            y="0"
+            width="172"
+            height="62"
+            rx="10"
+            fill="#0f172a"
+            stroke={isTrainType ? trainBadge.color : INK}
+            strokeWidth="3.2"
+          />
+          <rect x="8" y="8" width="156" height="24" rx="6" fill={trainBadge.color} />
+          <text x="86" y="25" textAnchor="middle" fill={INK} fontSize="14.5" fontWeight="900">
+            3番線 {trainBadge.jp}
+          </text>
+          <text x="86" y="50" textAnchor="middle" fill="#e2e8f0" fontSize="12" fontWeight="800">
+            {trainBadge.en} · 新宿 Shinjuku
+          </text>
+        </g>
+
+        {/* Illuminated Last Train Clock when 終電 active */}
+        {isLastTrain ? (
+          <g transform="translate(226, 20)">
+            <rect x="0" y="0" width="166" height="60" rx="10" fill="#450a0a" stroke="#fbbf24" strokeWidth="3.2" />
+            <text x="83" y="25" textAnchor="middle" fill="#fde047" fontSize="16" fontWeight="900">
+              23:58 終電!
+            </text>
+            <text x="83" y="46" textAnchor="middle" fill="#ffffff" fontSize="12" fontWeight="800">
+              Last Train Departing
+            </text>
+          </g>
+        ) : null}
+
+        {/* Transfer Sign when 乗り換え active */}
+        {isTransfer ? (
+          <g transform="translate(216, 20)">
+            <rect x="0" y="0" width="182" height="60" rx="10" fill="#0c4a6e" stroke="#38bdf8" strokeWidth="3.2" />
+            <text x="91" y="26" textAnchor="middle" fill="#ffffff" fontSize="15" fontWeight="900">
+              乗り換え Transfer ⇄
+            </text>
+            <text x="91" y="46" textAnchor="middle" fill="#7dd3fc" fontSize="11.5" fontWeight="800">
+              JR 山手線 → 東京メトロ
+            </text>
+          </g>
+        ) : null}
+
+        {/* Japan Standardized Bright Yellow EXIT Sign (Always visible, glows on Exit/Guide) */}
+        <g
+          transform="translate(422, 20)"
+          opacity={isExitOrGuide ? 1 : 0.72}
+        >
+          <rect
+            x="0"
+            y="0"
+            width="192"
+            height="62"
+            rx="10"
+            fill="#facc15"
+            stroke={isExitOrGuide ? "#ffffff" : INK}
+            strokeWidth={isExitOrGuide ? "4" : "3"}
+          />
+          <text x="96" y="29" textAnchor="middle" fill={INK} fontSize="20" fontWeight="900">
+            出口 EXIT →
+          </text>
+          <text x="96" y="49" textAnchor="middle" fill="#1e293b" fontSize="12" fontWeight="800">
+            案内 Station Guide
+          </text>
+        </g>
+      </g>
+
+      {/* Layer 1.5: Sleek Colorful Commuter Train Car with Air-Brake Steam Puffs */}
+      <g transform={`translate(${88 + trainCruiseX + camPan * 0.85}, 152)`}>
+        {/* Air-brake steam puffs near bogies */}
+        <SteamPuffs originX={34} originY={184} localSec={localSec} driftX={-32} riseY={24} scale={0.85} />
+        <SteamPuffs originX={390} originY={184} localSec={localSec + 0.4} driftX={32} riseY={24} scale={0.85} />
+
+        {/* Train body */}
+        <rect
+          x="0"
+          y="0"
+          width="454"
+          height="196"
+          rx="18"
+          fill="#e2e8f0"
+          stroke={INK}
+          strokeWidth="3.8"
+        />
+        {/* Iconic JR/Metro vibrant color stripe */}
+        <rect x="3" y="114" width="448" height="22" fill={trainBadge.color} />
+        {/* Roof detail */}
+        <rect x="52" y="-10" width="90" height="10" rx="4" fill="#64748b" stroke={INK} strokeWidth="2.4" />
+        <rect x="290" y="-10" width="90" height="10" rx="4" fill="#64748b" stroke={INK} strokeWidth="2.4" />
+
+        {/* Warm Lit Train Passenger Windows */}
+        <rect x="26" y="34" width="114" height="66" rx="8" fill="#fef3c7" stroke={INK} strokeWidth="3" />
+        <rect x="310" y="34" width="114" height="66" rx="8" fill="#fef3c7" stroke={INK} strokeWidth="3" />
+
+        {/* Train Destination Sign */}
+        <rect x="36" y="10" width="124" height="20" rx="4" fill="#0f172a" stroke={INK} strokeWidth="1.8" />
+        <text x="98" y="24" textAnchor="middle" fill={trainBadge.color} fontSize="11.5" fontWeight="900">
+          {trainBadge.jp} · 新宿行
+        </text>
+
+        {/* Center Sliding Doorway */}
+        <rect x="170" y="28" width="114" height="156" rx="6" fill="#0f172a" stroke={INK} strokeWidth="3" />
+        <rect
+          x={172 - doorOpen}
+          y="30"
+          width="54"
+          height="152"
+          rx="3"
+          fill="#94a3b8"
+          fillOpacity={0.82}
+          stroke={INK}
+          strokeWidth="2.2"
+        />
+        <rect
+          x={228 + doorOpen}
+          y="30"
+          width="54"
+          height="152"
+          rx="3"
+          fill="#94a3b8"
+          fillOpacity={0.82}
+          stroke={INK}
+          strokeWidth="2.2"
+        />
+      </g>
+
+      {/* Platform Foreground + Yellow Tactile Line */}
+      <rect x="-40" y="352" width="720" height="118" fill="#334155" stroke={INK} strokeWidth="3.2" />
+      <rect x="-40" y="352" width="720" height="11" fill="#facc15" stroke={INK} strokeWidth="2" />
+
+      {/* Stickman riding / pointing to Exit */}
+      <g transform={`translate(${camPan}, 0)`}>
+        <StickmanFigure
+          x={isExitOrGuide ? 464 : 308}
+          y={296}
+          facing={1}
+          scale={1.16}
+          leanDeg={4}
+          headTiltDeg={isExitOrGuide ? -10 : 0}
+          leftUpperArmDeg={-16}
+          leftForearmDeg={12}
+          rightUpperArmDeg={isExitOrGuide ? 115 : 88}
+          rightForearmDeg={isExitOrGuide ? 124 : 102}
+          leftThighDeg={-8}
+          leftCalfDeg={-4}
+          rightThighDeg={8}
+          rightCalfDeg={4}
+          hasBackpack
+          expression="happy"
+          accentColor={isExitOrGuide ? "#facc15" : trainBadge.color}
+        />
+
+        <SceneSpeechTag
+          x={isExitOrGuide ? 430 : 308}
+          y={196}
+          jp={
+            isTransfer
+              ? "乗り換えはどこ？"
+              : isLastTrain
+                ? "急いで！終電です！"
+                : isExitOrGuide
+                  ? "黄色い出口へ！"
+                  : `${trainBadge.jp}に乗ります！`
+          }
+          en={
+            isTransfer
+              ? "Find transfer line"
+              : isLastTrain
+                ? "Catch the last train"
+                : isExitOrGuide
+                  ? "Follow yellow EXIT"
+                  : `${trainBadge.en} Train`
+          }
+          accent={isExitOrGuide ? "#facc15" : trainBadge.color}
+        />
+      </g>
+    </g>
+  );
+};
+
+/**
+ * Vibrant, colorful, layered 2.5D vector animation stage driven strictly by
+ * `useCurrentFrame()` and dynamically synced to `activeSubTopicKey`.
  */
 export const StickmanScenePlayer: React.FC<StickmanScenePlayerProps> = ({
   scene,
   sectionStartSec,
   sectionEndSec,
+  activeSubTopicKey = "",
+  activeSubTopicLabel,
   caption,
-  width = 480,
-  height = 360,
+  width = "100%",
+  height = 465,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -1317,94 +1507,122 @@ export const StickmanScenePlayer: React.FC<StickmanScenePlayerProps> = ({
   const localSec = Math.max(0, timeSec - sectionStartSec);
   const sectionDur = Math.max(9, sectionEndSec - sectionStartSec);
   const progress = clamp01(localSec / sectionDur);
-  const entryFade = interpolate(localSec, [0, 0.25], [0.88, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+
+  // Subtle continuous camera breathing/zoom inside viewport
+  const camZoom = interpolate(
+    Math.sin(localSec * 0.55),
+    [-1, 1],
+    [1.0, 1.045],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+  );
 
   return (
     <div
       style={{
         width,
         flexShrink: 0,
-        alignSelf: "center",
-        borderRadius: 14,
+        borderRadius: 18,
         overflow: "hidden",
-        border: "1px solid rgba(54, 242, 174, 0.34)",
-        backgroundColor: "#090f14",
+        border: "2px solid rgba(52, 211, 153, 0.36)",
+        backgroundColor: "#0a121a",
+        boxShadow: "0 18px 40px rgba(0, 0, 0, 0.45)",
         display: "flex",
         flexDirection: "column",
-        opacity: entryFade,
       }}
     >
       <div
         style={{
+          position: "relative",
           width: "100%",
           height,
-          backgroundColor: "#090f14",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          overflow: "hidden",
+          backgroundColor: "#0a121a",
         }}
       >
         <svg
           width="100%"
           height="100%"
-          viewBox="0 0 480 360"
+          viewBox="0 0 640 460"
+          preserveAspectRatio="xMidYMid meet"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           style={{
             fontFamily:
               '"Hiragino Sans", "Noto Sans JP", "Avenir Next", "Helvetica Neue", sans-serif',
+            transform: `scale(${camZoom.toFixed(4)})`,
+            transformOrigin: "center center",
           }}
         >
-          {/* Matte chalkboard dot-grid background */}
-          <defs>
-            <pattern
-              id={`board-dots-${scene}`}
-              width="24"
-              height="24"
-              patternUnits="userSpaceOnUse"
-            >
-              <circle cx="12" cy="12" r="1" fill="rgba(148, 163, 184, 0.14)" />
-            </pattern>
-          </defs>
-          <rect width="480" height="360" fill="#091016" />
-          <rect width="480" height="360" fill={`url(#board-dots-${scene})`} />
+          {scene === "walk_to_station" ? (
+            <WalkToStation25D
+              localSec={localSec}
+              progress={progress}
+              activeKey={activeSubTopicKey}
+            />
+          ) : scene === "buy_ticket_ic" ? (
+            <BuyTicketIc25D
+              localSec={localSec}
+              progress={progress}
+              activeKey={activeSubTopicKey}
+            />
+          ) : scene === "tap_ticket_gate" ? (
+            <TapTicketGate25D
+              localSec={localSec}
+              progress={progress}
+              activeKey={activeSubTopicKey}
+            />
+          ) : (
+            <RideAndExitTrain25D
+              localSec={localSec}
+              progress={progress}
+              activeKey={activeSubTopicKey}
+            />
+          )}
 
-          {/* Bottom progress bar */}
-          <rect x="16" y="346" width="448" height="4" rx="2" fill="rgba(255,255,255,0.08)" />
+          {/* Bottom live progress bar */}
+          <rect x="20" y="446" width="600" height="5" rx="2.5" fill="rgba(17,24,39,0.55)" />
           <rect
-            x="16"
-            y="346"
-            width={Math.round(448 * progress)}
-            height="4"
-            rx="2"
+            x="20"
+            y="446"
+            width={Math.round(600 * progress)}
+            height="5"
+            rx="2.5"
             fill="#34d399"
           />
-
-          {scene === "walk_to_station" ? (
-            <WalkToStationScene localSec={localSec} progress={progress} />
-          ) : scene === "buy_ticket_ic" ? (
-            <BuyTicketIcScene localSec={localSec} progress={progress} />
-          ) : scene === "tap_ticket_gate" ? (
-            <TapTicketGateScene localSec={localSec} progress={progress} />
-          ) : (
-            <RideAndExitTrainScene localSec={localSec} progress={progress} />
-          )}
         </svg>
+
+        {activeSubTopicLabel ? (
+          <div
+            style={{
+              position: "absolute",
+              top: 12,
+              left: 12,
+              padding: "5px 13px",
+              borderRadius: 999,
+              backgroundColor: "rgba(11, 18, 26, 0.86)",
+              border: "1.5px solid rgba(52, 211, 153, 0.65)",
+              color: "#34d399",
+              fontSize: 13,
+              fontWeight: 800,
+              letterSpacing: "0.03em",
+            }}
+          >
+            ● LIVE: {activeSubTopicLabel}
+          </div>
+        ) : null}
       </div>
+
       {caption ? (
         <div
           style={{
-            padding: "9px 14px",
+            padding: "8px 14px",
             borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-            backgroundColor: "#0f171e",
-            fontSize: 16,
+            backgroundColor: "#0e1720",
+            fontSize: 14.5,
             fontWeight: 600,
             color: "#b7d9ca",
             textAlign: "center",
-            lineHeight: 1.3,
+            lineHeight: 1.25,
           }}
         >
           {caption}

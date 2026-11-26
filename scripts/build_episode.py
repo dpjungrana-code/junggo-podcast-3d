@@ -21,19 +21,24 @@ import argparse
 import asyncio
 import html
 import json
+import math
 import re
+import wave
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import edge_tts
+import numpy as np
 
 from qa_engine import (
     align_word_timings,
     audit_script_morphology,
     compare_phonetics,
     decode_mp3_to_pcm16k,
+    furigana_tokens_to_tts_text,
     japanese_to_spoken_kana,
+    parse_furigana_markup,
     transcribe_clip_whisper,
 )
 
@@ -514,7 +519,12 @@ async def _synthesize_and_verify_line(
     pitch = line.get("pitch") or pitch
     pause_in_line = float(line.get("microPauseSec", micro_pause_sec))
 
-    primary_text = str(line.get("ttsText") or line["japanese"])
+    display_jp, parsed_tokens = parse_furigana_markup(str(line["japanese"]))
+    auto_tts = furigana_tokens_to_tts_text(parsed_tokens)
+    line["japanese"] = display_jp
+    line["_furigana_tokens"] = parsed_tokens
+    primary_text = str(line.get("ttsText") or auto_tts)
+    line["ttsText"] = primary_text
     stream = await _tts_line_with_micro_pauses(
         text=primary_text,
         voice=voice,
@@ -527,7 +537,7 @@ async def _synthesize_and_verify_line(
     sim = compare_phonetics(primary_text, whisper_res.transcript)
 
     if sim < 0.88:
-        auto_kana = japanese_to_spoken_kana(str(line["japanese"]))
+        auto_kana = auto_tts or japanese_to_spoken_kana(display_jp)
         print(
             f"[QA AUTO-FIX] {line.get('id')}: low Whisper similarity ({sim:.2%}) "
             f"| expected={japanese_to_spoken_kana(primary_text)} vs heard={whisper_res.kana}. "
@@ -550,7 +560,153 @@ async def _synthesize_and_verify_line(
             sim = retry_sim
             line["ttsText"] = auto_kana
 
-    return stream, (pcm, whisper_res, sim), None
+    return stream, (pcm, whisper_res, sim), parsed_tokens
+
+
+def _write_wav_pcm16(path: Path, samples: np.ndarray, sample_rate: int = 44100) -> None:
+    """Writes normalized float32/float64 audio samples [-1, 1] to 16-bit mono WAV."""
+    clipped = np.clip(samples, -1.0, 1.0)
+    pcm16 = (clipped * 32767.0).astype(np.int16)
+    with wave.open(str(path), "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        wf.writeframes(pcm16.tobytes())
+
+
+def _generate_sfx_library(sfx_dir: Path) -> dict[str, str]:
+    """
+    Synthesizes 6 clean, royalty-free procedural WAV sound effects in `public/audio/sfx/`
+    so UI switches, train chimes, IC card taps, coins, and quiz reveals stay lively.
+    """
+    sfx_dir.mkdir(parents=True, exist_ok=True)
+    sr = 44100
+
+    # 1. whoosh.wav: airy soft filtered-noise + subtle pitch glide (0.32s)
+    t_w = np.linspace(0.0, 0.32, int(sr * 0.32), endpoint=False)
+    rng = np.random.default_rng(42)
+    noise = rng.normal(0.0, 1.0, size=t_w.shape[0])
+    # Smooth moving-average lowpass + gentle bandpass character
+    kernel = np.ones(48) / 48.0
+    smooth_noise = np.convolve(noise, kernel, mode="same")
+    env_w = np.sin(np.pi * (t_w / 0.32)) ** 1.4
+    sweep = np.sin(2.0 * np.pi * (240.0 + 380.0 * (t_w / 0.32)) * t_w) * 0.12
+    _write_wav_pcm16(sfx_dir / "whoosh.wav", (smooth_noise * 0.75 + sweep) * env_w * 0.55, sr)
+
+    # 2. ic_beep.wav: crisp Japanese IC gate double-chirp "ピッ！" (0.20s)
+    t_ic = np.linspace(0.0, 0.20, int(sr * 0.20), endpoint=False)
+    sig_ic = np.zeros_like(t_ic)
+    m1 = t_ic < 0.065
+    m2 = (t_ic >= 0.085) & (t_ic < 0.175)
+    sig_ic[m1] = np.sin(2.0 * np.pi * 2280.0 * t_ic[m1]) * np.exp(-t_ic[m1] * 26.0)
+    sig_ic[m2] = (
+        0.75 * np.sin(2.0 * np.pi * 2280.0 * (t_ic[m2] - 0.085))
+        + 0.35 * np.sin(2.0 * np.pi * 3420.0 * (t_ic[m2] - 0.085))
+    ) * np.exp(-(t_ic[m2] - 0.085) * 20.0)
+    _write_wav_pcm16(sfx_dir / "ic_beep.wav", sig_ic * 0.65, sr)
+
+    # 3. coin_clink.wav: sparkling yen coin metallic chime (0.36s)
+    t_c = np.linspace(0.0, 0.36, int(sr * 0.36), endpoint=False)
+    c1 = (
+        0.6 * np.sin(2.0 * np.pi * 2637.0 * t_c)
+        + 0.4 * np.sin(2.0 * np.pi * 3951.0 * t_c)
+    ) * np.exp(-t_c * 14.0)
+    delay = (t_c >= 0.075).astype(np.float64)
+    t_c2 = np.maximum(0.0, t_c - 0.075)
+    c2 = delay * (
+        0.55 * np.sin(2.0 * np.pi * 3136.0 * t_c2)
+        + 0.35 * np.sin(2.0 * np.pi * 4698.0 * t_c2)
+    ) * np.exp(-t_c2 * 11.0)
+    _write_wav_pcm16(sfx_dir / "coin_clink.wav", (c1 + c2) * 0.55, sr)
+
+    # 4. error_buzz.wav: soft gentle two-tone low-balance alert (0.30s)
+    t_e = np.linspace(0.0, 0.30, int(sr * 0.30), endpoint=False)
+    sig_e = np.zeros_like(t_e)
+    e1 = t_e < 0.12
+    e2 = t_e >= 0.14
+    sig_e[e1] = (
+        0.7 * np.sin(2.0 * np.pi * 340.0 * t_e[e1])
+        + 0.3 * np.sin(2.0 * np.pi * 510.0 * t_e[e1])
+    ) * np.exp(-t_e[e1] * 14.0)
+    sig_e[e2] = (
+        0.75 * np.sin(2.0 * np.pi * 255.0 * (t_e[e2] - 0.14))
+        + 0.25 * np.sin(2.0 * np.pi * 382.0 * (t_e[e2] - 0.14))
+    ) * np.exp(-(t_e[e2] - 0.14) * 12.0)
+    _write_wav_pcm16(sfx_dir / "error_buzz.wav", sig_e * 0.65, sr)
+
+    # 5. train_chime.wav: warm JR-inspired ascending 4-note station chime (0.70s)
+    t_t = np.linspace(0.0, 0.70, int(sr * 0.70), endpoint=False)
+    sig_t = np.zeros_like(t_t)
+    notes_train = [(0.0, 783.99), (0.14, 987.77), (0.28, 1174.66), (0.42, 1567.98)]
+    for onset, freq in notes_train:
+        mask = t_t >= onset
+        dt = np.maximum(0.0, t_t - onset)
+        tone = (
+            0.75 * np.sin(2.0 * math.pi * freq * dt)
+            + 0.25 * np.sin(2.0 * math.pi * (freq * 2.0) * dt)
+        ) * np.exp(-dt * 8.5)
+        sig_t += mask * tone
+    _write_wav_pcm16(sfx_dir / "train_chime.wav", sig_t * 0.5, sr)
+
+    # 6. quiz_correct.wav: crisp cheerful "ピンポン！" major triad chime (0.58s)
+    t_q = np.linspace(0.0, 0.58, int(sr * 0.58), endpoint=False)
+    sig_q = np.zeros_like(t_q)
+    for onset, freq in [(0.0, 1046.5), (0.11, 1318.51), (0.22, 1567.98)]:
+        mask = t_q >= onset
+        dt = np.maximum(0.0, t_q - onset)
+        sig_q += mask * (
+            0.8 * np.sin(2.0 * math.pi * freq * dt)
+            + 0.2 * np.sin(2.0 * math.pi * (freq * 2.0) * dt)
+        ) * np.exp(-dt * 8.0)
+    _write_wav_pcm16(sfx_dir / "quiz_correct.wav", sig_q * 0.52, sr)
+
+    return {
+        "whoosh": "audio/sfx/whoosh.wav",
+        "ic_beep": "audio/sfx/ic_beep.wav",
+        "coin_clink": "audio/sfx/coin_clink.wav",
+        "error_buzz": "audio/sfx/error_buzz.wav",
+        "train_chime": "audio/sfx/train_chime.wav",
+        "quiz_correct": "audio/sfx/quiz_correct.wav",
+    }
+
+
+def _compute_cue_subtopic_switches(
+    cue_start_sec: float,
+    word_timings: list[dict[str, Any]],
+    sub_topics: list[dict[str, Any]],
+    default_index: int | None,
+) -> list[dict[str, Any]]:
+    """
+    Maps Whisper word timestamps onto `subTopics` triggers so the active pill
+    and Left Spotlight follow Sensei & Maria's spoken words dynamically.
+    """
+    if not sub_topics:
+        return []
+
+    hits: list[tuple[float, int]] = []
+    for wt in word_timings:
+        word_text = str(wt.get("word", "")).strip()
+        if not word_text:
+            continue
+        w_start = float(wt.get("startSec", cue_start_sec))
+        for idx, topic in enumerate(sub_topics):
+            keywords = topic.get("triggerKeywords") or [topic.get("jp", "")]
+            if any(str(kw) and (str(kw) in word_text or word_text in str(kw)) and len(word_text) >= 2 for kw in keywords):
+                hits.append((round(w_start, 3), idx))
+                break
+
+    base_idx = int(default_index) if default_index is not None else 0
+    base_idx = max(0, min(len(sub_topics) - 1, base_idx))
+
+    switches: list[dict[str, Any]] = [{"timeSec": round(cue_start_sec, 3), "subTopicIndex": base_idx}]
+    for t_sec, idx in sorted(hits, key=lambda pair: pair[0]):
+        if t_sec <= switches[-1]["timeSec"] + 0.15:
+            if len(switches) == 1:
+                switches[0]["subTopicIndex"] = idx
+            continue
+        if idx != switches[-1]["subTopicIndex"]:
+            switches.append({"timeSec": t_sec, "subTopicIndex": idx})
+    return switches
 
 
 async def build_episode(
@@ -583,21 +739,32 @@ async def build_episode(
     if not raw_lines:
         raise ValueError("episode_script.json must contain at least one entry in 'lines'.")
 
+    sfx_dir = audio_out_path.parent / "sfx"
+    sfx_map = _generate_sfx_library(sfx_dir)
+    print(f"[SFX] Generated {len(sfx_map)} procedural WAV sound effects in {sfx_dir}")
+
+    raw_sections_by_id: dict[str, dict[str, Any]] = {
+        str(sec.get("id", "")): sec for sec in raw_sections if sec.get("id")
+    }
+
     # Step 1: Synthesize all lines concurrently via Edge-TTS
     synthesized: list[Mp3StreamInfo] = []
     pcms: list[Any] = []
     whisper_results: list[Any] = []
+    parsed_lines: list[dict[str, Any]] = []
     for line in raw_lines:
         line_dict = dict(line)
-        stream, (pcm, wres, sim), _ = await _synthesize_and_verify_line(
+        stream, (pcm, wres, sim), line_tokens = await _synthesize_and_verify_line(
             line=line_dict,
             default_rate=speech_rate,
             micro_pause_sec=micro_pause_sec,
             whisper_model=whisper_model,
         )
+        line_dict["_furigana_tokens"] = line_tokens
         synthesized.append(stream)
         pcms.append(pcm)
         whisper_results.append((wres, sim))
+        parsed_lines.append(line_dict)
         print(
             f"  [TTS+Whisper] {line.get('id', '?'):<7} ({line.get('speaker', '?'):<6}) "
             f"dur={stream.duration_sec:5.2f}s | match={sim * 100:5.1f}% | {wres.transcript}"
@@ -619,15 +786,18 @@ async def build_episode(
     section_line_starts: dict[str, list[float]] = {}
 
     for idx, (line, stream, pcm, (wres, _sim)) in enumerate(
-        zip(raw_lines, synthesized, pcms, whisper_results)
+        zip(parsed_lines, synthesized, pcms, whisper_results)
     ):
         start_sec = round(cursor_sec, 3)
         combined_audio.extend(stream.frames_bytes)
         cursor_sec += stream.duration_sec
         end_sec = round(cursor_sec, 3)
 
+        display_jp = str(line["japanese"])
+        furi_tokens = line.get("_furigana_tokens") or []
+
         word_timings = align_word_timings(
-            japanese=str(line["japanese"]),
+            japanese=display_jp,
             romaji=str(line.get("romaji", "")),
             clip_start_sec=start_sec,
             clip_duration_sec=stream.duration_sec,
@@ -641,7 +811,8 @@ async def build_episode(
             "startSec": start_sec,
             "endSec": end_sec,
             "speaker": line.get("speaker", "Sensei"),
-            "japanese": line["japanese"],
+            "japanese": display_jp,
+            "furiganaTokens": furi_tokens,
             "romaji": line.get("romaji", ""),
             "english": line.get("english", ""),
             "wordTimings": word_timings,
@@ -663,9 +834,30 @@ async def build_episode(
             cue_obj["imageCaption"] = line["imageCaption"]
         if line.get("animationScene"):
             cue_obj["animationScene"] = line["animationScene"]
-        subtitles.append(cue_obj)
+        if "activeSubTopicIndex" in line:
+            cue_obj["activeSubTopicIndex"] = int(line["activeSubTopicIndex"])
+        if line.get("activeSubTopic"):
+            cue_obj["activeSubTopic"] = line["activeSubTopic"]
 
         sec_id = line.get("sectionId")
+        sec_def = raw_sections_by_id.get(str(sec_id or ""), {})
+        sec_subtopics: list[dict[str, Any]] = list(
+            (sec_def.get("stationGuide") or {}).get("subTopics")
+            or sec_def.get("subTopics")
+            or []
+        )
+        if sec_subtopics:
+            cue_switches = _compute_cue_subtopic_switches(
+                cue_start_sec=start_sec,
+                word_timings=word_timings,
+                sub_topics=sec_subtopics,
+                default_index=line.get("activeSubTopicIndex"),
+            )
+            if cue_switches:
+                cue_obj["subTopicSwitches"] = cue_switches
+
+        subtitles.append(cue_obj)
+
         if sec_id:
             section_line_starts.setdefault(sec_id, []).append(start_sec)
             if sec_id not in section_spans:
@@ -781,6 +973,28 @@ async def build_episode(
                 )
 
             if station_payload is not None:
+                title_disp, title_toks = parse_furigana_markup(str(station_payload.get("titleJp", "")))
+                station_payload["titleJp"] = title_disp
+                station_payload["titleTokens"] = title_toks
+                kp_disp, kp_toks = parse_furigana_markup(str(station_payload.get("keyPhraseJp", "")))
+                station_payload["keyPhraseJp"] = kp_disp
+                station_payload["keyPhraseTokens"] = kp_toks
+
+                parsed_subtopics: list[dict[str, Any]] = []
+                for st in station_payload.get("subTopics", []):
+                    st_copy = dict(st)
+                    jp_d, jp_t = parse_furigana_markup(str(st_copy.get("jp", "")))
+                    ex_d, ex_t = parse_furigana_markup(str(st_copy.get("exampleJp", "")))
+                    pill_d, _ = parse_furigana_markup(str(st_copy.get("pillLabel", "")))
+                    st_copy["jp"] = jp_d
+                    st_copy["jpTokens"] = jp_t
+                    st_copy["exampleJp"] = ex_d
+                    st_copy["exampleTokens"] = ex_t
+                    st_copy["pillLabel"] = pill_d
+                    parsed_subtopics.append(st_copy)
+                if parsed_subtopics:
+                    station_payload["subTopics"] = parsed_subtopics
+
                 if sec_image_url and not station_payload.get("imageUrl"):
                     station_payload["imageUrl"] = sec_image_url
                 if sec_animation_scene and not station_payload.get("animationScene"):
@@ -807,6 +1021,17 @@ async def build_episode(
 
             if "quiz" in sec:
                 quiz = dict(sec["quiz"])
+                q_disp, q_toks = parse_furigana_markup(str(quiz.get("questionJp", "")))
+                quiz["questionJp"] = q_disp
+                quiz["questionTokens"] = q_toks
+                parsed_opts: list[dict[str, Any]] = []
+                for opt in quiz.get("options", []):
+                    opt_copy = dict(opt)
+                    oj_disp, oj_toks = parse_furigana_markup(str(opt_copy.get("jp", "")))
+                    opt_copy["jp"] = oj_disp
+                    opt_copy["jpTokens"] = oj_toks
+                    parsed_opts.append(opt_copy)
+                quiz["options"] = parsed_opts
                 sec_dur = max(1.0, sec_end - sec_start)
                 quiz_line_starts = section_line_starts.get(sec_id, [])
                 if "revealSec" not in quiz and len(quiz_line_starts) >= 2:
@@ -830,6 +1055,52 @@ async def build_episode(
 
         sections[-1]["endSec"] = total_duration_sec
 
+    # Build cleanly spaced procedural SFX triggers (-14dB = volume 0.20)
+    sfx_events: list[dict[str, Any]] = []
+
+    def _add_sfx(time_sec: float, kind: str, min_gap: float = 1.15) -> None:
+        src = sfx_map.get(kind)
+        if not src:
+            return
+        t_val = round(max(0.0, time_sec), 3)
+        if any(abs(t_val - ev["timeSec"]) < min_gap for ev in sfx_events):
+            return
+        sfx_events.append({"timeSec": t_val, "kind": kind, "src": src, "volume": 0.20})
+
+    sections_by_id: dict[str, dict[str, Any]] = {s["id"]: s for s in sections}
+    for s in sections:
+        anim = s.get("animationScene") or (s.get("stationGuide") or {}).get("animationScene")
+        if anim == "ride_and_exit_train":
+            _add_sfx(s["startSec"] + 0.05, "train_chime", min_gap=0.8)
+        elif s.get("type") in ("station_guide", "dialogue") and s["startSec"] > 0.5:
+            _add_sfx(s["startSec"] + 0.05, "whoosh", min_gap=0.8)
+        if s.get("type") == "quiz" and isinstance(s.get("quiz"), dict):
+            _add_sfx(float(s["quiz"]["revealSec"]) + 0.05, "quiz_correct", min_gap=0.5)
+
+    for cue in subtitles:
+        switches = cue.get("subTopicSwitches") or []
+        cue_sec_id = ""
+        for raw_ln in raw_lines:
+            if raw_ln.get("id") == cue.get("id"):
+                cue_sec_id = str(raw_ln.get("sectionId", ""))
+                break
+        sec_obj = sections_by_id.get(cue_sec_id, {})
+        subtopics = (sec_obj.get("stationGuide") or {}).get("subTopics") or sec_obj.get("subTopics") or []
+        for idx_sw, sw in enumerate(switches):
+            t_sw = float(sw["timeSec"])
+            topic_idx = int(sw["subTopicIndex"])
+            hkey = str(subtopics[topic_idx].get("highlightKey", "")) if topic_idx < len(subtopics) else ""
+            if hkey == "gate":
+                _add_sfx(t_sw, "ic_beep", min_gap=1.2)
+            elif hkey == "low_balance":
+                _add_sfx(t_sw, "error_buzz", min_gap=1.2)
+            elif hkey in ("adjust", "charge", "fare"):
+                _add_sfx(t_sw, "coin_clink", min_gap=1.2)
+            elif idx_sw > 0:
+                _add_sfx(t_sw, "whoosh", min_gap=1.35)
+
+    sfx_events.sort(key=lambda ev: ev["timeSec"])
+
     episode_data: dict[str, Any] = {
         "episodeNumber": episode_number,
         "title": title,
@@ -839,6 +1110,7 @@ async def build_episode(
         "audioSrc": "audio/current_episode.mp3",
         "sections": sections,
         "subtitles": subtitles,
+        "sfxEvents": sfx_events,
     }
 
     audio_out_path.parent.mkdir(parents=True, exist_ok=True)

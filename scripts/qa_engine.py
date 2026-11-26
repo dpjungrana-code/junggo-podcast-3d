@@ -152,6 +152,231 @@ COMPOUND_WORD_CHUNKS: tuple[str, ...] = (
 
 _PUNCTUATION_RE = re.compile(r'^[\s「」『』、。！？!?…・（）()【】「」"“”\',.\-]+$')
 _DEVANAGARI_RE = re.compile(r"[\u0900-\u097F]")
+_KANJI_RE = re.compile(r"[\u4e00-\u9faf\u3005]")
+_FURIGANA_BRACKET_RE = re.compile(r"\[([^\[\]]+)\]")
+
+
+def _is_kanji_char(ch: str) -> bool:
+    return bool(_KANJI_RE.match(ch))
+
+
+def _is_hiragana_char(ch: str) -> bool:
+    code = ord(ch)
+    return 0x3041 <= code <= 0x309F
+
+
+def _is_digit_char(ch: str) -> bool:
+    return ch.isdigit()
+
+
+def _find_explicit_base_start(prefix: str, reading_hira: str) -> int:
+    """
+    Finds the start index in `prefix` of the Japanese word annotated by `[reading_hira]`.
+    Handles Kanji compounds (`改札口`), counters (`3番線`), and okurigana verbs (`行く`, `乗り換え`).
+    """
+    if not prefix:
+        return 0
+    idx = len(prefix)
+    rem = reading_hira
+
+    # Case A: trailing okurigana matching the tail of `[reading_hira]` (e.g., 行く[いく], 乗り換え[のりかえ])
+    trailing_hira_start = idx
+    while trailing_hira_start > 0 and _is_hiragana_char(prefix[trailing_hira_start - 1]):
+        ch = prefix[trailing_hira_start - 1]
+        if len(rem) > 1 and rem.endswith(ch):
+            trailing_hira_start -= 1
+            rem = rem[:-1]
+        else:
+            break
+
+    # Only accept trailing hiragana as okurigana if a Kanji immediately precedes it
+    if trailing_hira_start < idx and trailing_hira_start > 0 and _is_kanji_char(prefix[trailing_hira_start - 1]):
+        idx = trailing_hira_start
+    elif not _is_kanji_char(prefix[idx - 1]) and not (idx >= 2 and _is_digit_char(prefix[idx - 1])):
+        #Fallback: consume backward until whitespace/punctuation/kanji
+        return max(0, idx - 1)
+
+    # Walk backward across contiguous Kanji / digits / compound-internal okurigana (like `り` in 乗り換え)
+    while idx > 0:
+        ch = prefix[idx - 1]
+        if _is_kanji_char(ch):
+            idx -= 1
+            continue
+        if ch in ("ヶ", "ヵ") and idx >= 2 and _is_kanji_char(prefix[idx - 2]):
+            idx -= 1
+            continue
+        if _is_digit_char(ch):
+            # Include numeric counters attached immediately before Kanji (e.g. `1番線`, `3番線`)
+            if idx < len(prefix) and _is_kanji_char(prefix[idx]):
+                idx -= 1
+                continue
+            if idx < len(prefix) and _is_digit_char(prefix[idx]):
+                idx -= 1
+                continue
+            break
+        if _is_hiragana_char(ch) and idx >= 2 and _is_kanji_char(prefix[idx - 2]) and ch in rem[:-1]:
+            idx -= 1
+            continue
+        break
+
+    return idx
+
+
+def _tokenize_fallback_furigana(span: str) -> list[dict[str, str | None]]:
+    """
+    Priority 2 Fallback (`fugashi` + `unidic-lite` + station overrides):
+    Resolves context-aware Hiragana readings ONLY for unbracketed Kanji tokens,
+    keeping `furigana: None` on all pure Hiragana, Katakana, ASCII, and punctuation.
+    """
+    if not span:
+        return []
+
+    tagger = _get_tagger()
+    kks = _get_kakasi()
+    tokens: list[dict[str, str | None]] = []
+    pos = 0
+    n = len(span)
+
+    while pos < n:
+        # Check exact station compound override at current position first if it contains Kanji
+        matched_surf: str | None = None
+        matched_kana: str | None = None
+        for surf, (kana, _) in _SORTED_OVERRIDES:
+            if _KANJI_RE.search(surf) and span.startswith(surf, pos):
+                matched_surf = surf
+                matched_kana = kana
+                break
+        if matched_surf is not None and matched_kana is not None:
+            tokens.append({"text": matched_surf, "furigana": matched_kana})
+            pos += len(matched_surf)
+            continue
+
+        # Advance until next compound override or end of span
+        next_override = n
+        for surf, _ in _SORTED_OVERRIDES:
+            if _KANJI_RE.search(surf):
+                found = span.find(surf, pos + 1)
+                if found != -1 and found < next_override:
+                    next_override = found
+
+        chunk = span[pos:next_override]
+        cursor = 0
+        for tok in tagger(chunk):
+            surf = tok.surface
+            found_i = chunk.find(surf, cursor)
+            if found_i > cursor:
+                # Preserve exact whitespace / unmatched chars
+                tokens.append({"text": chunk[cursor:found_i], "furigana": None})
+            cursor = (found_i if found_i >= 0 else cursor) + len(surf)
+
+            if not _KANJI_RE.search(surf):
+                tokens.append({"text": surf, "furigana": None})
+            else:
+                pron = getattr(tok.feature, "kana", None) or getattr(tok.feature, "pron", None)
+                if pron and pron != "*":
+                    hira = katakana_to_hiragana(pron)
+                else:
+                    hira = "".join(item.get("hira", item.get("orig", "")) for item in kks.convert(surf))
+                tokens.append({"text": surf, "furigana": hira or surf})
+
+        if cursor < len(chunk):
+            tokens.append({"text": chunk[cursor:], "furigana": None})
+        pos = next_override
+
+    return tokens
+
+
+def strip_furigana_brackets(raw_text: str) -> str:
+    """Removes inline `[reading]` brackets to produce clean Japanese display text."""
+    return _FURIGANA_BRACKET_RE.sub("", raw_text)
+
+
+def parse_furigana_markup(raw_text: str) -> tuple[str, list[dict[str, str | None]]]:
+    """
+    Hybrid Explicit-First Furigana Parser:
+    - Priority 1: Explicit `漢字[ふりがな]` markup becomes `{ "text": 漢字, "furigana": ふりがな }`.
+    - Priority 2: Unbracketed spans resolve Kanji readings via `fugashi` (`unidic-lite`) +
+      station overrides, keeping `furigana: None` for Hiragana, Katakana, ASCII, and punctuation.
+    Returns `(display_text, tokens)` with `"".join(t["text"] for t in tokens) == display_text`.
+    """
+    if not raw_text:
+        return "", []
+
+    tokens: list[dict[str, str | None]] = []
+    pos = 0
+    n = len(raw_text)
+
+    while pos < n:
+        match = _FURIGANA_BRACKET_RE.search(raw_text, pos)
+        if match is None:
+            tokens.extend(_tokenize_fallback_furigana(raw_text[pos:]))
+            break
+
+        before = raw_text[pos:match.start()]
+        reading_hira = katakana_to_hiragana(match.group(1).strip())
+        base_start = _find_explicit_base_start(before, reading_hira)
+
+        unmarked_prefix = before[:base_start]
+        base_text = before[base_start:]
+        if unmarked_prefix:
+            tokens.extend(_tokenize_fallback_furigana(unmarked_prefix))
+        if base_text:
+            tokens.append({"text": base_text, "furigana": reading_hira})
+        pos = match.end()
+
+    # Merge consecutive `furigana: None` tokens for cleaner DOM nodes
+    merged: list[dict[str, str | None]] = []
+    for tok in tokens:
+        if (
+            merged
+            and merged[-1]["furigana"] is None
+            and tok["furigana"] is None
+        ):
+            merged[-1]["text"] = str(merged[-1]["text"]) + str(tok["text"])
+        elif tok["text"]:
+            merged.append(tok)
+
+    display_text = "".join(str(t["text"]) for t in merged)
+    return display_text, merged
+
+
+def furigana_tokens_to_tts_text(tokens: list[dict[str, str | None]]) -> str:
+    """
+    Builds exact `ttsText` from Furigana tokens so `edge-tts` speaks EVERY bracketed
+    Kanji/counter using its authoritative explicit reading.
+    """
+    parts: list[str] = []
+    for tok in tokens:
+        if tok.get("furigana"):
+            parts.append(str(tok["furigana"]))
+        else:
+            txt = str(tok.get("text", ""))
+            txt = (
+                txt.replace("JungGo", "ジュンゴ")
+                .replace("PASMO", "パスモ")
+                .replace("Suica", "スイカ")
+                .replace("N4", "エヌよん")
+                .replace("N3", "エヌさん")
+            )
+            txt = re.sub(r"(?<![A-Za-z])A(?![A-Za-z])", "エー", txt)
+            txt = re.sub(r"(?<![A-Za-z])B(?![A-Za-z])", "ビー", txt)
+            txt = re.sub(r"(?<![A-Za-z])C(?![A-Za-z])", "しー", txt)
+            parts.append(txt)
+    return "".join(parts)
+
+
+def furigana_tokens_to_expected_kana(tokens: list[dict[str, str | None]]) -> str:
+    """
+    Converts `{text, furigana}` display tokens directly into normalized Hiragana
+    phonetics for Whisper Audio-vs-Furigana triple-check verification.
+    """
+    parts: list[str] = []
+    for tok in tokens:
+        if tok.get("furigana"):
+            parts.append(str(tok["furigana"]))
+        else:
+            parts.append(japanese_to_spoken_kana(str(tok.get("text", ""))))
+    return normalize_kana_phonetic("".join(parts))
 
 _TAGGER: fugashi.Tagger | None = None
 _KAKASI: pykakasi.Kakasi | None = None
@@ -358,7 +583,7 @@ def audit_script_morphology(raw_script: dict[str, Any]) -> list[str]:
         sg = sec.get("stationGuide")
         if isinstance(sg, dict):
             for term in sg.get("terms", []):
-                jp = str(term.get("jp", ""))
+                jp = strip_furigana_brackets(str(term.get("jp", "")))
                 reading = str(term.get("reading", ""))
                 romaji = str(term.get("romaji", ""))
                 exp_kana = normalize_kana_phonetic(japanese_to_spoken_kana(jp))
@@ -374,23 +599,39 @@ def audit_script_morphology(raw_script: dict[str, Any]) -> list[str]:
                     errors.append(
                         f"{sec_id}.term({jp}): romaji {romaji!r} mismatches dictionary {dict_rom!r} (sim={sim:.2f})"
                     )
-            kp_jp = str(sg.get("keyPhraseJp", ""))
+            kp_jp_raw = str(sg.get("keyPhraseJp", ""))
+            _, kp_tokens = parse_furigana_markup(kp_jp_raw)
             kp_rom = str(sg.get("keyPhraseRomaji", ""))
-            if kp_jp and kp_rom:
-                dict_kp = normalize_romaji_compare(japanese_to_romaji(kp_jp))
+            if kp_tokens and kp_rom:
+                dict_kp = normalize_romaji_compare(japanese_to_romaji(furigana_tokens_to_tts_text(kp_tokens)))
                 got_kp = normalize_romaji_compare(kp_rom)
                 sim = difflib.SequenceMatcher(None, dict_kp, got_kp).ratio()
                 if sim < 0.88:
                     errors.append(
                         f"{sec_id}.keyPhrase: romaji {kp_rom!r} mismatches {dict_kp!r} (sim={sim:.2f})"
                     )
+            for st_idx, st in enumerate(sg.get("subTopics", [])):
+                st_jp_disp, st_jp_toks = parse_furigana_markup(str(st.get("jp", "")))
+                if _KANJI_RE.search(st_jp_disp) and any(_KANJI_RE.search(str(t["text"])) and not t.get("furigana") for t in st_jp_toks):
+                    errors.append(f"{sec_id}.subTopics[{st_idx}]: Kanji missing Furigana in {st_jp_disp!r}")
+                ex_disp, ex_toks = parse_furigana_markup(str(st.get("exampleJp", "")))
+                ex_rom = str(st.get("exampleRomaji", ""))
+                if ex_toks and ex_rom:
+                    dict_ex = normalize_romaji_compare(japanese_to_romaji(furigana_tokens_to_tts_text(ex_toks)))
+                    got_ex = normalize_romaji_compare(ex_rom)
+                    sim = difflib.SequenceMatcher(None, dict_ex, got_ex).ratio()
+                    if sim < 0.85:
+                        errors.append(
+                            f"{sec_id}.subTopics[{st_idx}].example: romaji {ex_rom!r} mismatches {dict_ex!r} (sim={sim:.2f})"
+                        )
 
         quiz = sec.get("quiz")
         if isinstance(quiz, dict):
             for opt in quiz.get("options", []):
-                jp = str(opt.get("jp", ""))
+                _, opt_toks = parse_furigana_markup(str(opt.get("jp", "")))
+                jp = "".join(str(t["text"]) for t in opt_toks)
                 romaji = str(opt.get("romaji", ""))
-                dict_opt = normalize_romaji_compare(japanese_to_romaji(jp))
+                dict_opt = normalize_romaji_compare(japanese_to_romaji(furigana_tokens_to_tts_text(opt_toks)))
                 got_opt = normalize_romaji_compare(romaji)
                 sim = difflib.SequenceMatcher(None, dict_opt, got_opt).ratio()
                 if sim < 0.90:
@@ -400,22 +641,28 @@ def audit_script_morphology(raw_script: dict[str, Any]) -> list[str]:
 
     for line in raw_script.get("lines", []):
         cid = line.get("id", "unknown")
-        jp = str(line.get("japanese", ""))
-        tts = str(line.get("ttsText") or jp)
+        raw_jp = str(line.get("japanese", ""))
+        jp, line_tokens = parse_furigana_markup(raw_jp)
+        auto_tts = furigana_tokens_to_tts_text(line_tokens)
+        tts = str(line.get("ttsText") or auto_tts)
         rom = str(line.get("romaji", ""))
 
-        tts_sim = compare_phonetics(jp, tts)
+        for t in line_tokens:
+            if _KANJI_RE.search(str(t["text"])) and not t.get("furigana"):
+                errors.append(f"{cid}: Kanji token {t['text']!r} missing Furigana reading")
+
+        tts_sim = compare_phonetics(auto_tts, tts)
         if tts_sim < 0.90:
             errors.append(
-                f"{cid}: ttsText phonetic mismatch vs japanese (sim={tts_sim:.2f}): {tts!r} vs {jp!r}"
+                f"{cid}: ttsText phonetic mismatch vs Furigana reading (sim={tts_sim:.2f}): {tts!r} vs {auto_tts!r}"
             )
 
-        dict_rom = normalize_romaji_compare(japanese_to_romaji(tts))
+        dict_rom = normalize_romaji_compare(japanese_to_romaji(auto_tts))
         got_rom = normalize_romaji_compare(rom)
         rom_sim = difflib.SequenceMatcher(None, dict_rom, got_rom).ratio()
         if rom_sim < 0.88:
             errors.append(
-                f"{cid}: romaji mismatch vs morphological reading (sim={rom_sim:.2f}): got={got_rom!r} dict={dict_rom!r}"
+                f"{cid}: romaji mismatch vs Furigana reading (sim={rom_sim:.2f}): got={got_rom!r} dict={dict_rom!r}"
             )
 
     return errors

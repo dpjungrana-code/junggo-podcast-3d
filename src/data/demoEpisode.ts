@@ -8,6 +8,48 @@ export type StickmanSceneId =
   | "tap_ticket_gate"
   | "ride_and_exit_train";
 
+export type FuriganaToken = {
+  readonly text: string;
+  readonly furigana: string | null;
+};
+
+export type SubTopicItem = {
+  readonly id: string;
+  readonly pillLabel: string;
+  readonly jp: string;
+  readonly jpTokens?: readonly FuriganaToken[];
+  readonly reading: string;
+  readonly romaji: string;
+  readonly meaningEn: string;
+  readonly exampleJp: string;
+  readonly exampleTokens?: readonly FuriganaToken[];
+  readonly exampleRomaji: string;
+  readonly exampleEn: string;
+  readonly highlightKey?: string;
+  readonly accentColor?: string;
+  readonly triggerKeywords?: readonly string[];
+};
+
+export type SubTopicSwitch = {
+  readonly timeSec: number;
+  readonly subTopicIndex: number;
+};
+
+export type SfxKind =
+  | "whoosh"
+  | "ic_beep"
+  | "coin_clink"
+  | "error_buzz"
+  | "train_chime"
+  | "quiz_correct";
+
+export type SfxEvent = {
+  readonly timeSec: number;
+  readonly kind: SfxKind;
+  readonly src: string;
+  readonly volume?: number;
+};
+
 export type PodcastSectionType =
   | "intro"
   | "story"
@@ -44,6 +86,7 @@ export type KanjiLessonData = {
   readonly imageUrl?: string;
   readonly imageCaption?: string;
   readonly animationScene?: StickmanSceneId;
+  readonly subTopics?: readonly SubTopicItem[];
 };
 
 export type StationTermItem = {
@@ -58,8 +101,10 @@ export type StationGuideData = {
   readonly jlptLevel: string;
   readonly sceneTag: string;
   readonly titleJp: string;
+  readonly titleTokens?: readonly FuriganaToken[];
   readonly titleEn: string;
   readonly keyPhraseJp: string;
+  readonly keyPhraseTokens?: readonly FuriganaToken[];
   readonly keyPhraseRomaji: string;
   readonly keyPhraseEn: string;
   readonly terms: readonly StationTermItem[];
@@ -68,6 +113,7 @@ export type StationGuideData = {
   readonly imageUrl?: string;
   readonly imageCaption?: string;
   readonly animationScene?: StickmanSceneId;
+  readonly subTopics?: readonly SubTopicItem[];
 };
 
 export type WordTiming = {
@@ -87,6 +133,7 @@ export type SubtitleCue = {
   readonly endSec: number;
   readonly speaker: string;
   readonly japanese: string;
+  readonly furiganaTokens?: readonly FuriganaToken[];
   readonly ttsText?: string;
   readonly romaji: string;
   readonly english: string;
@@ -95,6 +142,9 @@ export type SubtitleCue = {
   readonly imageUrl?: string;
   readonly imageCaption?: string;
   readonly animationScene?: StickmanSceneId;
+  readonly activeSubTopicIndex?: number;
+  readonly activeSubTopic?: string;
+  readonly subTopicSwitches?: readonly SubTopicSwitch[];
 };
 
 export const isGuestSpeaker = (speaker: string): boolean => {
@@ -238,6 +288,7 @@ export type VocabCardData = {
 export type QuizOption = {
   readonly label: "A" | "B" | "C";
   readonly jp: string;
+  readonly jpTokens?: readonly FuriganaToken[];
   readonly romaji: string;
   readonly english: string;
   readonly isCorrect: boolean;
@@ -246,6 +297,7 @@ export type QuizOption = {
 export type QuizCardData = {
   readonly title: string;
   readonly questionJp: string;
+  readonly questionTokens?: readonly FuriganaToken[];
   readonly questionEn: string;
   readonly options: readonly QuizOption[];
   readonly countdownStartSec: number;
@@ -268,6 +320,7 @@ export type EpisodeSection = {
   readonly imageSrc?: string;
   readonly imageCaption?: string;
   readonly animationScene?: StickmanSceneId;
+  readonly subTopics?: readonly SubTopicItem[];
 };
 
 export type EpisodeData = {
@@ -280,6 +333,7 @@ export type EpisodeData = {
   readonly audioSrc?: string;
   readonly sections: readonly EpisodeSection[];
   readonly subtitles: readonly SubtitleCue[];
+  readonly sfxEvents?: readonly SfxEvent[];
 };
 
 export const DEMO_EPISODE: EpisodeData = {

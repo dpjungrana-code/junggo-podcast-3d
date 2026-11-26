@@ -8,6 +8,7 @@ import {
 } from "remotion";
 import {
   EpisodeSection,
+  FuriganaToken,
   SubtitleCue,
   WordTiming,
   isGuestSpeaker,
@@ -58,11 +59,111 @@ const getTokenState = (token: WordTiming, timeSec: number): HighlightState => {
 
 const KARAOKE_GREEN = "#34d399";
 
+const resolveCharHighlightState = (
+  charStart: number,
+  charEnd: number,
+  wordTimings: readonly WordTiming[] | undefined,
+  timeSec: number,
+): HighlightState => {
+  if (!wordTimings || wordTimings.length === 0) {
+    return "upcoming";
+  }
+
+  let matchedPassed = false;
+  for (const w of wordTimings) {
+    if (
+      typeof w.charStart !== "number" ||
+      typeof w.charEnd !== "number" ||
+      w.charEnd <= w.charStart
+    ) {
+      continue;
+    }
+    if (charStart < w.charEnd && charEnd > w.charStart) {
+      const state = getTokenState(w, timeSec);
+      if (state === "active") {
+        return "active";
+      }
+      if (state === "passed") {
+        matchedPassed = true;
+      }
+    }
+  }
+  if (matchedPassed) {
+    return "passed";
+  }
+
+  // Punctuation / trailing particles between tokens: glow once preceding token starts
+  const ordered = wordTimings
+    .filter((w) => typeof w.charStart === "number")
+    .slice()
+    .sort((a, b) => (a.charStart ?? 0) - (b.charStart ?? 0));
+  for (let i = ordered.length - 1; i >= 0; i--) {
+    const w = ordered[i];
+    if ((w.charEnd ?? 0) <= charStart) {
+      return timeSec >= w.endSec ? "passed" : "upcoming";
+    }
+  }
+  return "upcoming";
+};
+
 const renderKaraokeJapanese = (
   japanese: string,
   wordTimings: readonly WordTiming[] | undefined,
+  furiganaTokens: readonly FuriganaToken[] | undefined,
   timeSec: number,
 ): React.ReactNode => {
+  if (furiganaTokens && furiganaTokens.length > 0) {
+    let cursor = 0;
+    return furiganaTokens.map((tok, idx) => {
+      const start = cursor;
+      const end = cursor + tok.text.length;
+      cursor = end;
+      const state = resolveCharHighlightState(start, end, wordTimings, timeSec);
+      const isActive = state === "active";
+      const isLit = state === "active" || state === "passed";
+
+      const spanStyle: React.CSSProperties = isActive
+        ? {
+            color: KARAOKE_GREEN,
+            textShadow: "0 0 14px rgba(52, 211, 153, 0.65)",
+            backgroundColor: "rgba(52, 211, 153, 0.16)",
+            borderBottom: `2.5px solid ${KARAOKE_GREEN}`,
+            borderRadius: 5,
+            padding: "0 2px",
+          }
+        : isLit
+          ? { color: KARAOKE_GREEN }
+          : { color: "#ffffff" };
+
+      if (tok.furigana) {
+        return (
+          <span key={`furi-${idx}`} style={spanStyle}>
+            <ruby style={{ rubyPosition: "over" }}>
+              {tok.text}
+              <rt
+                style={{
+                  fontSize: "0.46em",
+                  fontWeight: 700,
+                  color: isLit ? KARAOKE_GREEN : "#7dd3fc",
+                  lineHeight: 1.05,
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {tok.furigana}
+              </rt>
+            </ruby>
+          </span>
+        );
+      }
+
+      return (
+        <span key={`plain-${idx}`} style={spanStyle}>
+          {tok.text}
+        </span>
+      );
+    });
+  }
+
   if (!wordTimings || wordTimings.length === 0) {
     return japanese;
   }
@@ -320,7 +421,7 @@ export const Subtitles: React.FC<SubtitlesProps> = ({ subtitles }) => {
           position: "absolute",
           left: 0,
           right: 0,
-          bottom: 22,
+          bottom: 16,
           display: "flex",
           justifyContent: "center",
           paddingLeft: 44,
@@ -335,7 +436,7 @@ export const Subtitles: React.FC<SubtitlesProps> = ({ subtitles }) => {
             gap: 22,
             width: "100%",
             maxWidth: 1832,
-            padding: "13px 30px 14px 24px",
+            padding: "10px 28px 11px 22px",
             borderRadius: 18,
             backgroundColor: "rgba(11, 15, 21, 0.94)",
             border: `1.8px solid ${
@@ -388,17 +489,18 @@ export const Subtitles: React.FC<SubtitlesProps> = ({ subtitles }) => {
           <div style={{ flex: 1, textAlign: "center" }}>
             <div
               style={{
-                fontSize: activeCue.japanese.length > 34 ? 26 : 30,
+                fontSize: activeCue.japanese.length > 34 ? 25 : 29,
                 fontWeight: 800,
                 color: "#ffffff",
                 letterSpacing: "0.02em",
-                lineHeight: 1.28,
-                marginBottom: 4,
+                lineHeight: 1.72,
+                marginBottom: 2,
               }}
             >
               {renderKaraokeJapanese(
                 activeCue.japanese,
                 activeCue.wordTimings,
+                activeCue.furiganaTokens,
                 timeSec,
               )}
             </div>

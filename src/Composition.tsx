@@ -3,6 +3,7 @@ import { ThreeCanvas } from "@remotion/three";
 import {
   AbsoluteFill,
   Audio,
+  Sequence,
   spring,
   staticFile,
   useCurrentFrame,
@@ -157,6 +158,15 @@ export const JungGoPodcastStudio: React.FC<JungGoPodcastProps> = ({
         }}
       >
         {resolvedAudio ? <Audio src={resolvedAudio} /> : null}
+        {ACTIVE_EPISODE.sfxEvents?.map((ev, idx) => (
+          <Sequence
+            key={`${ev.kind}-${ev.timeSec}-${idx}`}
+            from={Math.max(0, Math.round(ev.timeSec * fps))}
+            durationInFrames={Math.max(12, Math.round(fps * 1.25))}
+          >
+            <Audio src={staticFile(ev.src)} volume={ev.volume ?? 0.2} />
+          </Sequence>
+        ))}
 
         {/* LAYER 0: Studio Blackboard Backdrop + Clean Top-Left JungGo Brand Header */}
         {boardFocusProgress > 0.005 ? (

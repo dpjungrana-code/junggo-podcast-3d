@@ -11,11 +11,13 @@ import {
 } from "remotion";
 import {
   EpisodeSection,
+  FuriganaToken,
   KanjiLessonData,
   QuizCardData,
   StationGuideData,
   StickmanSceneId,
   StudioMode,
+  SubTopicItem,
   SubtitleCue,
   VocabCardData,
   getActiveSection,
@@ -24,6 +26,41 @@ import {
   resolveCueGesture,
 } from "../data/demoEpisode";
 import { StickmanScenePlayer } from "./StickmanScenePlayer";
+
+const RubyText: React.FC<{
+  readonly tokens?: readonly FuriganaToken[];
+  readonly fallback: string;
+  readonly rtSize?: string;
+  readonly rtColor?: string;
+}> = ({ tokens, fallback, rtSize = "0.45em", rtColor = "#34d399" }) => {
+  if (!tokens || tokens.length === 0) {
+    return <>{fallback}</>;
+  }
+  return (
+    <>
+      {tokens.map((tok, idx) =>
+        tok.furigana ? (
+          <ruby key={`rt-${idx}`} style={{ rubyPosition: "over" }}>
+            {tok.text}
+            <rt
+              style={{
+                fontSize: rtSize,
+                fontWeight: 800,
+                color: rtColor,
+                lineHeight: 1.05,
+                letterSpacing: "0.02em",
+              }}
+            >
+              {tok.furigana}
+            </rt>
+          </ruby>
+        ) : (
+          <React.Fragment key={`pl-${idx}`}>{tok.text}</React.Fragment>
+        ),
+      )}
+    </>
+  );
+};
 
 export type PresentationBoardProps = {
   readonly episodeNumber: string;
@@ -473,10 +510,15 @@ const QuizBoardContent: React.FC<{
             fontSize: 44,
             fontWeight: 800,
             color: "#ffffff",
-            lineHeight: 1.2,
+            lineHeight: 1.55,
           }}
         >
-          {quiz.questionJp}
+          <RubyText
+            tokens={quiz.questionTokens}
+            fallback={quiz.questionJp}
+            rtSize="0.4em"
+            rtColor="#c4b5fd"
+          />
         </div>
         <div
           style={{
@@ -542,9 +584,16 @@ const QuizBoardContent: React.FC<{
                   fontSize: 24,
                   fontWeight: 600,
                   color: isHit ? "#7cf5c4" : "#cbd5e1",
+                  lineHeight: 1.55,
                 }}
               >
-                {opt.jp} ({opt.romaji})
+                <RubyText
+                  tokens={opt.jpTokens}
+                  fallback={opt.jp}
+                  rtSize="0.46em"
+                  rtColor={isHit ? "#7cf5c4" : "#93c5fd"}
+                />{" "}
+                ({opt.romaji})
               </span>
             </div>
           );
@@ -934,10 +983,87 @@ const KanjiLessonBoardContent: React.FC<{
   );
 };
 
+const synthesizeFallbackSubTopics = (
+  guide: StationGuideData,
+): readonly SubTopicItem[] => {
+  if (guide.subTopics && guide.subTopics.length > 0) {
+    return guide.subTopics;
+  }
+  return guide.terms.slice(0, 4).map((term, idx) => ({
+    id: `term-${idx}`,
+    pillLabel: `${term.jp} ${term.meaningEn.split("(")[0].trim()}`,
+    jp: term.jp,
+    reading: term.reading,
+    romaji: term.romaji,
+    meaningEn: term.meaningEn,
+    exampleJp: guide.keyPhraseJp,
+    exampleRomaji: guide.keyPhraseRomaji,
+    exampleEn: guide.keyPhraseEn,
+    accentColor: term.badgeColor ?? "#34d399",
+  }));
+};
+
+const resolveActiveSubTopicState = (
+  subTopics: readonly SubTopicItem[],
+  activeCue: SubtitleCue | null,
+  sectionStartSec: number,
+  sectionEndSec: number,
+  timeSec: number,
+): {
+  readonly index: number;
+  readonly topic: SubTopicItem;
+  readonly switchSec: number;
+} => {
+  const count = Math.max(1, subTopics.length);
+  let resolvedIdx = 0;
+  let switchSec = sectionStartSec;
+
+  if (activeCue?.subTopicSwitches && activeCue.subTopicSwitches.length > 0) {
+    const sorted = [...activeCue.subTopicSwitches].sort(
+      (a, b) => a.timeSec - b.timeSec,
+    );
+    resolvedIdx = Math.max(0, Math.min(count - 1, sorted[0].subTopicIndex));
+    switchSec = sorted[0].timeSec;
+    for (const sw of sorted) {
+      if (timeSec >= sw.timeSec) {
+        resolvedIdx = Math.max(0, Math.min(count - 1, sw.subTopicIndex));
+        switchSec = sw.timeSec;
+      }
+    }
+  } else if (typeof activeCue?.activeSubTopicIndex === "number") {
+    resolvedIdx = Math.max(0, Math.min(count - 1, activeCue.activeSubTopicIndex));
+    switchSec = activeCue.startSec;
+  } else if (activeCue?.activeSubTopic) {
+    const target = activeCue.activeSubTopic.trim().toLowerCase();
+    const matched = subTopics.findIndex(
+      (t) =>
+        t.id.toLowerCase() === target ||
+        t.jp.toLowerCase() === target ||
+        (t.highlightKey ?? "").toLowerCase() === target,
+    );
+    if (matched >= 0) {
+      resolvedIdx = matched;
+      switchSec = activeCue.startSec;
+    }
+  } else {
+    const dur = Math.max(4, sectionEndSec - sectionStartSec);
+    const frac = Math.max(0, Math.min(0.999, (timeSec - sectionStartSec) / dur));
+    resolvedIdx = Math.min(count - 1, Math.floor(frac * count));
+    switchSec = sectionStartSec + (resolvedIdx * dur) / count;
+  }
+
+  return {
+    index: resolvedIdx,
+    topic: subTopics[resolvedIdx],
+    switchSec,
+  };
+};
+
 /**
- * Authoritative Station Survival Guide lesson card (100% English explanations):
- * Displays JR/Tokyo Metro terminology grid, auto-generated SVG station diagram,
- * survival key phrase with Hepburn Romaji, and practical station tip.
+ * Uncluttered, single-topic focused Station Survival Guide layout:
+ * - Compact Header + Top Sub-Topic Pill Bar (highlights ONLY the active sub-topic)
+ * - Left Focus Column (~43%): Huge Kanji, Furigana, Romaji, English & 1 Survival Example
+ * - Right Animated Stage (~57%): Colorful layered 2.5D animated world synced to active sub-topic
  */
 const StationGuideBoardContent: React.FC<{
   readonly guide: StationGuideData;
@@ -946,6 +1072,8 @@ const StationGuideBoardContent: React.FC<{
   readonly animationScene?: StickmanSceneId;
   readonly sectionStartSec: number;
   readonly sectionEndSec: number;
+  readonly activeCue: SubtitleCue | null;
+  readonly timeSec: number;
 }> = ({
   guide,
   visualUrl,
@@ -953,14 +1081,60 @@ const StationGuideBoardContent: React.FC<{
   animationScene,
   sectionStartSec,
   sectionEndSec,
+  activeCue,
+  timeSec,
 }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   const mediaUrl = visualUrl ?? guide.imageUrl;
   const mediaCaption = visualCaption ?? guide.imageCaption;
   const activeScene = animationScene ?? guide.animationScene;
 
+  const subTopics = synthesizeFallbackSubTopics(guide);
+  const {
+    index: activeIdx,
+    topic: activeTopic,
+    switchSec,
+  } = resolveActiveSubTopicState(
+    subTopics,
+    activeCue,
+    sectionStartSec,
+    sectionEndSec,
+    timeSec,
+  );
+
+  const switchFrame = Math.round(switchSec * fps);
+  const localFrames = Math.max(0, frame - switchFrame);
+  const focusPop = spring({
+    frame: localFrames,
+    fps,
+    config: { damping: 16, stiffness: 150, mass: 0.75 },
+  });
+  const cardFade = interpolate(localFrames, [0, 7], [0.55, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const cardSlideY = interpolate(localFrames, [0, 8], [10, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.out(Easing.cubic),
+  });
+
+  const accent = activeTopic.accentColor ?? "#34d399";
+  const jpLen = activeTopic.jp.length;
+  const jpFontSize = jpLen >= 8 ? 46 : jpLen >= 5 ? 56 : jpLen >= 4 ? 64 : 78;
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
-      {/* Header Row */}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        height: "100%",
+        gap: 18,
+      }}
+    >
+      {/* Compact Header Row */}
       <div
         style={{
           display: "flex",
@@ -971,12 +1145,12 @@ const StationGuideBoardContent: React.FC<{
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span
             style={{
-              fontSize: 17,
+              fontSize: 16,
               fontWeight: 800,
               letterSpacing: "0.04em",
               color: "#ffffff",
               backgroundColor: "#148c53",
-              padding: "7px 20px",
+              padding: "6px 17px",
               borderRadius: 999,
             }}
           >
@@ -984,200 +1158,244 @@ const StationGuideBoardContent: React.FC<{
           </span>
           <span
             style={{
-              fontSize: 16,
+              fontSize: 15.5,
               fontWeight: 700,
               color: "#98c8b6",
               backgroundColor: "rgba(255, 255, 255, 0.08)",
-              padding: "6px 16px",
+              padding: "6px 15px",
               borderRadius: 999,
             }}
           >
             {guide.sceneTag}
           </span>
+          <span style={{ fontSize: 20, fontWeight: 800, color: "#e2f5ec", marginLeft: 4 }}>
+            {guide.titleJp} · <span style={{ color: "#34d399" }}>{guide.titleEn}</span>
+          </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
           <AudioWaveIcon />
-          <span style={{ fontSize: 18, fontWeight: 700, color: "#e2f5ec" }}>
-            Station Survival Guide
+          <span style={{ fontSize: 16.5, fontWeight: 700, color: "#b7d9ca" }}>
+            Single-Topic Focus
           </span>
         </div>
       </div>
 
-      {/* Main Split Row: Large Terms Grid + 480x360 Vector Station Diagram */}
-      <div style={{ display: "flex", alignItems: "stretch", gap: 26 }}>
+      {/* Top Sub-Topic Pill Bar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "8px 10px",
+          borderRadius: 14,
+          backgroundColor: "rgba(10, 17, 23, 0.72)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+        }}
+      >
+        {subTopics.map((item, idx) => {
+          const isActive = idx === activeIdx;
+          const pillAccent = item.accentColor ?? "#34d399";
+          const pillScale = isActive ? 1 + (1 - focusPop) * 0.02 + focusPop * 0.02 : 1;
+          return (
+            <div
+              key={item.id}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                textAlign: "center",
+                padding: "10px 14px",
+                borderRadius: 10,
+                backgroundColor: isActive
+                  ? "rgba(20, 140, 83, 0.34)"
+                  : "rgba(255, 255, 255, 0.03)",
+                border: isActive
+                  ? `2px solid ${pillAccent}`
+                  : "1px solid rgba(255, 255, 255, 0.07)",
+                boxShadow: isActive
+                  ? `0 0 18px ${pillAccent}44`
+                  : "none",
+                color: isActive ? "#ffffff" : "#7b93a3",
+                fontSize: 17.5,
+                fontWeight: isActive ? 900 : 600,
+                opacity: isActive ? 1 : 0.62,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                scale: pillScale,
+              }}
+            >
+              {isActive ? "● " : ""}
+              {item.pillLabel}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Split Focused Canvas: Single Active Sub-Topic (Left ~43%) + Layered 2.5D Animation (Right ~57%) */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 30,
+        }}
+      >
+        {/* Left Focus Column: Spacious, Zero Clutter */}
         <div
+          key={activeTopic.id}
           style={{
-            flex: 1,
+            flex: "0 0 43%",
             minWidth: 0,
             display: "flex",
             flexDirection: "column",
-            justifyContent: "space-between",
-            gap: 14,
+            justifyContent: "center",
+            gap: 18,
+            paddingLeft: 8,
+            opacity: cardFade,
+            translate: `0px ${cardSlideY}px`,
           }}
         >
-          <div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div
               style={{
-                fontSize: 40,
+                fontSize: jpFontSize,
                 fontWeight: 900,
                 color: "#ffffff",
-                lineHeight: 1.15,
+                lineHeight: 1.38,
+                letterSpacing: "-0.01em",
               }}
             >
-              {guide.titleJp}
+              <RubyText
+                tokens={activeTopic.jpTokens}
+                fallback={activeTopic.jp}
+                rtSize="0.34em"
+                rtColor={accent}
+              />
             </div>
-            <div
-              style={{
-                fontSize: 22,
-                fontWeight: 700,
-                color: "#34d399",
-                marginTop: 4,
-              }}
-            >
-              {guide.titleEn}
+            {!activeTopic.jpTokens || activeTopic.jpTokens.length === 0 ? (
+              <div
+                style={{
+                  fontSize: 28,
+                  fontWeight: 800,
+                  color: accent,
+                  lineHeight: 1.2,
+                }}
+              >
+                {activeTopic.reading}
+              </div>
+            ) : null}
+            <div style={{ marginTop: 2 }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  fontSize: 19,
+                  fontWeight: 700,
+                  color: "#e2f5ec",
+                  backgroundColor: "rgba(52, 211, 153, 0.14)",
+                  border: `1px solid ${accent}55`,
+                  padding: "4px 16px",
+                  borderRadius: 999,
+                }}
+              >
+                {activeTopic.romaji}
+              </span>
             </div>
           </div>
 
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 14,
+              fontSize: 33,
+              fontWeight: 800,
+              color: "#f8fafc",
+              lineHeight: 1.18,
             }}
           >
-            {guide.terms.slice(0, 4).map((term) => (
-              <div
-                key={`${term.jp}-${term.romaji}`}
-                style={{
-                  backgroundColor: "#0d141a",
-                  border: "1px solid rgba(52, 211, 153, 0.25)",
-                  borderLeft: `5px solid ${term.badgeColor ?? "#34d399"}`,
-                  borderRadius: 13,
-                  padding: "13px 16px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 4,
-                  minWidth: 0,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    gap: 10,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: term.jp.length >= 4 ? 25 : 29,
-                      fontWeight: 900,
-                      color: "#ffffff",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {term.jp}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: term.reading.length >= 6 ? 14.5 : 16,
-                      fontWeight: 700,
-                      color: "#34d399",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {term.reading}
-                  </span>
-                </div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#94a3b8" }}>
-                  {term.romaji}
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "#e2e8f0" }}>
-                  {term.meaningEn}
-                </div>
-              </div>
-            ))}
+            {activeTopic.meaningEn}
+          </div>
+
+          <div
+            style={{
+              height: 1,
+              width: "88%",
+              backgroundColor: "rgba(255, 255, 255, 0.12)",
+            }}
+          />
+
+          {/* 1 Concise Survival Example Sentence with Inline Ruby Furigana */}
+          <div
+            style={{
+              borderLeft: `4px solid ${accent}`,
+              paddingLeft: 16,
+              display: "flex",
+              flexDirection: "column",
+              gap: 5,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11.5,
+                fontWeight: 800,
+                letterSpacing: "0.08em",
+                color: accent,
+              }}
+            >
+              SURVIVAL EXAMPLE
+            </div>
+            <div
+              style={{
+                fontSize: 24,
+                fontWeight: 800,
+                color: "#ffffff",
+                lineHeight: 1.68,
+              }}
+            >
+              <RubyText
+                tokens={activeTopic.exampleTokens}
+                fallback={activeTopic.exampleJp}
+                rtSize="0.46em"
+                rtColor={accent}
+              />
+            </div>
+            <div style={{ fontSize: 16.5, fontWeight: 600, color: accent }}>
+              {activeTopic.exampleRomaji}
+            </div>
+            <div style={{ fontSize: 17.5, fontWeight: 500, color: "#cbd5e1" }}>
+              {activeTopic.exampleEn}
+            </div>
           </div>
         </div>
 
-        {activeScene ? (
-          <StickmanScenePlayer
-            scene={activeScene}
-            sectionStartSec={sectionStartSec}
-            sectionEndSec={sectionEndSec}
-            caption={mediaCaption}
-            width={480}
-            height={360}
-          />
-        ) : mediaUrl ? (
-          <MediaVisualFrame
-            imageUrl={mediaUrl}
-            caption={mediaCaption}
-            width={480}
-            height={360}
-          />
-        ) : null}
-      </div>
-
-      {/* Survival Key Phrase Box */}
-      <div
-        style={{
-          backgroundColor: "#0d141a",
-          border: "1px solid rgba(52, 211, 153, 0.3)",
-          borderRadius: 15,
-          padding: "15px 22px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 4,
-        }}
-      >
+        {/* Right Animated 2.5D Stage */}
         <div
           style={{
-            fontSize: 12.5,
-            fontWeight: 800,
-            letterSpacing: "0.08em",
-            color: "#34d399",
+            flex: "1 1 57%",
+            minWidth: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          SURVIVAL PHRASE
+          {activeScene ? (
+            <StickmanScenePlayer
+              scene={activeScene}
+              sectionStartSec={sectionStartSec}
+              sectionEndSec={sectionEndSec}
+              activeSubTopicKey={activeTopic.highlightKey ?? activeTopic.id}
+              activeSubTopicLabel={activeTopic.pillLabel}
+              caption={mediaCaption}
+              width="100%"
+              height={465}
+            />
+          ) : mediaUrl ? (
+            <MediaVisualFrame
+              imageUrl={mediaUrl}
+              caption={mediaCaption}
+              width="100%"
+              height={465}
+            />
+          ) : null}
         </div>
-        <div style={{ fontSize: 31, fontWeight: 800, color: "#ffffff", lineHeight: 1.24 }}>
-          {guide.keyPhraseJp}
-        </div>
-        <div style={{ fontSize: 19.5, fontWeight: 600, color: "#34d399" }}>
-          {guide.keyPhraseRomaji}
-        </div>
-        <div style={{ fontSize: 20, fontWeight: 500, color: "#e2e8f0" }}>
-          {guide.keyPhraseEn}
-        </div>
-      </div>
-
-      {/* Practical Tip Footer */}
-      <div
-        style={{
-          backgroundColor: "#0d141a",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-          borderLeft: "4.5px solid #f59e0b",
-          borderRadius: 11,
-          padding: "10px 16px",
-          fontSize: 17.5,
-          fontWeight: 500,
-          color: "#d6e6df",
-          lineHeight: 1.34,
-        }}
-      >
-        <span
-          style={{
-            fontSize: 13.5,
-            fontWeight: 800,
-            letterSpacing: "0.06em",
-            color: "#fbbf24",
-            marginRight: 10,
-          }}
-        >
-          TIP
-        </span>
-        {guide.tipEn}
       </div>
     </div>
   );
@@ -1304,13 +1522,18 @@ const OverviewBoardContent: React.FC<{
             </div>
             <div
               style={{
-                fontSize: hasVisual ? 34 : 42,
+                fontSize: hasVisual ? 33 : 40,
                 fontWeight: 800,
                 color: "#ffffff",
-                lineHeight: 1.32,
+                lineHeight: 1.66,
               }}
             >
-              {activeCue.japanese}
+              <RubyText
+                tokens={activeCue.furiganaTokens}
+                fallback={activeCue.japanese}
+                rtSize="0.45em"
+                rtColor="#34d399"
+              />
             </div>
             <div style={{ fontSize: hasVisual ? 22 : 26, fontWeight: 600, color: "#fde68a" }}>
               {activeCue.romaji}
@@ -1750,6 +1973,10 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
         <div
           key={activeSection.id}
           style={{
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
             opacity: contentOpacity,
             translate: `0px ${contentOffsetY}px`,
           }}
@@ -1764,6 +1991,8 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
               animationScene={activeAnimationScene}
               sectionStartSec={activeSection.startSec}
               sectionEndSec={activeSection.endSec}
+              activeCue={activeCue}
+              timeSec={timeSec}
             />
           ) : (activeSection.type === "kanji_lesson" ||
               Boolean(activeSection.kanji)) &&
