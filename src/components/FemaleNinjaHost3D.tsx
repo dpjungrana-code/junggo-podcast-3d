@@ -16,18 +16,37 @@ import {
   blendGazeTargets,
   buildAudienceCheckIns,
   buildBlinkSchedule,
+  buildListenerGlances,
   buildListenerNods,
+  buildQuestionLifts,
   computeBlinkAmount,
   computeLayeredGaze,
   computeLensDirection,
   computeListenerNodPitch,
+  computeQuestionLift,
   computeSpeakingEnvelope,
+  computeUpperLidAmount,
   gazeAngleToPupilOffset,
 } from "../utils/hostGaze";
-import { createHoodieLogoTexture } from "../utils/textures";
+import {
+  createHoodieLogoTexture,
+  createSoftBlushTexture,
+} from "../utils/textures";
 import { computeCameraPose } from "./CameraRig";
+import { CheekBlush3D } from "./CheekBlush3D";
+import { PixarEyelids3D } from "./PixarEyelids3D";
 import { PixarHand3D, computeCalmGestureEnvelopes } from "./PixarHand3D";
 import { MARIA_IRIS, PixarIris3D } from "./PixarIris3D";
+import { MARIA_MOUTH, PixarMouth3D } from "./PixarMouth3D";
+
+/** Maria's default seat in the dual studio (root position + yaw). */
+export const MARIA_LAYOUT = {
+  position: [-0.08, 0.78, -0.64],
+  yaw: -0.26,
+} as const;
+
+/** Maria's brighter, slightly more open resting lid. */
+const MARIA_REST_LID = 0.19;
 
 export type FemaleNinjaHost3DProps = {
   readonly sections: readonly EpisodeSection[];
@@ -41,6 +60,16 @@ export type FemaleNinjaHost3DProps = {
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
 const clamp01 = (v: number): number => Math.max(0, Math.min(1, v));
+
+const lerp3 = (
+  a: readonly [number, number, number],
+  b: readonly [number, number, number],
+  t: number,
+): [number, number, number] => [
+  a[0] + (b[0] - a[0]) * t,
+  a[1] + (b[1] - a[1]) * t,
+  a[2] + (b[2] - a[2]) * t,
+];
 
 const computeSectionWeight = (
   sections: readonly EpisodeSection[],
@@ -100,6 +129,8 @@ type FemaleEyeProps = {
   readonly pupilOffsetY: number;
   readonly browRaise: number;
   readonly browTilt: number;
+  readonly lidAmount: number;
+  readonly smileLift: number;
 };
 
 /**
@@ -116,11 +147,10 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
   pupilOffsetY,
   browRaise,
   browTilt,
+  lidAmount,
+  smileLift,
 }) => {
   const outerSign = side === "left" ? 1 : -1;
-  const upperLidScaleY = lerp(0.01, 1.0, blinkAmount);
-  const lowerLidLift = blinkAmount * 0.015;
-  const closedLineVisible = blinkAmount > 0.45;
 
   return (
     <group
@@ -135,7 +165,7 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
         scale={[1.0, 0.55, 0.72]}
         castShadow
       >
-        <torusGeometry args={[0.049, 0.0046, 8, 16, Math.PI * 0.54]} />
+        <torusGeometry args={[0.049, 0.0056, 8, 18, Math.PI * 0.54]} />
         <meshStandardMaterial color="#382218" roughness={0.56} />
       </mesh>
 
@@ -151,32 +181,6 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
         />
       </mesh>
 
-      {/* Soft upper lash arch */}
-      <mesh
-        position={[0, 0.005, 0.011]}
-        rotation={[0, 0, 0.14]}
-        scale={[1.03, 1.08, 0.72]}
-      >
-        <torusGeometry args={[0.052, 0.0058, 6, 16, Math.PI * 0.86]} />
-        <meshStandardMaterial color="#211618" roughness={0.38} />
-      </mesh>
-
-      {/* Flared outer winged eyelashes */}
-      <mesh
-        position={[outerSign * 0.051, 0.018, 0.012]}
-        rotation={[0, 0, outerSign * -0.95]}
-      >
-        <capsuleGeometry args={[0.004, 0.017, 4, 6]} />
-        <meshStandardMaterial color="#211618" roughness={0.38} />
-      </mesh>
-      <mesh
-        position={[outerSign * 0.048, 0.032, 0.012]}
-        rotation={[0, 0, outerSign * -0.68]}
-      >
-        <capsuleGeometry args={[0.0034, 0.013, 4, 6]} />
-        <meshStandardMaterial color="#211618" roughness={0.38} />
-      </mesh>
-
       {/* Glare-free matte iris & pupil with crisp controlled catchlights */}
       <PixarIris3D
         palette={MARIA_IRIS}
@@ -185,38 +189,19 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
         offsetY={pupilOffsetY}
       />
 
-      {/* 3D Upper Eyelid Pivot */}
-      {blinkAmount > 0.02 && (
-        <group position={[0, 0.058, 0.011]} scale={[1, upperLidScaleY, 1]}>
-          <mesh position={[0, -0.056, 0]} scale={[1.06, 1.06, 0.36]}>
-            <sphereGeometry args={[0.054, 14, 10]} />
-            <meshStandardMaterial color="#ffd7bc" roughness={0.5} />
-          </mesh>
-        </group>
-      )}
-
-      {/* Curved closed-eye lash arc */}
-      {closedLineVisible && (
-        <mesh
-          position={[0, -0.015, 0.03]}
-          rotation={[0, 0, Math.PI * 1.15]}
-          scale={[1.06, 0.44, 0.6]}
-        >
-          <torusGeometry args={[0.045, 0.0058, 6, 14, Math.PI * 0.7]} />
-          <meshStandardMaterial color="#140f12" roughness={0.4} />
-        </mesh>
-      )}
-
-      {/* Lower eyelid cushion */}
-      {blinkAmount > 0.02 && (
-        <mesh
-          position={[0, -0.052 + lowerLidLift, 0.013]}
-          scale={[1.05, 0.25, 0.38]}
-        >
-          <sphereGeometry args={[0.05, 12, 8]} />
-          <meshStandardMaterial color="#fcccb0" roughness={0.52} />
-        </mesh>
-      )}
+      {/* Resting upper lid + lash line with flared wings, smile cushion & blink */}
+      <PixarEyelids3D
+        eyeRadius={0.052}
+        scleraScale={[1.02, 1.08]}
+        lidAmount={lidAmount}
+        smileLift={smileLift}
+        blinkAmount={blinkAmount}
+        lidColor="#fbcdb2"
+        lowerLidColor="#ffd7bc"
+        lashColor="#211618"
+        lashThickness={0.0068}
+        wingSide={outerSign}
+      />
     </group>
   );
 };
@@ -352,8 +337,8 @@ const FemaleArticulatedArm3D: React.FC<FemaleArmProps> = ({
 export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   sections,
   subtitles,
-  position = [-0.08, 0.78, -0.64],
-  rotation = [0, -0.26, 0],
+  position = MARIA_LAYOUT.position,
+  rotation = [0, MARIA_LAYOUT.yaw, 0],
   boardFocusProgress = 0,
 }) => {
   const frame = useCurrentFrame();
@@ -422,6 +407,7 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   );
 
   const logoTexture = useMemo(() => createHoodieLogoTexture(), []);
+  const blushTexture = useMemo(() => createSoftBlushTexture(), []);
 
   const torsoGeometry = useMemo(() => {
     const profile = [
@@ -486,6 +472,7 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   useEffect(() => {
     return () => {
       logoTexture.dispose();
+      blushTexture.dispose();
       torsoGeometry.dispose();
       ponytailGeometry.dispose();
       upperTailGeometry.dispose();
@@ -493,6 +480,7 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
     };
   }, [
     logoTexture,
+    blushTexture,
     torsoGeometry,
     ponytailGeometry,
     upperTailGeometry,
@@ -520,7 +508,32 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
     () => buildListenerNods(subtitles, true),
     [subtitles],
   );
-  const gaze = computeLayeredGaze(sections, subtitles, timeSec, audienceCheckIns);
+  // Independent listener gaze: while Sensei talks, Maria watches him (with brief
+  // audience glances) instead of mirroring his lens/board gaze.
+  const listenerGaze = useMemo(
+    () => ({ forGuest: true, glances: buildListenerGlances(subtitles, true) }),
+    [subtitles],
+  );
+  const questionLifts = useMemo(
+    () => buildQuestionLifts(subtitles, true),
+    [subtitles],
+  );
+  const gaze = computeLayeredGaze(
+    sections,
+    subtitles,
+    timeSec,
+    audienceCheckIns,
+    listenerGaze,
+  );
+  // 0.2s-old gaze drives the overlapping action of ribbon tails & drawstrings
+  const lagGaze = computeLayeredGaze(
+    sections,
+    subtitles,
+    timeSec - 0.2,
+    audienceCheckIns,
+    listenerGaze,
+  );
+  const questionLift = computeQuestionLift(questionLifts, timeSec);
   const lookAtSenseiWeight = gaze.head.partner;
   const lookAtBoardWeight = clamp01(
     Math.max(gaze.head.board, mariaPointWeight, senseiPointWeight * 0.5),
@@ -577,13 +590,21 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   const torsoWorld = blendGazeTargets(gaze.torso, torsoTargets);
   const torsoYaw = torsoWorld - rootYaw;
   const torsoPitch =
-    voiceEnergy * 0.022 + listenerWeight * gaze.torso.partner * 0.022;
+    0.012 + voiceEnergy * 0.022 + listenerWeight * gaze.torso.partner * 0.022;
+  // Slow idle weight shift on her own rhythm (~13s) + opposite resting shoulder tilt
+  const weightShift = Math.sin(timeSec * 0.47 + 2.1) * 0.018;
+  const torsoRoll = -0.01 + weightShift;
+  const torsoShiftX = weightShift * 0.3;
+  const torsoLagYaw =
+    blendGazeTargets(lagGaze.torso, torsoTargets) - torsoWorld;
 
   // Head Turning (relative to the trailing torso), Nodding & Tilting
   const headWorld =
     blendGazeTargets(gaze.head, headTargets) +
     Math.sin(timeSec * 0.95 + 0.8) * 0.022 * (1 - lookAtBoardWeight * 0.4);
   const headYaw = headWorld - torsoWorld;
+  const headLagYaw = blendGazeTargets(lagGaze.head, headTargets) -
+    blendGazeTargets(gaze.head, headTargets);
 
   // Eyes lead the head and hold the target while the head drifts (VOR-style)
   const eyeWorld = blendGazeTargets(gaze.eyes, eyeTargets);
@@ -617,54 +638,78 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   const partnerTilt =
     -partnerSide * lookAtSenseiWeight * lerp(0.055, 0.08, listenerWeight);
   const headRoll =
-    Math.sin(timeSec * 1.15 + 0.7) * 0.024 +
+    Math.sin(timeSec * 1.15 + 0.7) * 0.024 -
+    torsoRoll * 0.6 -
+    questionLift * 0.04 +
     partnerTilt +
     quizWeight * -0.09;
 
+  // Warmth: smiles while encouraging/celebrating, and softly while listening
+  const smileWarmth = clamp01(
+    mariaNodWeight * 0.85 + mariaCalmEmphasis * 0.25 + listenerWeight * 0.35,
+  );
   const browRaise =
     0.004 +
     (isMariaSpeaking ? voiceEnergy * 0.009 + speechPeak * 0.005 : 0) +
+    questionLift * 0.01 +
     lookAtSenseiWeight * 0.0035 +
     quizWeight * 0.004;
   // Positive gentle inner-brow lift keeps Maria's expression bright, warm, and welcoming
-  const friendlyBrowTilt = 0.05 + quizWeight * 0.02;
+  const friendlyBrowTilt = 0.05 + questionLift * 0.03 + quizWeight * 0.02;
+  // Quiz/thinking moments: one curious brow up, the other slightly down
+  const browAsym = quizWeight * (1 - mariaSpeakingWeight) * 0.007;
+  const lidAmount = computeUpperLidAmount(
+    MARIA_REST_LID,
+    blinkAmount,
+    pupilOffsetY,
+    questionLift,
+    smileWarmth,
+  );
 
-  const tailSway = Math.sin(timeSec * 2.5 + 1.4) * 0.08 + voiceEnergy * 0.055;
-  const ponytailSwayZ = Math.sin(timeSec * 2.1 + 0.5) * 0.045 - headYaw * 0.25;
+  // Ribbon tails & ponytail trail head turns (overlapping action)
+  const tailSway =
+    Math.sin(timeSec * 2.5 + 1.4) * 0.055 + voiceEnergy * 0.045 + headLagYaw * 0.9;
+  const tailLagYaw = headLagYaw * 1.4;
+  const ponytailSwayZ =
+    Math.sin(timeSec * 2.1 + 0.5) * 0.045 - headYaw * 0.25 + headLagYaw * 0.8;
+  const drawstringSwingZ = -torsoLagYaw * 0.9 + Math.sin(timeSec * 1.55 + 1.1) * 0.025;
+  const drawstringSwingX =
+    0.08 + Math.sin(timeSec * 2.3 + 1.8) * 0.03 - torsoPitch * 0.6;
 
   // Calm, Unhurried Phrase-Level Arm & Hand Gestures ("Less-Is-More": quiet desk rest when listening)
   const slowBreathArm = Math.sin(timeSec * 2.0 + 0.8) * 0.016;
   const calmDrift = Math.sin(timeSec * 2.4 + 0.4) * 0.02;
   const calmFollowThrough = Math.cos(timeSec * 2.0 + 0.9) * 0.018;
 
-  // Right Arm (-X, facing Sensei): rests calmly near desk (~70% of time); gentle subtle open-palm on selected emphasis phrases
-  const rightShoulderRot: [number, number, number] = [
-    -0.32 - mariaCalmEmphasis * 0.24 + slowBreathArm + calmDrift * mariaCalmEmphasis,
-    0.08 + mariaCalmEmphasis * 0.08,
-    -0.22 - mariaCalmEmphasis * 0.14,
+  // Right Arm (-X, facing Sensei): palm resting flat on the desk (~70% of time);
+  // supinates into a gentle open palm on selected emphasis phrases.
+  const rightRestShoulder: [number, number, number] = [-0.42 + slowBreathArm, 0.08, -0.1];
+  const rightEmphasisShoulder: [number, number, number] = [
+    -0.56 + slowBreathArm + calmDrift,
+    0.16,
+    -0.36,
   ];
-  const rightElbowRot: [number, number, number] = [
-    -1.08 +
-      mariaCalmEmphasis * 0.14 +
-      slowBreathArm * 0.6 +
-      calmFollowThrough * mariaCalmEmphasis,
+  const rightRestElbow: [number, number, number] = [-0.46 + slowBreathArm * 0.6, 0, 0.26];
+  const rightEmphasisElbow: [number, number, number] = [
+    -0.94 + slowBreathArm * 0.6 + calmFollowThrough,
     0,
-    0.2 - mariaCalmEmphasis * 0.08,
+    0.12,
   ];
-  const rightWristRot: [number, number, number] = [
-    0.16 - mariaCalmEmphasis * 0.22,
-    0.16 + mariaCalmEmphasis * 0.1,
-    -0.1 + mariaCalmEmphasis * 0.14,
-  ];
-  const rightFingerCurl = lerp(0.5, 0.2, mariaCalmEmphasis);
-  const rightFingerSpread = lerp(0.18, 0.66, mariaCalmEmphasis);
-  const rightThumbCurl = lerp(0.32, 0.15, mariaCalmEmphasis);
+  const rightRestWrist: [number, number, number] = [-0.62, Math.PI, -0.1];
+  const rightEmphasisWrist: [number, number, number] = [-0.06, 0.26, 0.04];
+  const rightShoulderRot = lerp3(rightRestShoulder, rightEmphasisShoulder, mariaCalmEmphasis);
+  const rightElbowRot = lerp3(rightRestElbow, rightEmphasisElbow, mariaCalmEmphasis);
+  const rightWristRot = lerp3(rightRestWrist, rightEmphasisWrist, mariaCalmEmphasis);
+  const rightFingerCurl = lerp(0.34, 0.2, mariaCalmEmphasis);
+  const rightFingerSpread = lerp(0.12, 0.66, mariaCalmEmphasis);
+  const rightThumbCurl = lerp(0.24, 0.15, mariaCalmEmphasis);
 
-  // Left Arm (+X, board side): rests quietly near desk unless Maria politely presents toward the board (`point_board`)
+  // Left Arm (+X, board side): loosely curled hand resting by the laptop, angled
+  // differently from her flat right hand, unless she presents the board (`point_board`)
   const leftRestShoulder: [number, number, number] = [
-    -0.32 + slowBreathArm,
+    -0.5 + slowBreathArm,
     -0.06,
-    0.22,
+    0.1,
   ];
   const leftPointShoulder: [number, number, number] = [
     -0.52 + calmDrift * 0.7,
@@ -678,9 +723,9 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   ];
 
   const leftRestElbow: [number, number, number] = [
-    -1.08 + slowBreathArm * 0.5,
+    -0.38 + slowBreathArm * 0.5,
     0,
-    -0.2,
+    -0.22,
   ];
   const leftPointElbow: [number, number, number] = [
     -0.56 + calmFollowThrough * 0.6,
@@ -694,13 +739,13 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   ];
 
   const leftWristRot: [number, number, number] = [
-    lerp(0.16, -0.22, mariaPointWeight),
-    lerp(0.16, -0.28, mariaPointWeight),
-    lerp(0.1, 0.24, mariaPointWeight),
+    lerp(-0.56, -0.22, mariaPointWeight),
+    lerp(-Math.PI * 0.86, -0.28, mariaPointWeight),
+    lerp(0.18, 0.24, mariaPointWeight),
   ];
-  const leftFingerCurl = lerp(0.5, 0.08, mariaPointWeight);
-  const leftFingerSpread = lerp(0.18, 0.08, mariaPointWeight);
-  const leftThumbCurl = lerp(0.32, 0.12, mariaPointWeight);
+  const leftFingerCurl = lerp(0.52, 0.08, mariaPointWeight);
+  const leftFingerSpread = lerp(0.1, 0.08, mariaPointWeight);
+  const leftThumbCurl = lerp(0.36, 0.12, mariaPointWeight);
 
   void activeSection;
 
@@ -732,8 +777,8 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
       {/* ==================== TORSO GROUP ==================== */}
       <group
         name="mariaTorsoGroup"
-        position={[0, breathY, 0]}
-        rotation={[torsoPitch, torsoYaw, 0]}
+        position={[torsoShiftX, breathY, 0]}
+        rotation={[torsoPitch, torsoYaw, torsoRoll]}
       >
         {/* Rich Crimson Velvet JungGo Ninja Hoodie */}
         <mesh
@@ -802,18 +847,22 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
           />
         </mesh>
 
-        {/* Warm Gold-Ivory Drawstrings */}
+        {/* Warm Gold-Ivory Drawstrings (pivot at the collar, lagging swing) */}
         {[-1, 1].map((side) => (
           <group
             key={side}
-            position={[side * 0.052, 0.388, 0.214]}
-            rotation={[0.08, 0, side * -0.05]}
+            position={[side * 0.052, 0.458, 0.208]}
+            rotation={[
+              drawstringSwingX - side * 0.01,
+              0,
+              side * -0.05 + drawstringSwingZ * (side === -1 ? 1 : 0.85),
+            ]}
           >
-            <mesh castShadow>
+            <mesh position={[0, -0.07, 0]} castShadow>
               <cylinderGeometry args={[0.0065, 0.0065, 0.14, 8]} />
               <meshStandardMaterial color="#f5d388" roughness={0.62} />
             </mesh>
-            <mesh position={[0, -0.075, 0]}>
+            <mesh position={[0, -0.145, 0]}>
               <cylinderGeometry args={[0.008, 0.007, 0.02, 8]} />
               <meshStandardMaterial color="#fff8eb" roughness={0.35} />
             </mesh>
@@ -866,25 +915,23 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
               sheen={0.22}
               sheenRoughness={0.75}
               sheenColor="#ffece0"
+              emissive="#ff8a6e"
+              emissiveIntensity={0.05}
             />
           </mesh>
 
-          {/* Soft Rosy Cheek Blush */}
+          {/* Soft gradient cheek blush decals (rise slightly with a smile) */}
           {[-1, 1].map((side) => (
-            <mesh
+            <CheekBlush3D
               key={side}
-              position={[side * 0.108, -0.036, 0.242]}
-              rotation={[0, side * 0.38, 0]}
-              scale={[1.48, 0.92, 0.4]}
-            >
-              <sphereGeometry args={[0.036, 10, 8]} />
-              <meshStandardMaterial
-                color="#f48d88"
-                transparent
-                opacity={0.5}
-                roughness={0.62}
-              />
-            </mesh>
+              side={side}
+              headRadius={0.282}
+              anchor={[0.108, -0.038 + smileWarmth * 0.006]}
+              size={[0.096, 0.06]}
+              color="#f2837f"
+              opacity={0.62 + smileWarmth * 0.12}
+              texture={blushTexture}
+            />
           ))}
 
           {/* Cute Sculpted Nose */}
@@ -962,8 +1009,10 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
             blinkAmount={blinkAmount}
             pupilOffsetX={pupilOffsetX}
             pupilOffsetY={pupilOffsetY}
-            browRaise={browRaise}
+            browRaise={browRaise - browAsym * 0.3}
             browTilt={friendlyBrowTilt}
+            lidAmount={lidAmount}
+            smileLift={smileWarmth}
           />
           <FemaleStylizedEye3D
             name="mariaLeftEyeGroup"
@@ -973,97 +1022,26 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
             blinkAmount={blinkAmount}
             pupilOffsetX={pupilOffsetX}
             pupilOffsetY={pupilOffsetY}
-            browRaise={browRaise}
+            browRaise={browRaise + browAsym}
             browTilt={-friendlyBrowTilt}
+            lidAmount={lidAmount}
+            smileLift={smileWarmth}
           />
 
           {/* ==================== WARM FRIENDLY PIXAR LIP-SYNC MOUTH CUTOUT ==================== */}
           <group
             name="mariaMouthGroup"
             position={[0, -0.09, 0.27]}
-            rotation={[0.24, 0, 0]}
+            rotation={[0.3, 0, 0]}
           >
-            {mouthOpen > 0.05 ? (
-              (() => {
-                // Soft joyful mouth curve so Maria always looks relaxed and smiling
-                const softOpen = Math.min(0.46, mouthOpen * 0.56);
-                const smileWidth = Math.max(0.94, mouthWidth * 1.05);
-                return (
-                  <group>
-                    {/* Gentle calm oral cavity */}
-                    <mesh
-                      position={[0, 0.002 - softOpen * 0.017, -0.001]}
-                      scale={[
-                        smileWidth * 0.96,
-                        0.2 + softOpen * 0.56,
-                        0.26,
-                      ]}
-                    >
-                      <sphereGeometry args={[0.056, 16, 12]} />
-                      <meshStandardMaterial color="#571322" roughness={0.7} />
-                    </mesh>
-                    {/* Crisp ivory upper teeth arch */}
-                    <mesh
-                      position={[0, 0.011, 0.01]}
-                      scale={[smileWidth * 0.88, 1, 1]}
-                    >
-                      <boxGeometry args={[0.07, 0.012, 0.01]} />
-                      <meshStandardMaterial
-                        color="#ffffff"
-                        emissive="#fff6ed"
-                        emissiveIntensity={0.14}
-                        roughness={0.18}
-                      />
-                    </mesh>
-                    {/* Soft coral-pink curved tongue */}
-                    <mesh
-                      position={[0, -0.008 - softOpen * 0.017, 0.009]}
-                      scale={[smileWidth * 0.82, 0.38, 0.4]}
-                    >
-                      <sphereGeometry args={[0.034, 12, 10]} />
-                      <meshStandardMaterial
-                        color="#f5788e"
-                        emissive="#541622"
-                        emissiveIntensity={0.25}
-                        roughness={0.4}
-                      />
-                    </mesh>
-                    {/* Upward-smiling gentle upper lip contour */}
-                    <mesh
-                      position={[0, 0.018, 0.01]}
-                      rotation={[0, 0, Math.PI * 1.22]}
-                      scale={[smileWidth * 1.02, 0.25, 0.56]}
-                    >
-                      <torusGeometry args={[0.054, 0.0044, 6, 16, Math.PI * 0.56]} />
-                      <meshStandardMaterial color="#ea998a" roughness={0.44} />
-                    </mesh>
-                    {/* Dynamic smiling lower lip rim */}
-                    <mesh
-                      position={[0, -0.008 - softOpen * 0.032, 0.009]}
-                      rotation={[0, 0, Math.PI * 1.11]}
-                      scale={[
-                        smileWidth * 0.98,
-                        0.56 + softOpen * 0.3,
-                        0.62,
-                      ]}
-                    >
-                      <torusGeometry args={[0.052, 0.0046, 6, 16, Math.PI * 0.78]} />
-                      <meshStandardMaterial color="#e08078" roughness={0.44} />
-                    </mesh>
-                  </group>
-                );
-              })()
-            ) : (
-              /* Warm welcoming Pixar closed smile */
-              <mesh
-                position={[0, 0.005, 0.01]}
-                rotation={[0, 0, Math.PI * 1.12]}
-                scale={[mouthWidth * 1.04, 0.62, 0.62]}
-              >
-                <torusGeometry args={[0.052, 0.005, 8, 20, Math.PI * 0.76]} />
-                <meshStandardMaterial color="#b3454e" roughness={0.44} />
-              </mesh>
-            )}
+            <PixarMouth3D
+              palette={MARIA_MOUTH}
+              halfWidth={0.045}
+              headRadius={0.282}
+              jawOpen={mouthOpen}
+              mouthWidth={mouthWidth}
+              smile={smileWarmth}
+            />
           </group>
 
           {/* Crimson Ninja Headband + Flowing Right-Side Ribbon Tails */}
@@ -1089,7 +1067,7 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
               <meshStandardMaterial color="#961e2c" roughness={0.74} />
             </mesh>
 
-            <group position={[0.286, -0.01, -0.03]}>
+            <group position={[0.286, -0.01, -0.03]} rotation={[0, tailLagYaw, 0]}>
               <mesh scale={[0.9, 1.05, 0.9]} castShadow>
                 <sphereGeometry args={[0.044, 10, 8]} />
                 <meshStandardMaterial color="#bd2a3b" roughness={0.72} />

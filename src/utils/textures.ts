@@ -61,8 +61,10 @@ const drawRoundedRect = (
 export const createWoodTexture = (): THREE.CanvasTexture => {
   const [canvas, ctx] = makeCanvas(1024, 512);
 
-  // Warm golden-amber oak base gradient
-  const grad = ctx.createLinearGradient(0, 0, 1024, 512);
+  // Warm golden-amber oak base gradient. Vertical only (and grain waves that are
+  // whole periods across the width) so the 2x horizontal repeat tiles seamlessly
+  // instead of showing a hard seam down the middle of the desk.
+  const grad = ctx.createLinearGradient(0, 0, 0, 512);
   grad.addColorStop(0, "#a96d38");
   grad.addColorStop(0.5, "#bc7e43");
   grad.addColorStop(1, "#985e2e");
@@ -85,14 +87,14 @@ export const createWoodTexture = (): THREE.CanvasTexture => {
     for (let i = 0; i < 42; i++) {
       const gy = y0 + (i / 42) * plankH;
       const amp = 1.8 + ((p * 7 + i * 13) % 5) * 0.55;
-      const freq = 0.007 + ((i * 11) % 7) * 0.0012;
+      const freq = ((Math.PI * 2) / 1024) * (1 + ((i * 11) % 3));
       const phase = p * 2.1 + i * 0.65;
       ctx.beginPath();
-      ctx.moveTo(0, gy);
-      for (let x = 0; x <= 1024; x += 24) {
+      ctx.moveTo(0, gy + Math.sin(phase) * amp + Math.cos(-phase) * amp * 0.35);
+      for (let x = 0; x <= 1024; x += 16) {
         const dy =
           Math.sin(x * freq + phase) * amp +
-          Math.cos(x * freq * 2.2 - phase) * (amp * 0.35);
+          Math.cos(x * freq * 2 - phase) * (amp * 0.35);
         ctx.lineTo(x, gy + dy);
       }
       ctx.strokeStyle =
@@ -106,6 +108,22 @@ export const createWoodTexture = (): THREE.CanvasTexture => {
   }
 
   return finalizeTexture(canvas, 2, 1);
+};
+
+/**
+ * Soft radial alpha falloff (white RGB) for cheek blush decals. Tint it with the
+ * material colour; the gradient edge means no hard rim on the curved head.
+ */
+export const createSoftBlushTexture = (): THREE.CanvasTexture => {
+  const [canvas, ctx] = makeCanvas(64, 64);
+  const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, "rgba(255, 255, 255, 1)");
+  grad.addColorStop(0.45, "rgba(255, 255, 255, 0.6)");
+  grad.addColorStop(0.8, "rgba(255, 255, 255, 0.14)");
+  grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  return finalizeTexture(canvas, 1, 1, 1);
 };
 
 /**

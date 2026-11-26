@@ -23,8 +23,8 @@ import {
   createWoodTexture,
   createYouTubePlaqueTexture,
 } from "../utils/textures";
-import { FemaleNinjaHost3D } from "./FemaleNinjaHost3D";
-import { NinjaHost3D } from "./NinjaHost3D";
+import { FemaleNinjaHost3D, MARIA_LAYOUT } from "./FemaleNinjaHost3D";
+import { NinjaHost3D, SENSEI_LAYOUT, SENSEI_MOUTH_LOCAL } from "./NinjaHost3D";
 
 type Studio3DProps = {
   readonly sections: readonly EpisodeSection[];
@@ -646,122 +646,133 @@ const TokyoSkylineBackdrop: React.FC<{ readonly timeSec: number }> = ({
   );
 };
 
-/**
- * Matte-black SM7B broadcast condenser mic on far-left dual-tube boom arm,
- * routing across lower-left so lip-sync mouth and chest logo remain clear.
- */
-const StudioMicrophone3D: React.FC<{
-  readonly audioVolume: number;
-  readonly isQuiz: boolean;
-  readonly studioMode?: StudioMode;
-}> = ({ audioVolume, isQuiz, studioMode = "solo" }) => {
-  const isDual = studioMode === "dual";
-  const ledColor = isQuiz ? "#a78bfa" : "#34f5b5";
-  const ledIntensity = 0.8 + audioVolume * 1.8;
+type Vec3 = readonly [number, number, number];
 
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+
+/** Host-local (root frame, yaw only) -> world position. */
+const hostLocalToWorld = (root: Vec3, yaw: number, local: Vec3): THREE.Vector3 =>
+  new THREE.Vector3(local[0], local[1], local[2])
+    .applyAxisAngle(Y_AXIS, yaw)
+    .add(new THREE.Vector3(root[0], root[1], root[2]));
+
+/** Solid boom-arm tube spanning exactly from `a` to `b` (so every joint connects). */
+const BoomRod: React.FC<{
+  readonly a: THREE.Vector3;
+  readonly b: THREE.Vector3;
+  readonly radius: number;
+}> = ({ a, b, radius }) => {
+  const dir = b.clone().sub(a);
+  const length = dir.length();
+  const mid = a.clone().add(b).multiplyScalar(0.5);
+  const quat = new THREE.Quaternion().setFromUnitVectors(Y_AXIS, dir.normalize());
   return (
-    <group
-      position={isDual ? [-2.26, 0.78, 0.2] : [-2.08, 0.78, 0.14]}
-      scale={isDual ? [0.88, 0.98, 0.96] : [1, 1, 1]}
-    >
-      {/* Desk clamp */}
-      <mesh position={[0, 0.03, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.13, 0.06, 0.13]} />
-        <meshStandardMaterial color="#14171d" metalness={0.6} roughness={0.38} />
-      </mesh>
-      {/* Lower boom arm */}
-      <mesh position={[0.42, 0.14, -0.02]} rotation={[0.04, 0, -1.26]} castShadow>
-        <cylinderGeometry args={[0.015, 0.017, 0.86, 10]} />
-        <meshStandardMaterial color="#1b1f27" metalness={0.6} roughness={0.38} />
-      </mesh>
-      {/* Elbow joint */}
-      <mesh position={[0.82, 0.24, -0.04]} castShadow>
-        <sphereGeometry args={[0.026, 12, 12]} />
-        <meshStandardMaterial color="#303642" metalness={0.75} roughness={0.3} />
-      </mesh>
-      {/* Upper boom arm */}
-      <mesh position={[1.18, 0.27, -0.14]} rotation={[0.3, 0, -1.44]} castShadow>
-        <cylinderGeometry args={[0.013, 0.014, 0.72, 10]} />
-        <meshStandardMaterial color="#1b1f27" metalness={0.6} roughness={0.38} />
-      </mesh>
-
-      {/* SM7B Broadcast Mic Capsule */}
-      <group position={[1.54, 0.29, -0.24]} rotation={[0.3, 0.45, -0.35]}>
-        <mesh position={[0, -0.02, 0]} castShadow>
-          <torusGeometry args={[0.064, 0.009, 10, 18, Math.PI]} />
-          <meshStandardMaterial color="#252b36" metalness={0.75} roughness={0.32} />
-        </mesh>
-        <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.046, 0.044, 0.17, 20]} />
-          <meshStandardMaterial color="#181b22" metalness={0.65} roughness={0.36} />
-        </mesh>
-        <mesh position={[0, 0, 0.05]}>
-          <torusGeometry args={[0.049, 0.0055, 8, 22]} />
-          <meshStandardMaterial
-            color={ledColor}
-            emissive={ledColor}
-            emissiveIntensity={ledIntensity}
-            roughness={0.25}
-          />
-        </mesh>
-        <mesh position={[0, 0, 0.13]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <capsuleGeometry args={[0.048, 0.068, 10, 18]} />
-          <meshStandardMaterial color="#12151a" roughness={0.92} />
-        </mesh>
-      </group>
-    </group>
+    <mesh position={mid} quaternion={quat} castShadow>
+      <cylinderGeometry args={[radius, radius * 1.08, length, 10]} />
+      <meshStandardMaterial color="#1b1f27" metalness={0.6} roughness={0.38} />
+    </mesh>
   );
 };
 
-/**
- * Secondary SM7B boom-arm condenser mic clamped front-right on the desk for Female Ninja Co-Host (Maria),
- * with a crimson-amber LED ring reactive when Maria is speaking.
- */
-const SecondaryMicrophone3D: React.FC<{
-  readonly audioVolume: number;
-  readonly isQuiz: boolean;
-}> = ({ audioVolume, isQuiz }) => {
-  const ledColor = isQuiz ? "#a78bfa" : "#f43f5e";
-  const ledIntensity = 0.8 + audioVolume * 1.8;
+const BoomJoint: React.FC<{ readonly at: THREE.Vector3; readonly r: number }> = ({
+  at,
+  r,
+}) => (
+  <mesh position={at} castShadow>
+    <sphereGeometry args={[r, 12, 10]} />
+    <meshStandardMaterial color="#303642" metalness={0.75} roughness={0.3} />
+  </mesh>
+);
 
+export type BoomMicRig = {
+  readonly clamp: THREE.Vector3;
+  readonly riserTop: THREE.Vector3;
+  readonly elbow: THREE.Vector3;
+  readonly mount: THREE.Vector3;
+  readonly capsule: THREE.Vector3;
+  readonly aim: THREE.Quaternion;
+};
+
+/**
+ * Broadcast boom placement for a host: the SM7B capsule sits at chin height,
+ * out to the host's outer side (away from the co-host and the lens line), and
+ * aims up at the mouth. It clears the face, the mouth and the chest wordmark in
+ * both studio-wide and circular-PIP framing. The two-section arm is built
+ * joint-to-joint from a desk clamp, so it always reads as one connected stand.
+ */
+export const computeBoomMicRig = (
+  root: Vec3,
+  yaw: number,
+  outerSide: number,
+  mouthLocal: Vec3,
+  clampLocal: Vec3,
+): BoomMicRig => {
+  const capsuleLocal: Vec3 = [outerSide * 0.3, 0.44, 0.4];
+  const capsule = hostLocalToWorld(root, yaw, capsuleLocal);
+  const mouth = hostLocalToWorld(root, yaw, mouthLocal);
+  const dir = mouth.clone().sub(capsule).normalize();
+  const aim = new THREE.Quaternion().setFromUnitVectors(Z_AXIS, dir);
+  // Yoke pivot directly under the capsule body, in the capsule's own frame
+  const mount = capsule
+    .clone()
+    .add(new THREE.Vector3(0, -0.072, -0.02).applyQuaternion(aim));
+  const elbow = hostLocalToWorld(root, yaw, [
+    capsuleLocal[0] + outerSide * 0.44,
+    capsuleLocal[1] + 0.05,
+    capsuleLocal[2] + 0.06,
+  ]);
+  const clamp = hostLocalToWorld(root, yaw, clampLocal);
+  clamp.y = 0.78;
+  const riserTop = clamp.clone().add(new THREE.Vector3(0, 0.16, 0));
+  return {
+    clamp,
+    riserTop,
+    elbow,
+    mount,
+    capsule,
+    aim,
+  };
+};
+
+/**
+ * Matte-black SM7B broadcast mic on a connected two-section boom arm, with a
+ * voice-reactive LED ring.
+ */
+const BoomMicrophone3D: React.FC<{
+  readonly rig: BoomMicRig;
+  readonly ledColor: string;
+  readonly audioVolume: number;
+}> = ({ rig, ledColor, audioVolume }) => {
+  const ledIntensity = 0.8 + audioVolume * 1.8;
   return (
-    <group
-      position={[0.92, 0.78, 0.28]}
-      rotation={[0, Math.PI - 0.38, 0]}
-      scale={[0.58, 0.98, 0.92]}
-    >
-      {/* Desk clamp */}
-      <mesh position={[0, 0.03, 0]} castShadow receiveShadow>
-        <boxGeometry args={[0.14, 0.06, 0.14]} />
+    <group>
+      {/* Desk clamp + riser post */}
+      <mesh position={[rig.clamp.x, rig.clamp.y + 0.03, rig.clamp.z]} castShadow receiveShadow>
+        <boxGeometry args={[0.12, 0.06, 0.12]} />
         <meshStandardMaterial color="#14171d" metalness={0.6} roughness={0.38} />
       </mesh>
-      {/* Lower boom arm */}
-      <mesh position={[0.42, 0.14, -0.02]} rotation={[0.04, 0, -1.26]} castShadow>
-        <cylinderGeometry args={[0.017, 0.019, 0.86, 10]} />
-        <meshStandardMaterial color="#1b1f27" metalness={0.6} roughness={0.38} />
-      </mesh>
-      {/* Elbow joint */}
-      <mesh position={[0.82, 0.24, -0.04]} castShadow>
-        <sphereGeometry args={[0.028, 12, 12]} />
-        <meshStandardMaterial color="#303642" metalness={0.75} roughness={0.3} />
-      </mesh>
-      {/* Upper boom arm */}
-      <mesh position={[1.18, 0.27, -0.14]} rotation={[0.3, 0, -1.44]} castShadow>
-        <cylinderGeometry args={[0.015, 0.016, 0.72, 10]} />
-        <meshStandardMaterial color="#1b1f27" metalness={0.6} roughness={0.38} />
-      </mesh>
-      {/* Secondary SM7B Broadcast Mic Capsule */}
-      <group position={[1.54, 0.29, -0.24]} rotation={[0.3, 0.35, -0.35]}>
-        <mesh position={[0, -0.02, 0]} castShadow>
-          <torusGeometry args={[0.064, 0.009, 10, 18, Math.PI]} />
+      <BoomRod a={rig.clamp} b={rig.riserTop} radius={0.018} />
+      <BoomJoint at={rig.riserTop} r={0.026} />
+      {/* Lower & upper arm sections meeting at the spring elbow */}
+      <BoomRod a={rig.riserTop} b={rig.elbow} radius={0.015} />
+      <BoomJoint at={rig.elbow} r={0.024} />
+      <BoomRod a={rig.elbow} b={rig.mount} radius={0.013} />
+      <BoomJoint at={rig.mount} r={0.018} />
+
+      {/* SM7B capsule aimed at the host's mouth */}
+      <group position={rig.capsule} quaternion={rig.aim}>
+        {/* U-yoke cradling the body down to the boom pivot */}
+        <mesh position={[0, 0, -0.02]} rotation={[0, 0, Math.PI]} castShadow>
+          <torusGeometry args={[0.058, 0.007, 10, 18, Math.PI]} />
           <meshStandardMaterial color="#252b36" metalness={0.75} roughness={0.32} />
         </mesh>
         <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.046, 0.044, 0.17, 20]} />
+          <cylinderGeometry args={[0.044, 0.042, 0.16, 20]} />
           <meshStandardMaterial color="#181b22" metalness={0.65} roughness={0.36} />
         </mesh>
         <mesh position={[0, 0, 0.05]}>
-          <torusGeometry args={[0.049, 0.0055, 8, 22]} />
+          <torusGeometry args={[0.047, 0.0052, 8, 22]} />
           <meshStandardMaterial
             color={ledColor}
             emissive={ledColor}
@@ -769,8 +780,8 @@ const SecondaryMicrophone3D: React.FC<{
             roughness={0.25}
           />
         </mesh>
-        <mesh position={[0, 0, 0.13]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-          <capsuleGeometry args={[0.048, 0.068, 10, 18]} />
+        <mesh position={[0, 0, 0.12]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <capsuleGeometry args={[0.046, 0.062, 10, 18]} />
           <meshStandardMaterial color="#12151a" roughness={0.92} />
         </mesh>
       </group>
@@ -803,6 +814,43 @@ export const Studio3D: React.FC<Studio3DProps> = ({
   const quizFactor = computeQuizFactor(sections, timeSec);
   const isQuiz = activeSection.type === "quiz";
 
+  const senseiLayout = isDual ? SENSEI_LAYOUT.dual : SENSEI_LAYOUT.solo;
+  const micRigs = useMemo(
+    () => ({
+      sensei: computeBoomMicRig(
+        senseiLayout.position,
+        senseiLayout.yaw,
+        -1,
+        SENSEI_MOUTH_LOCAL,
+        [-0.88, 0, 0.52],
+      ),
+      maria: computeBoomMicRig(
+        MARIA_LAYOUT.position,
+        MARIA_LAYOUT.yaw,
+        1,
+        [0, 0.66, 0.29],
+        [0.95, 0, 0.42],
+      ),
+    }),
+    [senseiLayout],
+  );
+  // Warm/cool rim spotlights aimed just above each host's head (no shadows)
+  const rimTargets = useMemo(() => {
+    const sensei = new THREE.Object3D();
+    sensei.position.set(
+      senseiLayout.position[0],
+      senseiLayout.position[1] + 0.9,
+      senseiLayout.position[2],
+    );
+    const maria = new THREE.Object3D();
+    maria.position.set(
+      MARIA_LAYOUT.position[0],
+      MARIA_LAYOUT.position[1] + 0.88,
+      MARIA_LAYOUT.position[2],
+    );
+    return { sensei, maria };
+  }, [senseiLayout]);
+
   const textures = useMemo(
     () => ({
       wood: createWoodTexture(),
@@ -823,9 +871,11 @@ export const Studio3D: React.FC<Studio3DProps> = ({
     () => ({
       slatGeo: new THREE.BoxGeometry(0.088, 3.6, 0.06),
       deskLegGeo: new THREE.BoxGeometry(0.08, 0.7, 0.08),
+      // Slightly deeper walnut so the ceiling wall-wash reads as pools of light and
+      // the faces, not the backdrop, carry the most saturated orange in frame.
       slatMat: new THREE.MeshStandardMaterial({
-        color: "#a85d28",
-        roughness: 0.44,
+        color: "#904d21",
+        roughness: 0.5,
         metalness: 0.06,
       }),
       wallMat: new THREE.MeshStandardMaterial({
@@ -869,7 +919,7 @@ export const Studio3D: React.FC<Studio3DProps> = ({
   }, [sharedScene, textures]);
 
   const keyIntensity = interpolate(quizFactor, [0, 1], [2.25, 1.35]);
-  const rimIntensity = interpolate(quizFactor, [0, 1], [1.95, 2.55]);
+  const rimIntensity = interpolate(quizFactor, [0, 1], [1.15, 1.9]);
   const ambientIntensity = interpolate(quizFactor, [0, 1], [0.58, 0.36]);
   const neonGlowIntensity =
     0.84 + audio.volume * 0.18 + Math.sin(timeSec * 4.5) * 0.025;
@@ -903,19 +953,47 @@ export const Studio3D: React.FC<Studio3DProps> = ({
         shadow-bias={-0.0005}
       />
 
-      {/* 2. Cool Royal-Blue Night Rim Light from Tokyo Window */}
+      {/* 2. Cool Royal-Blue Night Light from the Tokyo Window: placed behind the hosts so
+            it grazes edges instead of tinting the faces lilac */}
       <directionalLight
-        position={[4.6, 2.5, -1.5]}
+        position={[4.2, 2.9, -3.4]}
         intensity={rimIntensity}
         color={quizFactor > 0.35 ? "#9c6bff" : "#3d7eff"}
       />
-      <pointLight
-        position={[2.6, 2.1, -1.4]}
-        intensity={1.55 + quizFactor * 0.7}
-        color={quizFactor > 0.35 ? "#8b5cf6" : "#4080ff"}
-        distance={8.0}
+
+      {/* 2b. Broadcast rim (back) lights: warm on Sensei, cool on Maria. They trace the
+            dark hoods & headphones against the slats. No shadow maps, and they replace the
+            old window point light + a merged shelf light, so the light count is unchanged. */}
+      <primitive object={rimTargets.sensei} />
+      <spotLight
+        position={[
+          senseiLayout.position[0] - 0.5,
+          2.85,
+          senseiLayout.position[2] - 1.1,
+        ]}
+        target={rimTargets.sensei}
+        intensity={interpolate(quizFactor, [0, 1], [16, 12])}
+        color={quizFactor > 0.35 ? "#c9a2ff" : "#ffc58c"}
+        angle={0.36}
+        penumbra={0.85}
+        distance={3.0}
         decay={2}
       />
+      {isDual ? (
+        <>
+          <primitive object={rimTargets.maria} />
+          <spotLight
+            position={[MARIA_LAYOUT.position[0] + 0.5, 2.85, MARIA_LAYOUT.position[2] - 1.1]}
+            target={rimTargets.maria}
+            intensity={interpolate(quizFactor, [0, 1], [16, 12])}
+            color={quizFactor > 0.35 ? "#b69cff" : "#a9c8ff"}
+            angle={0.36}
+            penumbra={0.85}
+            distance={3.0}
+            decay={2}
+          />
+        </>
+      ) : null}
 
       {/* 3. Warm Front-Desk Bounce Fill for Pixar Face & Oak Tabletop Sheen */}
       <pointLight
@@ -926,19 +1004,12 @@ export const Studio3D: React.FC<Studio3DProps> = ({
         decay={2}
       />
 
-      {/* 4. Warm Recessed Bookshelf Bay Glows (angled & tucked behind shelf lip for zero spine glare) */}
+      {/* 4. Warm Recessed Bookshelf Bay Glow (one merged light tucked behind the shelf lip) */}
       <pointLight
-        position={[-2.35, 2.22, -1.68]}
-        intensity={interpolate(quizFactor, [0, 1], [1.45, 0.85])}
-        color="#ffab40"
-        distance={2.9}
-        decay={2}
-      />
-      <pointLight
-        position={[-2.35, 1.84, -1.82]}
-        intensity={interpolate(quizFactor, [0, 1], [0.72, 0.42])}
-        color="#ffb24d"
-        distance={2.5}
+        position={[-2.35, 2.05, -1.74]}
+        intensity={interpolate(quizFactor, [0, 1], [1.95, 1.15])}
+        color="#ffae45"
+        distance={3.0}
         decay={2}
       />
 
@@ -1246,16 +1317,20 @@ export const Studio3D: React.FC<Studio3DProps> = ({
           </group>
         ) : null}
 
-        {/* Far-Left Clamped SM7B Boom-Arm Microphone (Sensei) */}
-        <StudioMicrophone3D
+        {/* Sensei's SM7B on a connected boom: chin height, outer side, aimed at his mouth */}
+        <BoomMicrophone3D
+          rig={micRigs.sensei}
+          ledColor={isQuiz ? "#a78bfa" : "#34f5b5"}
           audioVolume={senseiMicVol}
-          isQuiz={isQuiz}
-          studioMode={studioMode}
         />
 
-        {/* Secondary Front-Right Clamped SM7B Boom-Arm Microphone (Maria) */}
+        {/* Maria's SM7B mirrored on her outer (window) side */}
         {isDual ? (
-          <SecondaryMicrophone3D audioVolume={mariaMicVol} isQuiz={isQuiz} />
+          <BoomMicrophone3D
+            rig={micRigs.maria}
+            ledColor={isQuiz ? "#a78bfa" : "#f43f5e"}
+            audioVolume={mariaMicVol}
+          />
         ) : null}
 
         {/* Open Space-Gray Laptop angled cleanly, JungGo Mt. Fuji Lid facing Camera */}

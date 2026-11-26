@@ -198,34 +198,201 @@ const applyCheckIn = (
 };
 
 /**
+ * Independent listener gaze. The per-cue gaze describes where the SPEAKER looks;
+ * the host who is listening instead mostly watches the speaker (a real co-host
+ * never keeps staring into the lens while their partner talks), with brief
+ * glances back to the audience. Board-reading lines keep most of the listener's
+ * attention on the board.
+ */
+const LISTENER_PARTNER_FROM_CAMERA = 0.78;
+const LISTENER_PARTNER_FROM_BOARD = 0.35;
+const LISTENER_GLANCE_EYE_SHARE = 1.0;
+const LISTENER_GLANCE_HEAD_SHARE = 0.55;
+const LISTENER_GLANCE_TORSO_SHARE = 0.15;
+
+export type ListenerGazeConfig = {
+  /** true when this host is Maria (the guest), false for Sensei. */
+  readonly forGuest: boolean;
+  /** Deterministic audience-glance start times from `buildListenerGlances`. */
+  readonly glances: readonly number[];
+};
+
+/** 0..1 weight of "this host is listening while the co-host talks". */
+export const computeListeningWeight = (
+  subtitles: readonly SubtitleCue[] | undefined,
+  forGuest: boolean,
+  timeSec: number,
+): number => {
+  const partner = computeSpeakingEnvelope(subtitles, !forGuest, timeSec);
+  const self = computeSpeakingEnvelope(subtitles, forGuest, timeSec);
+  return clamp(partner * (1 - self), 0, 1);
+};
+
+/**
+ * Deterministic ~0.8s audience glances while this host listens: the first one
+ * 2.2–3.7s into the co-host's line, then every 3.8–6.0s, never in the last 0.6s.
+ */
+export const buildListenerGlances = (
+  subtitles: readonly SubtitleCue[] | undefined,
+  listenerIsGuest: boolean,
+): readonly number[] => {
+  const starts: number[] = [];
+  if (!subtitles) {
+    return starts;
+  }
+  for (const cue of subtitles) {
+    if (isGuestSpeaker(cue.speaker) === listenerIsGuest) {
+      continue;
+    }
+    let k = 0;
+    let t = cue.startSec + 2.2 + random(`listen-glance-${cue.id}-0`) * 1.5;
+    while (t + CHECK_IN_DURATION_SEC <= cue.endSec - 0.6) {
+      starts.push(t);
+      k++;
+      t += 3.8 + random(`listen-glance-${cue.id}-${k}`) * 2.2;
+    }
+  }
+  return starts;
+};
+
+const applyListenerBias = (
+  weights: HostGazeWeights,
+  listening: number,
+  glance: number,
+): HostGazeWeights => {
+  const share = listening * (1 - glance);
+  const fromCamera = weights.camera * LISTENER_PARTNER_FROM_CAMERA * share;
+  const fromBoard = weights.board * LISTENER_PARTNER_FROM_BOARD * share;
+  return {
+    camera: weights.camera - fromCamera,
+    partner: weights.partner + fromCamera + fromBoard,
+    board: weights.board - fromBoard,
+  };
+};
+
+/**
  * Layered gaze: eyes lead by 150ms, the head follows, the torso settles last.
  * Audience check-ins pull the eyes fully to the lens, the head partway, and
  * the torso only slightly, so the glance reads as natural rather than robotic.
+ * With `listener` set (dual studio), the host watches the co-host while they talk.
  */
 export const computeLayeredGaze = (
   sections: readonly EpisodeSection[],
   subtitles: readonly SubtitleCue[] | undefined,
   timeSec: number,
   checkIns: readonly number[],
+  listener?: ListenerGazeConfig,
 ): LayeredGaze => {
   const eyeT = timeSec + EYE_LEAD_SEC;
   const torsoT = timeSec - TORSO_LAG_SEC;
   const headCheckIn = computeAudienceCheckIn(checkIns, timeSec);
+
+  const layer = (t: number, checkInShare: number, glanceShare: number) => {
+    const base = applyCheckIn(
+      computeHostGazeWeights(sections, subtitles, t),
+      computeAudienceCheckIn(checkIns, t) * checkInShare,
+    );
+    if (!listener) {
+      return base;
+    }
+    return applyListenerBias(
+      base,
+      computeListeningWeight(subtitles, listener.forGuest, t),
+      computeAudienceCheckIn(listener.glances, t) * glanceShare,
+    );
+  };
+
   return {
-    eyes: applyCheckIn(
-      computeHostGazeWeights(sections, subtitles, eyeT),
-      computeAudienceCheckIn(checkIns, eyeT) * CHECK_IN_EYE_SHARE,
-    ),
-    head: applyCheckIn(
-      computeHostGazeWeights(sections, subtitles, timeSec),
-      headCheckIn * CHECK_IN_HEAD_SHARE,
-    ),
-    torso: applyCheckIn(
-      computeHostGazeWeights(sections, subtitles, torsoT),
-      computeAudienceCheckIn(checkIns, torsoT) * CHECK_IN_TORSO_SHARE,
-    ),
+    eyes: layer(eyeT, CHECK_IN_EYE_SHARE, LISTENER_GLANCE_EYE_SHARE),
+    head: layer(timeSec, CHECK_IN_HEAD_SHARE, LISTENER_GLANCE_HEAD_SHARE),
+    torso: layer(torsoT, CHECK_IN_TORSO_SHARE, LISTENER_GLANCE_TORSO_SHARE),
     checkIn: headCheckIn,
   };
+};
+
+/**
+ * 0..1 "asking" envelope for this host: brows lift and eyes open slightly on
+ * question endings (word followed by ？ / ?, or a sentence-final か), and softly
+ * on agreement-seeking ね / よね, rising just before the particle and relaxing
+ * ~0.6s after it.
+ */
+export const buildQuestionLifts = (
+  subtitles: readonly SubtitleCue[] | undefined,
+  forGuest: boolean,
+): readonly { readonly timeSec: number; readonly endSec: number; readonly strength: number }[] => {
+  const lifts: { timeSec: number; endSec: number; strength: number }[] = [];
+  if (!subtitles) {
+    return lifts;
+  }
+  for (const cue of subtitles) {
+    if (isGuestSpeaker(cue.speaker) !== forGuest) {
+      continue;
+    }
+    for (const w of cue.wordTimings ?? []) {
+      const end = w.charEnd ?? -1;
+      const next = end >= 0 ? cue.japanese.slice(end, end + 1) : "";
+      const word = w.word.trim();
+      let strength = 0;
+      if (next === "？" || next === "?") {
+        strength = 1;
+      } else if (word.endsWith("か") && /^[。！!、]?$/.test(next)) {
+        strength = 0.75;
+      } else if (word === "ね" || word.endsWith("よね")) {
+        strength = 0.5;
+      }
+      if (strength > 0) {
+        lifts.push({ timeSec: w.startSec, endSec: w.endSec, strength });
+      }
+    }
+  }
+  return lifts.sort((a, b) => a.timeSec - b.timeSec);
+};
+
+export const computeQuestionLift = (
+  lifts: readonly { readonly timeSec: number; readonly endSec: number; readonly strength: number }[],
+  timeSec: number,
+): number => {
+  let value = 0;
+  for (const lift of lifts) {
+    if (lift.timeSec - 0.3 > timeSec) {
+      break;
+    }
+    if (timeSec > lift.endSec + 0.85) {
+      continue;
+    }
+    value = Math.max(
+      value,
+      lift.strength *
+        interpolate(
+          timeSec,
+          [lift.timeSec - 0.3, lift.timeSec + 0.05, lift.endSec + 0.25, lift.endSec + 0.85],
+          [0, 1, 1, 0],
+          { ...CLAMP, easing: EASE },
+        ),
+    );
+  }
+  return value;
+};
+
+/**
+ * Resting upper-lid coverage (0 = lid fully up, 1 = closed) for a relaxed,
+ * non-startled Pixar look. The lid tracks vertical gaze (drops when looking
+ * down, lifts when looking up), opens a touch on questions, and squints slightly
+ * with a warm smile; blinks close it the rest of the way.
+ */
+export const computeUpperLidAmount = (
+  restLid: number,
+  blinkAmount: number,
+  pupilOffsetY: number,
+  questionLift: number,
+  smile: number,
+): number => {
+  const rest = clamp(
+    restLid - pupilOffsetY * 6 - questionLift * 0.08 + smile * 0.07,
+    0.1,
+    0.55,
+  );
+  return rest + (1 - rest) * blinkAmount;
 };
 
 export type ListenerNod = {

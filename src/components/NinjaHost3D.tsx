@@ -18,18 +18,40 @@ import {
   blendGazeTargets,
   buildAudienceCheckIns,
   buildBlinkSchedule,
+  buildListenerGlances,
   buildListenerNods,
+  buildQuestionLifts,
   computeBlinkAmount,
   computeLayeredGaze,
   computeLensDirection,
   computeListenerNodPitch,
+  computeQuestionLift,
   computeSpeakingEnvelope,
+  computeUpperLidAmount,
   gazeAngleToPupilOffset,
 } from "../utils/hostGaze";
-import { createHoodieLogoTexture } from "../utils/textures";
+import {
+  createHoodieLogoTexture,
+  createSoftBlushTexture,
+} from "../utils/textures";
 import { computeCameraPose } from "./CameraRig";
+import { CheekBlush3D } from "./CheekBlush3D";
+import { PixarEyelids3D } from "./PixarEyelids3D";
 import { PixarHand3D, computeCalmGestureEnvelopes } from "./PixarHand3D";
 import { PixarIris3D, SENSEI_IRIS } from "./PixarIris3D";
+import { PixarMouth3D, SENSEI_MOUTH } from "./PixarMouth3D";
+
+/** Sensei's seat (root position + yaw) per studio mode; shared with Studio3D props. */
+export const SENSEI_LAYOUT = {
+  dual: { position: [-1.14, 0.78, -0.6], yaw: 0.34 },
+  solo: { position: [-0.78, 0.78, -0.62], yaw: 0.24 },
+} as const;
+
+/** Head-local mouth anchor (used by Studio3D to aim the boom mic). */
+export const SENSEI_MOUTH_LOCAL: readonly [number, number, number] = [0, 0.67, 0.3];
+
+/** Sensei's calm, slightly heavier resting lid (Maria's sits a little higher). */
+const SENSEI_REST_LID = 0.24;
 
 export type NinjaHost3DProps = {
   readonly sections: readonly EpisodeSection[];
@@ -123,6 +145,8 @@ type StylizedEyeProps = {
   readonly pupilOffsetY: number;
   readonly browRaise: number;
   readonly browTilt: number;
+  readonly lidAmount: number;
+  readonly smileLift: number;
 };
 
 /**
@@ -139,11 +163,10 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
   pupilOffsetY,
   browRaise,
   browTilt,
+  lidAmount,
+  smileLift,
 }) => {
   void side;
-  const upperLidScaleY = lerp(0.01, 1.0, blinkAmount);
-  const lowerLidLift = blinkAmount * 0.015;
-  const closedLineVisible = blinkAmount > 0.45;
 
   return (
     <group
@@ -158,7 +181,7 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
         scale={[1.0, 0.56, 0.72]}
         castShadow
       >
-        <torusGeometry args={[0.05, 0.0056, 8, 16, Math.PI * 0.54]} />
+        <torusGeometry args={[0.05, 0.0068, 8, 18, Math.PI * 0.54]} />
         <meshStandardMaterial color="#382218" roughness={0.58} />
       </mesh>
 
@@ -174,16 +197,6 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
         />
       </mesh>
 
-      {/* Soft upper lash arch */}
-      <mesh
-        position={[0, 0.005, 0.011]}
-        rotation={[0, 0, 0.14]}
-        scale={[1.02, 1.06, 0.7]}
-      >
-        <torusGeometry args={[0.052, 0.0055, 6, 16, Math.PI * 0.84]} />
-        <meshStandardMaterial color="#241818" roughness={0.4} />
-      </mesh>
-
       {/* Glare-free matte iris & pupil with crisp controlled catchlights */}
       <PixarIris3D
         palette={SENSEI_IRIS}
@@ -192,38 +205,18 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
         offsetY={pupilOffsetY}
       />
 
-      {/* 3D Upper Eyelid Pivot */}
-      {blinkAmount > 0.02 && (
-        <group position={[0, 0.058, 0.011]} scale={[1, upperLidScaleY, 1]}>
-          <mesh position={[0, -0.056, 0]} scale={[1.06, 1.06, 0.36]}>
-            <sphereGeometry args={[0.054, 14, 10]} />
-            <meshStandardMaterial color="#ffd4b5" roughness={0.5} />
-          </mesh>
-        </group>
-      )}
-
-      {/* Friendly curved dark closed-eye lash line */}
-      {closedLineVisible && (
-        <mesh
-          position={[0, -0.015, 0.03]}
-          rotation={[0, 0, Math.PI * 1.15]}
-          scale={[1.05, 0.42, 0.6]}
-        >
-          <torusGeometry args={[0.045, 0.0056, 6, 14, Math.PI * 0.7]} />
-          <meshStandardMaterial color="#161113" roughness={0.4} />
-        </mesh>
-      )}
-
-      {/* Subtle Lower Eyelid Cushion */}
-      {blinkAmount > 0.02 && (
-        <mesh
-          position={[0, -0.052 + lowerLidLift, 0.013]}
-          scale={[1.05, 0.25, 0.38]}
-        >
-          <sphereGeometry args={[0.05, 12, 8]} />
-          <meshStandardMaterial color="#fcccb0" roughness={0.52} />
-        </mesh>
-      )}
+      {/* Resting upper lid + lash line, smile cushion & blink (shared rig) */}
+      <PixarEyelids3D
+        eyeRadius={0.052}
+        scleraScale={[1.0, 1.06]}
+        lidAmount={lidAmount}
+        smileLift={smileLift}
+        blinkAmount={blinkAmount}
+        lidColor="#f9caa9"
+        lowerLidColor="#ffd4b5"
+        lashColor="#241818"
+        lashThickness={0.0062}
+      />
     </group>
   );
 };
@@ -405,6 +398,7 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   const calmEmphasisWeight = calmGestures.calmEmphasisWeight;
 
   const logoTexture = useMemo(() => createHoodieLogoTexture(), []);
+  const blushTexture = useMemo(() => createSoftBlushTexture(), []);
 
   const torsoGeometry = useMemo(() => {
     const profile = [
@@ -455,16 +449,26 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   useEffect(() => {
     return () => {
       logoTexture.dispose();
+      blushTexture.dispose();
       torsoGeometry.dispose();
       upperTailGeometry.dispose();
       lowerTailGeometry.dispose();
     };
-  }, [logoTexture, torsoGeometry, upperTailGeometry, lowerTailGeometry]);
+  }, [
+    logoTexture,
+    blushTexture,
+    torsoGeometry,
+    upperTailGeometry,
+    lowerTailGeometry,
+  ]);
 
-  const hostPos: [number, number, number] = isDual
-    ? [-1.14, 0.78, -0.6]
-    : [-0.78, 0.78, -0.62];
-  const rootYaw = isDual ? 0.34 : 0.24;
+  const layout = isDual ? SENSEI_LAYOUT.dual : SENSEI_LAYOUT.solo;
+  const hostPos: [number, number, number] = [
+    layout.position[0],
+    layout.position[1],
+    layout.position[2],
+  ];
+  const rootYaw = layout.yaw;
   /** Maria sits to Sensei's left (+X world), so turning toward her is +yaw. */
   const partnerSide = 1;
 
@@ -492,7 +496,35 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     () => (isDual ? buildListenerNods(subtitles, false) : []),
     [isDual, subtitles],
   );
-  const gaze = computeLayeredGaze(sections, subtitles, timeSec, audienceCheckIns);
+  // Independent listener gaze: while Maria talks, Sensei watches her (with brief
+  // audience glances) instead of sharing her lens/board gaze like a twin.
+  const listenerGaze = useMemo(
+    () =>
+      isDual
+        ? { forGuest: false, glances: buildListenerGlances(subtitles, false) }
+        : undefined,
+    [isDual, subtitles],
+  );
+  const questionLifts = useMemo(
+    () => buildQuestionLifts(subtitles, false),
+    [subtitles],
+  );
+  const gaze = computeLayeredGaze(
+    sections,
+    subtitles,
+    timeSec,
+    audienceCheckIns,
+    listenerGaze,
+  );
+  // 0.2s-old gaze drives the overlapping action of headband tails & drawstrings
+  const lagGaze = computeLayeredGaze(
+    sections,
+    subtitles,
+    timeSec - 0.2,
+    audienceCheckIns,
+    listenerGaze,
+  );
+  const questionLift = computeQuestionLift(questionLifts, timeSec);
 
   // True eye contact: aim at the real lens (studio wide or circular PIP camera)
   const cameraPose = computeCameraPose(
@@ -554,9 +586,17 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   const torsoWorld = blendGazeTargets(gaze.torso, torsoTargets);
   const torsoYaw = torsoWorld - rootYaw + torsoSway;
   const torsoPitch =
+    0.02 +
     voiceEnergy * 0.024 +
     quizRevealWeight * -0.022 +
     listenerWeight * gaze.torso.partner * 0.022;
+  // Slow idle weight shift (~12s period, own phase) + a resting shoulder tilt
+  const weightShift = Math.sin(timeSec * 0.52 + 0.3) * 0.016;
+  const torsoRoll = 0.012 + weightShift;
+  const torsoShiftX = weightShift * 0.35;
+  // Torso yaw/pitch change over the last 0.2s, for lagging cloth
+  const torsoLagYaw =
+    blendGazeTargets(lagGaze.torso, torsoTargets) - torsoWorld;
 
   // Head Turning (stabilised against torso sway), Nodding & Tilting
   const speakBobY = isHostSpeaking ? voiceEnergy * 0.012 : 0;
@@ -565,6 +605,8 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     Math.sin(timeSec * 1.05) * 0.022 * (1 - pointBoardWeight * 0.4) +
     (isHostSpeaking ? Math.cos(timeSec * 4.8) * voiceEnergy * 0.018 : 0);
   const headYaw = headWorld - torsoWorld - torsoSway;
+  const headLagYaw = blendGazeTargets(lagGaze.head, headTargets) -
+    blendGazeTargets(gaze.head, headTargets);
 
   // Eyes lead the head and hold the target while the head drifts (VOR-style)
   const eyeWorld = blendGazeTargets(gaze.eyes, eyeTargets);
@@ -602,34 +644,61 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   const partnerTilt =
     -partnerSide * gaze.head.partner * lerp(0.055, 0.08, listenerWeight);
   const headRoll =
-    Math.sin(timeSec * 1.25) * 0.022 +
+    Math.sin(timeSec * 1.25) * 0.022 -
+    torsoRoll * 0.65 +
+    questionLift * 0.035 +
     partnerTilt +
     thinkingWeight * 0.16 -
     vocabWeight * 0.024 +
     nodEncourageWeight * 0.02;
 
+  // Warmth: smiles while encouraging, on quiz reveals, and softly while listening
+  const smileWarmth = clamp01(
+    nodEncourageWeight * 0.8 + quizRevealWeight * 0.7 + listenerWeight * 0.3,
+  );
   const browRaise =
     0.004 +
     (isHostSpeaking ? voiceEnergy * 0.009 + speechPeak * 0.005 : 0) +
+    questionLift * 0.009 +
     quizWeight * 0.004 +
     nodEncourageWeight * 0.007 +
     thinkingWeight * 0.004;
   // Positive gentle inner-brow lift keeps expressions warm, relaxed, and welcoming
   const friendlyBrowTilt =
-    0.045 + nodEncourageWeight * 0.025 + thinkingWeight * 0.015;
+    0.045 +
+    questionLift * 0.03 +
+    nodEncourageWeight * 0.025 +
+    thinkingWeight * 0.015;
+  // Thinking = one quizzical brow up, the other slightly down
+  const browAsym = thinkingWeight * 0.008;
+  const lidAmount = computeUpperLidAmount(
+    SENSEI_REST_LID,
+    blinkAmount,
+    pupilOffsetY,
+    questionLift,
+    smileWarmth,
+  );
 
-  const tailSway = Math.sin(timeSec * 2.65) * 0.085 + voiceEnergy * 0.065;
+  // Headband tails trail head turns (overlapping action) on top of a soft flutter
+  const tailSway =
+    Math.sin(timeSec * 2.65) * 0.06 + voiceEnergy * 0.05 - headLagYaw * 0.9;
+  const tailLagYaw = headLagYaw * 1.4;
+  // Drawstrings swing against torso turns and settle with breathing
+  const drawstringSwingZ = -torsoLagYaw * 0.9 + Math.sin(timeSec * 1.7) * 0.025;
+  const drawstringSwingX =
+    0.08 + Math.sin(timeSec * 2.15 + 0.6) * 0.03 - torsoPitch * 0.6;
 
   // Calm, Unhurried Phrase-Level Arm & Hand Gestures ("Less-Is-More": ~0.4 Hz max, quiet desk rest when listening)
   const slowBreathArm = Math.sin(timeSec * 1.9) * 0.018;
   const calmDrift = Math.sin(timeSec * 2.5) * 0.022;
   const calmFollowThrough = Math.cos(timeSec * 2.1 + 0.5) * 0.02;
 
-  // Right Arm (-X, viewer's left): rests calmly near desk (~95% of time), gently raises on thinking cues
+  // Right Arm (-X, viewer's left): forearm angled down, palm resting flat on the desk
+  // (~95% of time), gently raises on thinking cues. Deliberately not a mirror of the left.
   const rightRestShoulder: [number, number, number] = [
-    -0.28 + slowBreathArm,
+    -0.46 + slowBreathArm,
     0.05,
-    -0.2 - calmEmphasisWeight * 0.03,
+    -0.14 - calmEmphasisWeight * 0.03,
   ];
   const rightThinkShoulder: [number, number, number] = [
     -0.9 + slowBreathArm,
@@ -643,9 +712,9 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   ];
 
   const rightRestElbow: [number, number, number] = [
-    -1.06 - calmEmphasisWeight * 0.05 + slowBreathArm * 0.6,
+    -0.42 - calmEmphasisWeight * 0.05 + slowBreathArm * 0.6,
     0,
-    0.24,
+    0.3,
   ];
   const rightThinkElbow: [number, number, number] = [
     -1.6 + calmFollowThrough * 0.5,
@@ -658,10 +727,11 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     lerp(rightRestElbow[2], rightThinkElbow[2], thinkingWeight),
   ];
 
+  // Pronated (palm-down) wrist lying flat on the desk
   const rightRestWrist: [number, number, number] = [
-    0.18 - calmEmphasisWeight * 0.06,
-    0.16,
-    -0.08,
+    -0.66 - calmEmphasisWeight * 0.06,
+    Math.PI,
+    -0.12,
   ];
   const rightThinkWrist: [number, number, number] = [0.22, 0.16, -0.14];
   const rightWristRot: [number, number, number] = [
@@ -671,22 +741,22 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   ];
 
   const rightFingerCurl = lerp(
-    lerp(0.5, 0.42, calmEmphasisWeight),
+    lerp(0.3, 0.42, calmEmphasisWeight),
     0.62,
     thinkingWeight,
   );
   const rightFingerSpread = lerp(
-    0.18,
+    0.1,
     0.28,
     calmEmphasisWeight * (1 - thinkingWeight),
   );
-  const rightThumbCurl = lerp(0.32, 0.46, thinkingWeight);
+  const rightThumbCurl = lerp(0.22, 0.46, thinkingWeight);
 
   // Left Arm (+X, viewer's right): rests calmly near desk (~65-70% of time); polite open-palm on key phrases & `point_board`
   const leftRestShoulder: [number, number, number] = [
-    -0.3 + slowBreathArm,
+    -0.4 + slowBreathArm,
     -0.05,
-    0.22,
+    0.12,
   ];
   const leftEmphasisShoulder: [number, number, number] = [
     -0.56 + calmDrift,
@@ -706,9 +776,9 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
       ];
 
   const leftRestElbow: [number, number, number] = [
-    -1.08 + slowBreathArm * 0.5,
+    -0.5 + slowBreathArm * 0.5,
     0,
-    -0.2,
+    -0.26,
   ];
   const leftEmphasisElbow: [number, number, number] = [
     -0.9 + calmFollowThrough,
@@ -743,25 +813,26 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     lerp(leftBaseElbow[2], leftPointElbow[2], pointBoardWeight),
   ];
 
+  // Rest: palm-down on the desk (pronated); supinates to an open palm on emphasis
   const leftWristRot: [number, number, number] = [
-    lerp(lerp(0.18, -0.18, calmEmphasisWeight), -0.22, pointBoardWeight),
-    lerp(lerp(0.16, -0.18, calmEmphasisWeight), -0.28, pointBoardWeight),
-    lerp(lerp(0.1, 0.2, calmEmphasisWeight), 0.24, pointBoardWeight),
+    lerp(lerp(-0.58, -0.18, calmEmphasisWeight), -0.22, pointBoardWeight),
+    lerp(lerp(-Math.PI, -0.18, calmEmphasisWeight), -0.28, pointBoardWeight),
+    lerp(lerp(0.14, 0.2, calmEmphasisWeight), 0.24, pointBoardWeight),
   ];
 
   // Pose-aware finger anatomy: relaxed semi-open rest -> welcoming open palm -> polite Japanese presentation
   const leftFingerCurl = lerp(
-    lerp(0.5, 0.18, calmEmphasisWeight),
+    lerp(0.4, 0.18, calmEmphasisWeight),
     0.08,
     pointBoardWeight,
   );
   const leftFingerSpread = lerp(
-    lerp(0.18, 0.68, calmEmphasisWeight),
+    lerp(0.14, 0.68, calmEmphasisWeight),
     0.08,
     pointBoardWeight,
   );
   const leftThumbCurl = lerp(
-    lerp(0.32, 0.14, calmEmphasisWeight),
+    lerp(0.26, 0.14, calmEmphasisWeight),
     0.12,
     pointBoardWeight,
   );
@@ -795,8 +866,8 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
       {/* ==================== TORSO GROUP ==================== */}
       <group
         name="torsoGroup"
-        position={[0, breathY, 0]}
-        rotation={[torsoPitch, torsoYaw, 0]}
+        position={[torsoShiftX, breathY, 0]}
+        rotation={[torsoPitch, torsoYaw, torsoRoll]}
       >
         {/* Vibrant Velvet Emerald-Green JungGo Hoodie */}
         <mesh
@@ -865,18 +936,22 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
           />
         </mesh>
 
-        {/* Emerald Drawstrings with Light Aglets */}
+        {/* Emerald Drawstrings with Light Aglets (pivot at the collar, lagging swing) */}
         {[-1, 1].map((side) => (
           <group
             key={side}
-            position={[side * 0.056, 0.39, 0.228]}
-            rotation={[0.08, 0, side * -0.05]}
+            position={[side * 0.056, 0.465, 0.222]}
+            rotation={[
+              drawstringSwingX + side * 0.01,
+              0,
+              side * -0.05 + drawstringSwingZ * (side === 1 ? 1 : 0.85),
+            ]}
           >
-            <mesh castShadow>
+            <mesh position={[0, -0.075, 0]} castShadow>
               <cylinderGeometry args={[0.007, 0.007, 0.15, 8]} />
               <meshStandardMaterial color="#0b4f2d" roughness={0.8} />
             </mesh>
-            <mesh position={[0, -0.08, 0]}>
+            <mesh position={[0, -0.155, 0]}>
               <cylinderGeometry args={[0.0085, 0.0075, 0.022, 8]} />
               <meshStandardMaterial color="#d8e2dc" roughness={0.4} />
             </mesh>
@@ -929,25 +1004,23 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
               sheen={0.22}
               sheenRoughness={0.75}
               sheenColor="#ffe8d6"
+              emissive="#ff8a66"
+              emissiveIntensity={0.05}
             />
           </mesh>
 
-          {/* Warm Rosy Cheek Blush */}
+          {/* Soft gradient cheek blush decals (rise slightly with a smile) */}
           {[-1, 1].map((side) => (
-            <mesh
+            <CheekBlush3D
               key={side}
-              position={[side * 0.112, -0.038, 0.25]}
-              rotation={[0, side * 0.38, 0]}
-              scale={[1.48, 0.92, 0.4]}
-            >
-              <sphereGeometry args={[0.036, 10, 8]} />
-              <meshStandardMaterial
-                color="#f49682"
-                transparent
-                opacity={0.48}
-                roughness={0.62}
-              />
-            </mesh>
+              side={side}
+              headRadius={0.292}
+              anchor={[0.112, -0.04 + smileWarmth * 0.006]}
+              size={[0.1, 0.062]}
+              color="#f28a7a"
+              opacity={0.6 + smileWarmth * 0.12}
+              texture={blushTexture}
+            />
           ))}
 
           {/* Cute Sculpted 3D Pixar Nose */}
@@ -1010,8 +1083,10 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
             blinkAmount={blinkAmount}
             pupilOffsetX={pupilOffsetX}
             pupilOffsetY={pupilOffsetY}
-            browRaise={browRaise}
+            browRaise={browRaise - browAsym * 0.3}
             browTilt={friendlyBrowTilt}
+            lidAmount={lidAmount}
+            smileLift={smileWarmth}
           />
           <StylizedEye3D
             name="leftEyeGroup"
@@ -1021,101 +1096,26 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
             blinkAmount={blinkAmount}
             pupilOffsetX={pupilOffsetX}
             pupilOffsetY={pupilOffsetY}
-            browRaise={browRaise}
+            browRaise={browRaise + browAsym}
             browTilt={-friendlyBrowTilt}
+            lidAmount={lidAmount}
+            smileLift={smileWarmth}
           />
 
           {/* ==================== WARM FRIENDLY PIXAR LIP-SYNC MOUTH ==================== */}
           <group
             name="mouthGroup"
-            position={[0, -0.092, 0.278]}
-            rotation={[0.24, 0, 0]}
+            position={[0, -0.092, 0.279]}
+            rotation={[0.3, 0, 0]}
           >
-            {mouthOpen > 0.05 ? (
-              (() => {
-                // Soft joyful mouth curve keeping Sensei warm and relaxed
-                const softOpen = Math.min(0.48, mouthOpen * 0.58);
-                const smileWidth = Math.max(0.95, mouthWidth * 1.05);
-                return (
-                  <group>
-                    {/* Gentle calm oral cavity */}
-                    <mesh
-                      position={[0, 0.002 - softOpen * 0.018, -0.001]}
-                      scale={[
-                        smileWidth * 0.96,
-                        0.21 + softOpen * 0.58,
-                        0.26,
-                      ]}
-                    >
-                      <sphereGeometry args={[0.058, 16, 12]} />
-                      <meshStandardMaterial color="#521220" roughness={0.7} />
-                    </mesh>
-
-                    {/* Crisp ivory upper teeth arch */}
-                    <mesh
-                      position={[0, 0.011, 0.01]}
-                      scale={[smileWidth * 0.9, 1, 1]}
-                    >
-                      <boxGeometry args={[0.072, 0.012, 0.01]} />
-                      <meshStandardMaterial
-                        color="#ffffff"
-                        emissive="#fff6ed"
-                        emissiveIntensity={0.14}
-                        roughness={0.18}
-                      />
-                    </mesh>
-
-                    {/* Soft coral-pink curved tongue */}
-                    <mesh
-                      position={[0, -0.008 - softOpen * 0.018, 0.009]}
-                      scale={[smileWidth * 0.82, 0.38, 0.4]}
-                    >
-                      <sphereGeometry args={[0.035, 12, 10]} />
-                      <meshStandardMaterial
-                        color="#f4788c"
-                        emissive="#541622"
-                        emissiveIntensity={0.25}
-                        roughness={0.42}
-                      />
-                    </mesh>
-
-                    {/* Upward-smiling gentle upper lip contour */}
-                    <mesh
-                      position={[0, 0.019, 0.01]}
-                      rotation={[0, 0, Math.PI * 1.22]}
-                      scale={[smileWidth * 1.02, 0.25, 0.56]}
-                    >
-                      <torusGeometry args={[0.056, 0.0046, 6, 16, Math.PI * 0.56]} />
-                      <meshStandardMaterial color="#e6a488" roughness={0.46} />
-                    </mesh>
-
-                    {/* Dynamic smiling lower lip rim */}
-                    <mesh
-                      position={[0, -0.008 - softOpen * 0.033, 0.009]}
-                      rotation={[0, 0, Math.PI * 1.11]}
-                      scale={[
-                        smileWidth * 0.98,
-                        0.56 + softOpen * 0.32,
-                        0.62,
-                      ]}
-                    >
-                      <torusGeometry args={[0.054, 0.0048, 6, 16, Math.PI * 0.78]} />
-                      <meshStandardMaterial color="#dd9279" roughness={0.46} />
-                    </mesh>
-                  </group>
-                );
-              })()
-            ) : (
-              /* Warm cheerful welcoming Pixar closed smile */
-              <mesh
-                position={[0, 0.005, 0.01]}
-                rotation={[0, 0, Math.PI * 1.12]}
-                scale={[mouthWidth * 1.04, 0.62, 0.62]}
-              >
-                <torusGeometry args={[0.054, 0.0052, 8, 20, Math.PI * 0.76]} />
-                <meshStandardMaterial color="#9e443a" roughness={0.44} />
-              </mesh>
-            )}
+            <PixarMouth3D
+              palette={SENSEI_MOUTH}
+              halfWidth={0.047}
+              headRadius={0.292}
+              jawOpen={mouthOpen}
+              mouthWidth={mouthWidth}
+              smile={smileWarmth}
+            />
           </group>
 
           {/* Vibrant Emerald-Green Ninja Headband + Flowing Ribbon Tails */}
@@ -1141,7 +1141,7 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
               <meshStandardMaterial color="#0f6339" roughness={0.76} />
             </mesh>
 
-            <group position={[-0.296, -0.01, -0.03]}>
+            <group position={[-0.296, -0.01, -0.03]} rotation={[0, tailLagYaw, 0]}>
               <mesh scale={[0.9, 1.05, 0.9]} castShadow>
                 <sphereGeometry args={[0.046, 10, 8]} />
                 <meshStandardMaterial color="#15804a" roughness={0.74} />

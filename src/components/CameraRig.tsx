@@ -238,17 +238,22 @@ export const computeCameraPose = (
   if (focusP > 0.001) {
     const microX = Math.sin(timeSec * 0.55) * 0.007;
     const microY = Math.cos(timeSec * 0.45) * 0.005;
-    const circlePanX = isDual ? clampedBias * 0.14 : 0;
+    // Circular PIP framing: lens just above the hosts' eye line (~1.56m) with a
+    // gentle ~7° downward tilt and a tighter 37° lens. The hosts fill the circle
+    // with ~10% headroom, the eye line sits near the upper third, and the
+    // half-cropped neon sign and empty desk mat drop out of the circle. The
+    // speaker-follow pan is smaller so the off-speaker host is never clipped.
+    const circlePanX = isDual ? clampedBias * 0.09 : 0;
     const circlePose: CameraPose = isDual
       ? {
-          pos: [-0.61 + circlePanX + microX, 1.42 + microY, 2.38],
-          lookAt: [-0.61 + circlePanX * 0.75, 1.35, -0.62],
-          fov: 40,
+          pos: [-0.61 + circlePanX + microX, 1.58 + microY, 2.42],
+          lookAt: [-0.61 + circlePanX * 0.75, 1.2, -0.62],
+          fov: 37,
         }
       : {
-          pos: [-0.74 + microX, 1.43 + microY, 1.46],
-          lookAt: [-0.78, 1.36, -0.62],
-          fov: 38,
+          pos: [-0.74 + microX, 1.56 + microY, 1.5],
+          lookAt: [-0.78, 1.3, -0.62],
+          fov: 37,
         };
     pose = lerpPose(pose, circlePose, focusP);
   }
