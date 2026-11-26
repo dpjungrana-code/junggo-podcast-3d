@@ -2,6 +2,12 @@ export type StudioMode = "solo" | "dual";
 
 export type LayoutMode = "auto" | "studio_wide" | "board_focus";
 
+export type StickmanSceneId =
+  | "walk_to_station"
+  | "buy_ticket_ic"
+  | "tap_ticket_gate"
+  | "ride_and_exit_train";
+
 export type PodcastSectionType =
   | "intro"
   | "story"
@@ -37,6 +43,7 @@ export type KanjiLessonData = {
   readonly visualPrompt?: string;
   readonly imageUrl?: string;
   readonly imageCaption?: string;
+  readonly animationScene?: StickmanSceneId;
 };
 
 export type StationTermItem = {
@@ -60,6 +67,7 @@ export type StationGuideData = {
   readonly visualPrompt?: string;
   readonly imageUrl?: string;
   readonly imageCaption?: string;
+  readonly animationScene?: StickmanSceneId;
 };
 
 export type WordTiming = {
@@ -86,6 +94,7 @@ export type SubtitleCue = {
   readonly wordTimings?: readonly WordTiming[];
   readonly imageUrl?: string;
   readonly imageCaption?: string;
+  readonly animationScene?: StickmanSceneId;
 };
 
 export const isGuestSpeaker = (speaker: string): boolean => {
@@ -223,6 +232,7 @@ export type VocabCardData = {
   readonly imageUrl?: string;
   readonly imageSrc?: string;
   readonly imageCaption?: string;
+  readonly animationScene?: StickmanSceneId;
 };
 
 export type QuizOption = {
@@ -257,6 +267,7 @@ export type EpisodeSection = {
   readonly imageUrl?: string;
   readonly imageSrc?: string;
   readonly imageCaption?: string;
+  readonly animationScene?: StickmanSceneId;
 };
 
 export type EpisodeData = {

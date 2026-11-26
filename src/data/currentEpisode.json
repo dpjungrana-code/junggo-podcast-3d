@@ -3,7 +3,7 @@
   "title": "Japan Train Station Survival Guide",
   "jlptLevel": "JLPT N4–N3",
   "studioMode": "dual",
-  "durationSec": 217.488,
+  "durationSec": 222.384,
   "audioSrc": "audio/current_episode.mp3",
   "sections": [
     {
@@ -55,11 +55,13 @@
         ],
         "tipEn": "Always check which directional exit (北・南・東・西口) matches your destination map before leaving the gate.",
         "visualPrompt": "station_exits_map",
+        "animationScene": "walk_to_station",
         "imageCaption": "Station Map & Directional Exits (北・南・東・西口)",
         "imageUrl": "images/generated/sec-station-1.svg"
       },
       "imageUrl": "images/generated/sec-station-1.svg",
-      "imageCaption": "Station Map & Directional Exits (北・南・東・西口)"
+      "imageCaption": "Station Map & Directional Exits (北・南・東・西口)",
+      "animationScene": "walk_to_station"
     },
     {
       "id": "sec-station-2",
@@ -103,11 +105,13 @@
         ],
         "tipEn": "Tap the English button on any JR or Metro 券売機 (ticket machine) to buy tickets or charge Suica / PASMO.",
         "visualPrompt": "ticket_machine_ic",
+        "animationScene": "buy_ticket_ic",
         "imageCaption": "Ticket Machine (券売機) & IC Card Top-Up",
         "imageUrl": "images/generated/sec-station-2.svg"
       },
       "imageUrl": "images/generated/sec-station-2.svg",
-      "imageCaption": "Ticket Machine (券売機) & IC Card Top-Up"
+      "imageCaption": "Ticket Machine (券売機) & IC Card Top-Up",
+      "animationScene": "buy_ticket_ic"
     },
     {
       "id": "sec-station-3",
@@ -151,11 +155,13 @@
         ],
         "tipEn": "If the gate beeps red or you rode past your stop, visit the yellow 精算機 (Fare Adjustment Machine) right next to the gate.",
         "visualPrompt": "ticket_gate_fare_adjust",
+        "animationScene": "tap_ticket_gate",
         "imageCaption": "IC Ticket Gate (改札口) & Fare Adjustment (精算機)",
         "imageUrl": "images/generated/sec-station-3.svg"
       },
       "imageUrl": "images/generated/sec-station-3.svg",
-      "imageCaption": "IC Ticket Gate (改札口) & Fare Adjustment (精算機)"
+      "imageCaption": "IC Ticket Gate (改札口) & Fare Adjustment (精算機)",
+      "animationScene": "tap_ticket_gate"
     },
     {
       "id": "sec-station-4",
@@ -203,11 +209,13 @@
         ],
         "tipEn": "Check the platform number (〇番線) and train type above the door—Limited Express (特急) often requires an extra fee!",
         "visualPrompt": "train_types_stops",
+        "animationScene": "ride_and_exit_train",
         "imageCaption": "Platform 3 & Local vs. Express Stop Diagram",
         "imageUrl": "images/generated/sec-station-4.svg"
       },
       "imageUrl": "images/generated/sec-station-4.svg",
-      "imageCaption": "Platform 3 & Local vs. Express Stop Diagram"
+      "imageCaption": "Platform 3 & Local vs. Express Stop Diagram",
+      "animationScene": "ride_and_exit_train"
     },
     {
       "id": "sec-station-5",
@@ -252,11 +260,13 @@
         ],
         "tipEn": "Across Japan, overhead EXIT (出口) signs are standardized in bright yellow with black text so you can spot them instantly.",
         "visualPrompt": "yellow_exit_transfer",
+        "animationScene": "ride_and_exit_train",
         "imageCaption": "Yellow Exit Sign (出口) & Line Transfer Arrows",
         "imageUrl": "images/generated/sec-station-5.svg"
       },
       "imageUrl": "images/generated/sec-station-5.svg",
-      "imageCaption": "Yellow Exit Sign (出口) & Line Transfer Arrows"
+      "imageCaption": "Yellow Exit Sign (出口) & Line Transfer Arrows",
+      "animationScene": "ride_and_exit_train"
     },
     {
       "id": "sec-roleplay",
@@ -272,7 +282,7 @@
       "type": "quiz",
       "label": "QUIZ 1 / 2",
       "startSec": 172.812,
-      "endSec": 191.916,
+      "endSec": 196.812,
       "quiz": {
         "title": "JLPT N4–N3 QUIZ 1 / 2",
         "questionJp": "「精算機」はどんな時に使いますか？",
@@ -301,16 +311,16 @@
           }
         ],
         "countdownStartSec": 173.388,
-        "revealSec": 182.52,
-        "countdownDurationSec": 9.132
+        "revealSec": 187.416,
+        "countdownDurationSec": 14.028
       }
     },
     {
       "id": "sec-quiz-2",
       "type": "quiz",
       "label": "QUIZ 2 / 2",
-      "startSec": 191.916,
-      "endSec": 217.488,
+      "startSec": 196.812,
+      "endSec": 222.384,
       "quiz": {
         "title": "JLPT N4–N3 QUIZ 2 / 2",
         "questionJp": "全ての駅に止まる電車はどれですか？",
@@ -338,8 +348,8 @@
             "isCorrect": false
           }
         ],
-        "countdownStartSec": 192.516,
-        "revealSec": 206.016,
+        "countdownStartSec": 197.412,
+        "revealSec": 210.912,
         "countdownDurationSec": 13.5
       }
     }
@@ -367,7 +377,7 @@
         {
           "word": "こんにちは",
           "startSec": 1.816,
-          "endSec": 2.196,
+          "endSec": 2.316,
           "charStart": 5,
           "charEnd": 10,
           "romaji": "konnichiwa",
@@ -376,7 +386,7 @@
         },
         {
           "word": "JungGo",
-          "startSec": 2.196,
+          "startSec": 2.316,
           "endSec": 4.536,
           "charStart": 11,
           "charEnd": 17,
@@ -449,7 +459,7 @@
         {
           "word": "日本",
           "startSec": 8.203,
-          "endSec": 9.061,
+          "endSec": 9.079,
           "charStart": 3,
           "charEnd": 5,
           "romaji": "nippon",
@@ -458,8 +468,8 @@
         },
         {
           "word": "の",
-          "startSec": 9.061,
-          "endSec": 9.358,
+          "startSec": 9.079,
+          "endSec": 9.365,
           "charStart": 5,
           "charEnd": 6,
           "romaji": "no",
@@ -468,7 +478,7 @@
         },
         {
           "word": "駅",
-          "startSec": 9.358,
+          "startSec": 9.365,
           "endSec": 9.602,
           "charStart": 6,
           "charEnd": 7,
@@ -589,7 +599,7 @@
         {
           "word": "駅",
           "startSec": 15.676,
-          "endSec": 15.983,
+          "endSec": 15.976,
           "charStart": 27,
           "charEnd": 28,
           "romaji": "eki",
@@ -598,8 +608,8 @@
         },
         {
           "word": "サバイバル",
-          "startSec": 15.983,
-          "endSec": 16.493,
+          "startSec": 15.976,
+          "endSec": 16.486,
           "charStart": 28,
           "charEnd": 33,
           "romaji": "sabaibaru",
@@ -608,7 +618,7 @@
         },
         {
           "word": "日本",
-          "startSec": 16.493,
+          "startSec": 16.486,
           "endSec": 17.066,
           "charStart": 33,
           "charEnd": 35,
@@ -731,7 +741,7 @@
         {
           "word": "見てください",
           "startSec": 21.377,
-          "endSec": 22.123,
+          "endSec": 22.111,
           "charStart": 11,
           "charEnd": 17,
           "romaji": "mitekudasai",
@@ -740,7 +750,7 @@
         },
         {
           "word": "すみません",
-          "startSec": 23.803,
+          "startSec": 23.811,
           "endSec": 24.532,
           "charStart": 19,
           "charEnd": 24,
@@ -844,7 +854,7 @@
         {
           "word": "まっすぐ",
           "startSec": 30.768,
-          "endSec": 31.274,
+          "endSec": 31.292,
           "charStart": 1,
           "charEnd": 5,
           "romaji": "massugu",
@@ -853,7 +863,7 @@
         },
         {
           "word": "行って",
-          "startSec": 31.274,
+          "startSec": 31.292,
           "endSec": 31.538,
           "charStart": 5,
           "charEnd": 8,
@@ -1066,7 +1076,7 @@
         {
           "word": "北口",
           "startSec": 43.891,
-          "endSec": 44.477,
+          "endSec": 44.495,
           "charStart": 9,
           "charEnd": 11,
           "romaji": "kitaguchi",
@@ -1075,8 +1085,8 @@
         },
         {
           "word": "南口",
-          "startSec": 44.477,
-          "endSec": 45.845,
+          "startSec": 44.495,
+          "endSec": 45.828,
           "charStart": 12,
           "charEnd": 14,
           "romaji": "minamiguchi",
@@ -1085,7 +1095,7 @@
         },
         {
           "word": "東口",
-          "startSec": 45.845,
+          "startSec": 45.828,
           "endSec": 47.193,
           "charStart": 15,
           "charEnd": 17,
@@ -1349,7 +1359,7 @@
         {
           "word": "を",
           "startSec": 60.06,
-          "endSec": 60.127,
+          "endSec": 60.133,
           "charStart": 29,
           "charEnd": 30,
           "romaji": "o",
@@ -1358,7 +1368,7 @@
         },
         {
           "word": "払います",
-          "startSec": 60.127,
+          "startSec": 60.133,
           "endSec": 60.66,
           "charStart": 30,
           "charEnd": 34,
@@ -1462,7 +1472,7 @@
         {
           "word": "便利",
           "startSec": 65.037,
-          "endSec": 65.515,
+          "endSec": 65.501,
           "charStart": 20,
           "charEnd": 22,
           "romaji": "benri",
@@ -1471,7 +1481,7 @@
         },
         {
           "word": "です",
-          "startSec": 65.515,
+          "startSec": 65.501,
           "endSec": 65.864,
           "charStart": 22,
           "charEnd": 24,
@@ -1584,7 +1594,7 @@
         {
           "word": "改札口",
           "startSec": 74.32,
-          "endSec": 74.85,
+          "endSec": 74.857,
           "charStart": 0,
           "charEnd": 3,
           "romaji": "kaisatsuguchi",
@@ -1593,8 +1603,8 @@
         },
         {
           "word": "で",
-          "startSec": 74.85,
-          "endSec": 74.972,
+          "startSec": 74.857,
+          "endSec": 74.989,
           "charStart": 3,
           "charEnd": 4,
           "romaji": "de",
@@ -1603,8 +1613,8 @@
         },
         {
           "word": "は",
-          "startSec": 74.972,
-          "endSec": 75.111,
+          "startSec": 74.989,
+          "endSec": 75.131,
           "charStart": 4,
           "charEnd": 5,
           "romaji": "wa",
@@ -1613,7 +1623,7 @@
         },
         {
           "word": "カード",
-          "startSec": 75.111,
+          "startSec": 75.131,
           "endSec": 75.817,
           "charStart": 5,
           "charEnd": 8,
@@ -1634,7 +1644,7 @@
         {
           "word": "タッチ",
           "startSec": 75.939,
-          "endSec": 76.388,
+          "endSec": 76.38,
           "charStart": 9,
           "charEnd": 12,
           "romaji": "tatchi",
@@ -1643,7 +1653,7 @@
         },
         {
           "word": "します",
-          "startSec": 76.388,
+          "startSec": 76.38,
           "endSec": 76.711,
           "charStart": 12,
           "charEnd": 15,
@@ -1674,7 +1684,7 @@
         {
           "word": "出口",
           "startSec": 79.61,
-          "endSec": 80.691,
+          "endSec": 80.703,
           "charStart": 26,
           "charEnd": 28,
           "romaji": "deguchi",
@@ -1683,8 +1693,8 @@
         },
         {
           "word": "の",
-          "startSec": 80.691,
-          "endSec": 80.84,
+          "startSec": 80.703,
+          "endSec": 80.854,
           "charStart": 28,
           "charEnd": 29,
           "romaji": "no",
@@ -1693,7 +1703,7 @@
         },
         {
           "word": "前",
-          "startSec": 80.84,
+          "startSec": 80.854,
           "endSec": 81.131,
           "charStart": 29,
           "charEnd": 30,
@@ -1867,7 +1877,7 @@
         {
           "word": "と",
           "startSec": 91.328,
-          "endSec": 91.5,
+          "endSec": 91.515,
           "charStart": 37,
           "charEnd": 38,
           "romaji": "to",
@@ -1876,8 +1886,8 @@
         },
         {
           "word": "言え",
-          "startSec": 93.26,
-          "endSec": 93.602,
+          "startSec": 93.255,
+          "endSec": 93.598,
           "charStart": 38,
           "charEnd": 40,
           "romaji": "ie",
@@ -1886,8 +1896,8 @@
         },
         {
           "word": "ば",
-          "startSec": 93.602,
-          "endSec": 93.75,
+          "startSec": 93.598,
+          "endSec": 93.735,
           "charStart": 40,
           "charEnd": 41,
           "romaji": "ba",
@@ -1896,8 +1906,8 @@
         },
         {
           "word": "大丈夫",
-          "startSec": 93.75,
-          "endSec": 94.348,
+          "startSec": 93.735,
+          "endSec": 94.367,
           "charStart": 41,
           "charEnd": 44,
           "romaji": "daijoobu",
@@ -1906,8 +1916,8 @@
         },
         {
           "word": "です",
-          "startSec": 94.348,
-          "endSec": 94.823,
+          "startSec": 94.367,
+          "endSec": 94.837,
           "charStart": 44,
           "charEnd": 46,
           "romaji": "desu",
@@ -1916,8 +1926,8 @@
         },
         {
           "word": "ね",
-          "startSec": 94.923,
-          "endSec": 95.104,
+          "startSec": 94.917,
+          "endSec": 95.084,
           "charStart": 46,
           "charEnd": 47,
           "romaji": "ne",
@@ -1939,7 +1949,7 @@
         {
           "word": "ホーム",
           "startSec": 97.076,
-          "endSec": 97.241,
+          "endSec": 97.304,
           "charStart": 0,
           "charEnd": 3,
           "romaji": "hoomu",
@@ -1948,8 +1958,8 @@
         },
         {
           "word": "で",
-          "startSec": 97.241,
-          "endSec": 97.293,
+          "startSec": 97.304,
+          "endSec": 97.423,
           "charStart": 3,
           "charEnd": 4,
           "romaji": "de",
@@ -1958,8 +1968,8 @@
         },
         {
           "word": "は",
-          "startSec": 97.293,
-          "endSec": 97.38,
+          "startSec": 97.423,
+          "endSec": 97.56,
           "charStart": 4,
           "charEnd": 5,
           "romaji": "wa",
@@ -1968,8 +1978,8 @@
         },
         {
           "word": "何番線",
-          "startSec": 97.38,
-          "endSec": 98.128,
+          "startSec": 97.56,
+          "endSec": 98.35,
           "charStart": 5,
           "charEnd": 8,
           "romaji": "nanbansen",
@@ -1978,8 +1988,8 @@
         },
         {
           "word": "か",
-          "startSec": 98.128,
-          "endSec": 98.219,
+          "startSec": 98.37,
+          "endSec": 98.459,
           "charStart": 8,
           "charEnd": 9,
           "romaji": "ka",
@@ -1988,8 +1998,8 @@
         },
         {
           "word": "を",
-          "startSec": 98.219,
-          "endSec": 98.388,
+          "startSec": 98.459,
+          "endSec": 98.626,
           "charStart": 9,
           "charEnd": 10,
           "romaji": "o",
@@ -1998,8 +2008,8 @@
         },
         {
           "word": "確認",
-          "startSec": 98.388,
-          "endSec": 98.936,
+          "startSec": 98.646,
+          "endSec": 99.09,
           "charStart": 10,
           "charEnd": 12,
           "romaji": "kakunin",
@@ -2008,8 +2018,8 @@
         },
         {
           "word": "して",
-          "startSec": 98.936,
-          "endSec": 99.207,
+          "startSec": 99.09,
+          "endSec": 99.506,
           "charStart": 12,
           "charEnd": 14,
           "romaji": "shite",
@@ -2018,8 +2028,8 @@
         },
         {
           "word": "この",
-          "startSec": 99.247,
-          "endSec": 99.506,
+          "startSec": 100.066,
+          "endSec": 100.303,
           "charStart": 16,
           "charEnd": 18,
           "romaji": "kono",
@@ -2028,8 +2038,8 @@
         },
         {
           "word": "電車",
-          "startSec": 100.066,
-          "endSec": 100.567,
+          "startSec": 100.303,
+          "endSec": 100.642,
           "charStart": 18,
           "charEnd": 20,
           "romaji": "densha",
@@ -2038,8 +2048,8 @@
         },
         {
           "word": "は",
-          "startSec": 100.567,
-          "endSec": 100.68,
+          "startSec": 100.642,
+          "endSec": 100.846,
           "charStart": 20,
           "charEnd": 21,
           "romaji": "wa",
@@ -2048,8 +2058,8 @@
         },
         {
           "word": "新宿",
-          "startSec": 100.68,
-          "endSec": 101.488,
+          "startSec": 100.846,
+          "endSec": 101.547,
           "charStart": 21,
           "charEnd": 23,
           "romaji": "shinjuku",
@@ -2058,8 +2068,8 @@
         },
         {
           "word": "に",
-          "startSec": 101.488,
-          "endSec": 101.583,
+          "startSec": 101.547,
+          "endSec": 101.594,
           "charStart": 23,
           "charEnd": 24,
           "romaji": "ni",
@@ -2068,8 +2078,8 @@
         },
         {
           "word": "行きます",
-          "startSec": 101.583,
-          "endSec": 102.059,
+          "startSec": 101.674,
+          "endSec": 102.126,
           "charStart": 24,
           "charEnd": 28,
           "romaji": "ikimasu",
@@ -2078,8 +2088,8 @@
         },
         {
           "word": "か",
-          "startSec": 102.059,
-          "endSec": 102.12,
+          "startSec": 103.806,
+          "endSec": 103.889,
           "charStart": 28,
           "charEnd": 29,
           "romaji": "ka",
@@ -2088,8 +2098,8 @@
         },
         {
           "word": "と",
-          "startSec": 103.8,
-          "endSec": 103.933,
+          "startSec": 103.889,
+          "endSec": 103.987,
           "charStart": 31,
           "charEnd": 32,
           "romaji": "to",
@@ -2098,8 +2108,8 @@
         },
         {
           "word": "聞く",
-          "startSec": 103.973,
-          "endSec": 104.169,
+          "startSec": 103.987,
+          "endSec": 104.225,
           "charStart": 32,
           "charEnd": 34,
           "romaji": "kiku",
@@ -2108,8 +2118,8 @@
         },
         {
           "word": "と",
-          "startSec": 104.209,
-          "endSec": 104.324,
+          "startSec": 104.225,
+          "endSec": 104.355,
           "charStart": 34,
           "charEnd": 35,
           "romaji": "to",
@@ -2118,8 +2128,8 @@
         },
         {
           "word": "安心",
-          "startSec": 104.324,
-          "endSec": 104.756,
+          "startSec": 104.355,
+          "endSec": 104.762,
           "charStart": 35,
           "charEnd": 37,
           "romaji": "anshin",
@@ -2128,7 +2138,7 @@
         },
         {
           "word": "です",
-          "startSec": 104.756,
+          "startSec": 104.762,
           "endSec": 105.056,
           "charStart": 37,
           "charEnd": 39,
@@ -2302,7 +2312,7 @@
         {
           "word": "駅",
           "startSec": 116.14,
-          "endSec": 116.407,
+          "endSec": 116.399,
           "charStart": 33,
           "charEnd": 34,
           "romaji": "eki",
@@ -2311,8 +2321,8 @@
         },
         {
           "word": "が",
-          "startSec": 116.407,
-          "endSec": 116.482,
+          "startSec": 116.399,
+          "endSec": 116.475,
           "charStart": 34,
           "charEnd": 35,
           "romaji": "ga",
@@ -2321,7 +2331,7 @@
         },
         {
           "word": "違う",
-          "startSec": 116.502,
+          "startSec": 116.515,
           "endSec": 117.174,
           "charStart": 35,
           "charEnd": 37,
@@ -2375,7 +2385,7 @@
         {
           "word": "別",
           "startSec": 119.676,
-          "endSec": 119.917,
+          "endSec": 119.927,
           "charStart": 0,
           "charEnd": 1,
           "romaji": "betsu",
@@ -2384,8 +2394,8 @@
         },
         {
           "word": "の",
-          "startSec": 119.917,
-          "endSec": 120.139,
+          "startSec": 119.927,
+          "endSec": 120.145,
           "charStart": 1,
           "charEnd": 2,
           "romaji": "no",
@@ -2394,8 +2404,8 @@
         },
         {
           "word": "線",
-          "startSec": 120.139,
-          "endSec": 120.381,
+          "startSec": 120.145,
+          "endSec": 120.402,
           "charStart": 2,
           "charEnd": 3,
           "romaji": "sen",
@@ -2404,8 +2414,8 @@
         },
         {
           "word": "に",
-          "startSec": 120.381,
-          "endSec": 120.532,
+          "startSec": 120.402,
+          "endSec": 120.541,
           "charStart": 3,
           "charEnd": 4,
           "romaji": "ni",
@@ -2414,8 +2424,8 @@
         },
         {
           "word": "乗る",
-          "startSec": 120.532,
-          "endSec": 120.718,
+          "startSec": 120.541,
+          "endSec": 120.738,
           "charStart": 4,
           "charEnd": 6,
           "romaji": "noru",
@@ -2424,8 +2434,8 @@
         },
         {
           "word": "時",
-          "startSec": 120.718,
-          "endSec": 120.863,
+          "startSec": 120.738,
+          "endSec": 120.852,
           "charStart": 6,
           "charEnd": 7,
           "romaji": "ji",
@@ -2434,8 +2444,8 @@
         },
         {
           "word": "は",
-          "startSec": 120.863,
-          "endSec": 121.168,
+          "startSec": 120.852,
+          "endSec": 121.027,
           "charStart": 7,
           "charEnd": 8,
           "romaji": "wa",
@@ -2444,8 +2454,8 @@
         },
         {
           "word": "乗り換え",
-          "startSec": 121.168,
-          "endSec": 122.027,
+          "startSec": 121.027,
+          "endSec": 121.985,
           "charStart": 9,
           "charEnd": 13,
           "romaji": "norikae",
@@ -2454,8 +2464,8 @@
         },
         {
           "word": "は",
-          "startSec": 122.027,
-          "endSec": 122.104,
+          "startSec": 121.985,
+          "endSec": 122.052,
           "charStart": 13,
           "charEnd": 14,
           "romaji": "wa",
@@ -2464,8 +2474,8 @@
         },
         {
           "word": "どこ",
-          "startSec": 122.104,
-          "endSec": 122.387,
+          "startSec": 122.052,
+          "endSec": 122.289,
           "charStart": 14,
           "charEnd": 16,
           "romaji": "doko",
@@ -2474,8 +2484,8 @@
         },
         {
           "word": "です",
-          "startSec": 122.387,
-          "endSec": 122.65,
+          "startSec": 122.289,
+          "endSec": 122.579,
           "charStart": 16,
           "charEnd": 18,
           "romaji": "desu",
@@ -2484,8 +2494,8 @@
         },
         {
           "word": "か",
-          "startSec": 122.65,
-          "endSec": 122.78,
+          "startSec": 122.579,
+          "endSec": 122.711,
           "charStart": 18,
           "charEnd": 19,
           "romaji": "ka",
@@ -2494,8 +2504,8 @@
         },
         {
           "word": "と",
-          "startSec": 122.78,
-          "endSec": 122.91,
+          "startSec": 122.711,
+          "endSec": 122.804,
           "charStart": 21,
           "charEnd": 22,
           "romaji": "to",
@@ -2504,8 +2514,8 @@
         },
         {
           "word": "聞きます",
-          "startSec": 122.91,
-          "endSec": 125.051,
+          "startSec": 122.884,
+          "endSec": 124.995,
           "charStart": 22,
           "charEnd": 26,
           "romaji": "kikimasu",
@@ -2514,8 +2524,8 @@
         },
         {
           "word": "夜",
-          "startSec": 125.051,
-          "endSec": 125.305,
+          "startSec": 124.995,
+          "endSec": 125.261,
           "charStart": 27,
           "charEnd": 28,
           "romaji": "yoru",
@@ -2524,8 +2534,8 @@
         },
         {
           "word": "は",
-          "startSec": 126.605,
-          "endSec": 126.625,
+          "startSec": 125.261,
+          "endSec": 125.305,
           "charStart": 28,
           "charEnd": 29,
           "romaji": "wa",
@@ -2534,8 +2544,8 @@
         },
         {
           "word": "終電",
-          "startSec": 127.077,
-          "endSec": 127.769,
+          "startSec": 127.065,
+          "endSec": 127.742,
           "charStart": 29,
           "charEnd": 31,
           "romaji": "shuuden",
@@ -2544,8 +2554,8 @@
         },
         {
           "word": "の",
-          "startSec": 127.769,
-          "endSec": 127.866,
+          "startSec": 127.742,
+          "endSec": 127.842,
           "charStart": 31,
           "charEnd": 32,
           "romaji": "no",
@@ -2554,8 +2564,8 @@
         },
         {
           "word": "時間",
-          "startSec": 127.866,
-          "endSec": 128.268,
+          "startSec": 127.842,
+          "endSec": 128.251,
           "charStart": 32,
           "charEnd": 34,
           "romaji": "jikan",
@@ -2564,8 +2574,8 @@
         },
         {
           "word": "も",
-          "startSec": 128.268,
-          "endSec": 128.406,
+          "startSec": 128.251,
+          "endSec": 128.349,
           "charStart": 34,
           "charEnd": 35,
           "romaji": "mo",
@@ -2574,8 +2584,8 @@
         },
         {
           "word": "チェック",
-          "startSec": 128.406,
-          "endSec": 129.022,
+          "startSec": 128.349,
+          "endSec": 128.928,
           "charStart": 35,
           "charEnd": 39,
           "romaji": "chekku",
@@ -2584,8 +2594,8 @@
         },
         {
           "word": "しましょう",
-          "startSec": 129.022,
-          "endSec": 129.536,
+          "startSec": 129.008,
+          "endSec": 129.556,
           "charStart": 39,
           "charEnd": 44,
           "romaji": "shimashoo",
@@ -2708,7 +2718,7 @@
         {
           "word": "探せ",
           "startSec": 136.15,
-          "endSec": 136.468,
+          "endSec": 136.432,
           "charStart": 23,
           "charEnd": 25,
           "romaji": "sagase",
@@ -2717,8 +2727,8 @@
         },
         {
           "word": "ば",
-          "startSec": 136.468,
-          "endSec": 136.686,
+          "startSec": 136.452,
+          "endSec": 136.682,
           "charStart": 25,
           "charEnd": 26,
           "romaji": "ba",
@@ -2727,7 +2737,7 @@
         },
         {
           "word": "すぐ",
-          "startSec": 136.686,
+          "startSec": 136.682,
           "endSec": 137.165,
           "charStart": 26,
           "charEnd": 28,
@@ -2781,7 +2791,7 @@
         {
           "word": "で",
           "startSec": 140.068,
-          "endSec": 140.125,
+          "endSec": 140.136,
           "charStart": 0,
           "charEnd": 1,
           "romaji": "de",
@@ -2790,8 +2800,8 @@
         },
         {
           "word": "は",
-          "startSec": 140.125,
-          "endSec": 140.392,
+          "startSec": 140.136,
+          "endSec": 140.411,
           "charStart": 1,
           "charEnd": 2,
           "romaji": "wa",
@@ -2800,7 +2810,7 @@
         },
         {
           "word": "駅",
-          "startSec": 140.392,
+          "startSec": 140.411,
           "endSec": 140.792,
           "charStart": 2,
           "charEnd": 3,
@@ -2891,7 +2901,7 @@
         {
           "word": "行きます",
           "startSec": 146.668,
-          "endSec": 147.325,
+          "endSec": 147.32,
           "charStart": 26,
           "charEnd": 30,
           "romaji": "ikimasu",
@@ -2900,8 +2910,8 @@
         },
         {
           "word": "か",
-          "startSec": 148.605,
-          "endSec": 148.625,
+          "startSec": 148.62,
+          "endSec": 148.64,
           "charStart": 30,
           "charEnd": 31,
           "romaji": "ka",
@@ -2910,7 +2920,7 @@
         },
         {
           "word": "乗り換え",
-          "startSec": 149.055,
+          "startSec": 149.068,
           "endSec": 149.58,
           "charStart": 32,
           "charEnd": 36,
@@ -2931,7 +2941,7 @@
         {
           "word": "どこ",
           "startSec": 149.748,
-          "endSec": 150.06,
+          "endSec": 150.044,
           "charStart": 37,
           "charEnd": 39,
           "romaji": "doko",
@@ -2940,8 +2950,8 @@
         },
         {
           "word": "です",
-          "startSec": 150.06,
-          "endSec": 150.313,
+          "startSec": 150.044,
+          "endSec": 150.319,
           "charStart": 39,
           "charEnd": 41,
           "romaji": "desu",
@@ -2950,8 +2960,8 @@
         },
         {
           "word": "か",
-          "startSec": 150.453,
-          "endSec": 150.473,
+          "startSec": 150.459,
+          "endSec": 150.488,
           "charStart": 41,
           "charEnd": 42,
           "romaji": "ka",
@@ -2973,7 +2983,7 @@
         {
           "word": "新宿",
           "startSec": 152.408,
-          "endSec": 152.988,
+          "endSec": 152.998,
           "charStart": 0,
           "charEnd": 2,
           "romaji": "shinjuku",
@@ -2982,8 +2992,8 @@
         },
         {
           "word": "でしたら",
-          "startSec": 152.988,
-          "endSec": 154.308,
+          "startSec": 152.998,
+          "endSec": 154.342,
           "charStart": 2,
           "charEnd": 6,
           "romaji": "deshitara",
@@ -2992,8 +3002,8 @@
         },
         {
           "word": "三番線",
-          "startSec": 154.308,
-          "endSec": 155.058,
+          "startSec": 154.342,
+          "endSec": 155.115,
           "charStart": 7,
           "charEnd": 10,
           "romaji": "sanbansen",
@@ -3002,8 +3012,8 @@
         },
         {
           "word": "の",
-          "startSec": 155.058,
-          "endSec": 155.168,
+          "startSec": 155.115,
+          "endSec": 155.229,
           "charStart": 10,
           "charEnd": 11,
           "romaji": "no",
@@ -3012,8 +3022,8 @@
         },
         {
           "word": "快速",
-          "startSec": 155.168,
-          "endSec": 155.648,
+          "startSec": 155.229,
+          "endSec": 155.689,
           "charStart": 11,
           "charEnd": 13,
           "romaji": "kaisoku",
@@ -3022,8 +3032,8 @@
         },
         {
           "word": "に",
-          "startSec": 155.648,
-          "endSec": 155.708,
+          "startSec": 155.689,
+          "endSec": 155.74,
           "charStart": 13,
           "charEnd": 14,
           "romaji": "ni",
@@ -3032,8 +3042,8 @@
         },
         {
           "word": "乗って",
-          "startSec": 155.708,
-          "endSec": 156.008,
+          "startSec": 155.84,
+          "endSec": 156.091,
           "charStart": 14,
           "charEnd": 17,
           "romaji": "notte",
@@ -3042,8 +3052,8 @@
         },
         {
           "word": "ください",
-          "startSec": 156.008,
-          "endSec": 158.208,
+          "startSec": 156.091,
+          "endSec": 158.195,
           "charStart": 17,
           "charEnd": 21,
           "romaji": "kudasai",
@@ -3052,8 +3062,8 @@
         },
         {
           "word": "まっすぐ",
-          "startSec": 158.208,
-          "endSec": 158.698,
+          "startSec": 158.195,
+          "endSec": 158.692,
           "charStart": 22,
           "charEnd": 26,
           "romaji": "massugu",
@@ -3062,8 +3072,8 @@
         },
         {
           "word": "行って",
-          "startSec": 158.698,
-          "endSec": 159.048,
+          "startSec": 158.692,
+          "endSec": 158.949,
           "charStart": 26,
           "charEnd": 29,
           "romaji": "itte",
@@ -3072,8 +3082,8 @@
         },
         {
           "word": "黄色い",
-          "startSec": 159.048,
-          "endSec": 160.108,
+          "startSec": 158.949,
+          "endSec": 160.056,
           "charStart": 30,
           "charEnd": 33,
           "romaji": "kiiroi",
@@ -3082,8 +3092,8 @@
         },
         {
           "word": "出口案内",
-          "startSec": 160.108,
-          "endSec": 160.968,
+          "startSec": 160.056,
+          "endSec": 160.922,
           "charStart": 33,
           "charEnd": 37,
           "romaji": "deguchiannai",
@@ -3092,8 +3102,8 @@
         },
         {
           "word": "で",
-          "startSec": 160.968,
-          "endSec": 161.148,
+          "startSec": 160.922,
+          "endSec": 161.08,
           "charStart": 37,
           "charEnd": 38,
           "romaji": "de",
@@ -3102,8 +3112,8 @@
         },
         {
           "word": "南口",
-          "startSec": 161.148,
-          "endSec": 161.768,
+          "startSec": 161.08,
+          "endSec": 161.713,
           "charStart": 38,
           "charEnd": 40,
           "romaji": "minamiguchi",
@@ -3112,8 +3122,8 @@
         },
         {
           "word": "へ",
-          "startSec": 161.768,
-          "endSec": 161.968,
+          "startSec": 161.733,
+          "endSec": 161.934,
           "charStart": 40,
           "charEnd": 41,
           "romaji": "e",
@@ -3122,7 +3132,7 @@
         },
         {
           "word": "出られます",
-          "startSec": 161.968,
+          "startSec": 161.934,
           "endSec": 162.508,
           "charStart": 41,
           "charEnd": 46,
@@ -3145,7 +3155,7 @@
         {
           "word": "ありがとうございます",
           "startSec": 164.448,
-          "endSec": 165.663,
+          "endSec": 165.671,
           "charStart": 0,
           "charEnd": 10,
           "romaji": "arigatoogozaimasu",
@@ -3154,7 +3164,7 @@
         },
         {
           "word": "もし",
-          "startSec": 167.543,
+          "startSec": 167.551,
           "endSec": 167.895,
           "charStart": 11,
           "charEnd": 13,
@@ -3228,7 +3238,7 @@
     {
       "id": "sub-17",
       "startSec": 173.088,
-      "endSec": 180.312,
+      "endSec": 185.208,
       "speaker": "Sensei",
       "japanese": "では第一問のクイズです！「精算機」はどんな時に使いますか？A、B、Cから選んでください。",
       "romaji": "Dewa daiichimon no kuizu desu! \"Seisanki\" wa donna toki ni tsukaimasu ka? A, B, C kara erande kudasai.",
@@ -3236,8 +3246,8 @@
       "wordTimings": [
         {
           "word": "で",
-          "startSec": 173.268,
-          "endSec": 173.308,
+          "startSec": 173.248,
+          "endSec": 173.271,
           "charStart": 0,
           "charEnd": 1,
           "romaji": "de",
@@ -3246,8 +3256,8 @@
         },
         {
           "word": "は",
-          "startSec": 173.308,
-          "endSec": 173.529,
+          "startSec": 173.271,
+          "endSec": 173.455,
           "charStart": 1,
           "charEnd": 2,
           "romaji": "wa",
@@ -3256,8 +3266,8 @@
         },
         {
           "word": "第一問",
-          "startSec": 173.529,
-          "endSec": 174.328,
+          "startSec": 173.455,
+          "endSec": 174.281,
           "charStart": 2,
           "charEnd": 5,
           "romaji": "daiichimon",
@@ -3266,8 +3276,8 @@
         },
         {
           "word": "の",
-          "startSec": 174.328,
-          "endSec": 174.5,
+          "startSec": 174.281,
+          "endSec": 174.458,
           "charStart": 5,
           "charEnd": 6,
           "romaji": "no",
@@ -3276,8 +3286,8 @@
         },
         {
           "word": "クイズ",
-          "startSec": 174.5,
-          "endSec": 174.798,
+          "startSec": 174.518,
+          "endSec": 174.828,
           "charStart": 6,
           "charEnd": 9,
           "romaji": "kuizu",
@@ -3286,8 +3296,8 @@
         },
         {
           "word": "です",
-          "startSec": 174.798,
-          "endSec": 175.011,
+          "startSec": 174.828,
+          "endSec": 175.063,
           "charStart": 9,
           "charEnd": 11,
           "romaji": "desu",
@@ -3296,8 +3306,8 @@
         },
         {
           "word": "精算機",
-          "startSec": 175.011,
-          "endSec": 175.657,
+          "startSec": 176.883,
+          "endSec": 177.373,
           "charStart": 13,
           "charEnd": 16,
           "romaji": "seesanki",
@@ -3306,8 +3316,8 @@
         },
         {
           "word": "は",
-          "startSec": 175.657,
-          "endSec": 175.791,
+          "startSec": 177.373,
+          "endSec": 177.408,
           "charStart": 17,
           "charEnd": 18,
           "romaji": "wa",
@@ -3316,8 +3326,8 @@
         },
         {
           "word": "どんな",
-          "startSec": 175.791,
-          "endSec": 176.118,
+          "startSec": 177.488,
+          "endSec": 177.761,
           "charStart": 18,
           "charEnd": 21,
           "romaji": "donna",
@@ -3326,8 +3336,8 @@
         },
         {
           "word": "時",
-          "startSec": 176.118,
-          "endSec": 176.308,
+          "startSec": 177.761,
+          "endSec": 177.908,
           "charStart": 21,
           "charEnd": 22,
           "romaji": "ji",
@@ -3336,8 +3346,8 @@
         },
         {
           "word": "に",
-          "startSec": 176.368,
-          "endSec": 176.54,
+          "startSec": 177.908,
+          "endSec": 177.99,
           "charStart": 22,
           "charEnd": 23,
           "romaji": "ni",
@@ -3346,8 +3356,8 @@
         },
         {
           "word": "使います",
-          "startSec": 176.54,
-          "endSec": 177.268,
+          "startSec": 177.99,
+          "endSec": 178.761,
           "charStart": 23,
           "charEnd": 27,
           "romaji": "tsukaimasu",
@@ -3356,8 +3366,8 @@
         },
         {
           "word": "か",
-          "startSec": 177.268,
-          "endSec": 177.385,
+          "startSec": 178.761,
+          "endSec": 178.859,
           "charStart": 27,
           "charEnd": 28,
           "romaji": "ka",
@@ -3366,8 +3376,8 @@
         },
         {
           "word": "A",
-          "startSec": 177.385,
-          "endSec": 177.535,
+          "startSec": 178.859,
+          "endSec": 179.233,
           "charStart": 29,
           "charEnd": 30,
           "romaji": "ee",
@@ -3376,8 +3386,8 @@
         },
         {
           "word": "B",
-          "startSec": 177.535,
-          "endSec": 177.754,
+          "startSec": 179.233,
+          "endSec": 182.048,
           "charStart": 31,
           "charEnd": 32,
           "romaji": "biii",
@@ -3386,8 +3396,8 @@
         },
         {
           "word": "C",
-          "startSec": 177.754,
-          "endSec": 177.951,
+          "startSec": 182.048,
+          "endSec": 183.091,
           "charStart": 33,
           "charEnd": 34,
           "romaji": "shii",
@@ -3396,8 +3406,8 @@
         },
         {
           "word": "から",
-          "startSec": 177.951,
-          "endSec": 178.315,
+          "startSec": 183.091,
+          "endSec": 183.281,
           "charStart": 34,
           "charEnd": 36,
           "romaji": "kara",
@@ -3406,8 +3416,8 @@
         },
         {
           "word": "選んで",
-          "startSec": 178.315,
-          "endSec": 178.823,
+          "startSec": 183.281,
+          "endSec": 183.676,
           "charStart": 36,
           "charEnd": 39,
           "romaji": "erande",
@@ -3416,8 +3426,8 @@
         },
         {
           "word": "ください",
-          "startSec": 178.883,
-          "endSec": 179.168,
+          "startSec": 183.676,
+          "endSec": 183.988,
           "charStart": 39,
           "charEnd": 43,
           "romaji": "kudasai",
@@ -3430,8 +3440,8 @@
     },
     {
       "id": "sub-18",
-      "startSec": 182.52,
-      "endSec": 191.616,
+      "startSec": 187.416,
+      "endSec": 196.512,
       "speaker": "Sensei",
       "japanese": "正解はBの、運賃を精算する、でした！乗り過ごした時にとても便利です。",
       "romaji": "Seikai wa B no, unchin o seisan suru, deshita! Norisugoshita toki ni totemo benri desu.",
@@ -3439,8 +3449,8 @@
       "wordTimings": [
         {
           "word": "正解",
-          "startSec": 182.72,
-          "endSec": 183.097,
+          "startSec": 187.616,
+          "endSec": 187.993,
           "charStart": 0,
           "charEnd": 2,
           "romaji": "seekai",
@@ -3449,8 +3459,8 @@
         },
         {
           "word": "は",
-          "startSec": 183.097,
-          "endSec": 183.257,
+          "startSec": 187.993,
+          "endSec": 188.153,
           "charStart": 2,
           "charEnd": 3,
           "romaji": "wa",
@@ -3459,8 +3469,8 @@
         },
         {
           "word": "B",
-          "startSec": 183.257,
-          "endSec": 183.554,
+          "startSec": 188.153,
+          "endSec": 188.45,
           "charStart": 3,
           "charEnd": 4,
           "romaji": "biii",
@@ -3469,8 +3479,8 @@
         },
         {
           "word": "の",
-          "startSec": 183.554,
-          "endSec": 183.718,
+          "startSec": 188.45,
+          "endSec": 188.614,
           "charStart": 4,
           "charEnd": 5,
           "romaji": "no",
@@ -3479,8 +3489,8 @@
         },
         {
           "word": "運賃",
-          "startSec": 183.718,
-          "endSec": 184.66,
+          "startSec": 188.614,
+          "endSec": 189.556,
           "charStart": 6,
           "charEnd": 8,
           "romaji": "unchin",
@@ -3489,8 +3499,8 @@
         },
         {
           "word": "を",
-          "startSec": 184.66,
-          "endSec": 184.889,
+          "startSec": 189.556,
+          "endSec": 189.785,
           "charStart": 8,
           "charEnd": 9,
           "romaji": "o",
@@ -3499,8 +3509,8 @@
         },
         {
           "word": "精算",
-          "startSec": 184.889,
-          "endSec": 185.378,
+          "startSec": 189.785,
+          "endSec": 190.278,
           "charStart": 9,
           "charEnd": 11,
           "romaji": "seesan",
@@ -3509,8 +3519,8 @@
         },
         {
           "word": "する",
-          "startSec": 185.378,
-          "endSec": 185.704,
+          "startSec": 190.278,
+          "endSec": 190.596,
           "charStart": 11,
           "charEnd": 13,
           "romaji": "suru",
@@ -3519,8 +3529,8 @@
         },
         {
           "word": "でした",
-          "startSec": 186.204,
-          "endSec": 186.582,
+          "startSec": 191.096,
+          "endSec": 191.478,
           "charStart": 14,
           "charEnd": 17,
           "romaji": "deshita",
@@ -3529,8 +3539,8 @@
         },
         {
           "word": "乗り過ごした",
-          "startSec": 188.262,
-          "endSec": 188.878,
+          "startSec": 193.158,
+          "endSec": 193.774,
           "charStart": 18,
           "charEnd": 24,
           "romaji": "norisugoshita",
@@ -3539,8 +3549,8 @@
         },
         {
           "word": "時",
-          "startSec": 188.898,
-          "endSec": 189.008,
+          "startSec": 193.794,
+          "endSec": 193.91,
           "charStart": 24,
           "charEnd": 25,
           "romaji": "ji",
@@ -3549,8 +3559,8 @@
         },
         {
           "word": "に",
-          "startSec": 189.028,
-          "endSec": 189.245,
+          "startSec": 193.93,
+          "endSec": 194.153,
           "charStart": 25,
           "charEnd": 26,
           "romaji": "ni",
@@ -3559,8 +3569,8 @@
         },
         {
           "word": "とても",
-          "startSec": 189.245,
-          "endSec": 189.746,
+          "startSec": 194.153,
+          "endSec": 194.642,
           "charStart": 26,
           "charEnd": 29,
           "romaji": "totemo",
@@ -3569,8 +3579,8 @@
         },
         {
           "word": "便利",
-          "startSec": 189.746,
-          "endSec": 190.135,
+          "startSec": 194.642,
+          "endSec": 195.031,
           "charStart": 29,
           "charEnd": 31,
           "romaji": "benri",
@@ -3579,8 +3589,8 @@
         },
         {
           "word": "です",
-          "startSec": 190.135,
-          "endSec": 190.42,
+          "startSec": 195.031,
+          "endSec": 195.316,
           "charStart": 31,
           "charEnd": 33,
           "romaji": "desu",
@@ -3593,8 +3603,8 @@
     },
     {
       "id": "sub-19",
-      "startSec": 192.216,
-      "endSec": 203.808,
+      "startSec": 197.112,
+      "endSec": 208.704,
       "speaker": "Maria",
       "japanese": "続いて第二問です！全ての駅に止まる電車はどれですか？よく考えてみてくださいね。",
       "romaji": "Tsudzuite dainimon desu! Subete no eki ni tomaru densha wa dore desu ka? Yoku kangaete mite kudasai ne.",
@@ -3602,8 +3612,8 @@
       "wordTimings": [
         {
           "word": "続いて",
-          "startSec": 192.496,
-          "endSec": 192.933,
+          "startSec": 197.392,
+          "endSec": 197.829,
           "charStart": 0,
           "charEnd": 3,
           "romaji": "tsuzuite",
@@ -3612,8 +3622,8 @@
         },
         {
           "word": "第二問",
-          "startSec": 192.953,
-          "endSec": 193.656,
+          "startSec": 197.849,
+          "endSec": 198.552,
           "charStart": 3,
           "charEnd": 6,
           "romaji": "dainimon",
@@ -3622,8 +3632,8 @@
         },
         {
           "word": "です",
-          "startSec": 193.656,
-          "endSec": 193.958,
+          "startSec": 198.552,
+          "endSec": 198.852,
           "charStart": 6,
           "charEnd": 8,
           "romaji": "desu",
@@ -3632,8 +3642,8 @@
         },
         {
           "word": "全て",
-          "startSec": 195.938,
-          "endSec": 196.472,
+          "startSec": 200.832,
+          "endSec": 201.368,
           "charStart": 9,
           "charEnd": 11,
           "romaji": "subete",
@@ -3642,8 +3652,8 @@
         },
         {
           "word": "の",
-          "startSec": 196.472,
-          "endSec": 196.596,
+          "startSec": 201.368,
+          "endSec": 201.485,
           "charStart": 11,
           "charEnd": 12,
           "romaji": "no",
@@ -3652,8 +3662,8 @@
         },
         {
           "word": "駅",
-          "startSec": 196.596,
-          "endSec": 196.934,
+          "startSec": 201.485,
+          "endSec": 201.828,
           "charStart": 12,
           "charEnd": 13,
           "romaji": "eki",
@@ -3662,8 +3672,8 @@
         },
         {
           "word": "に",
-          "startSec": 196.934,
-          "endSec": 197.023,
+          "startSec": 201.828,
+          "endSec": 201.919,
           "charStart": 13,
           "charEnd": 14,
           "romaji": "ni",
@@ -3672,8 +3682,8 @@
         },
         {
           "word": "止まる",
-          "startSec": 197.043,
-          "endSec": 197.349,
+          "startSec": 201.939,
+          "endSec": 202.245,
           "charStart": 14,
           "charEnd": 17,
           "romaji": "tomaru",
@@ -3682,8 +3692,8 @@
         },
         {
           "word": "電車",
-          "startSec": 197.349,
-          "endSec": 197.738,
+          "startSec": 202.245,
+          "endSec": 202.642,
           "charStart": 17,
           "charEnd": 19,
           "romaji": "densha",
@@ -3692,8 +3702,8 @@
         },
         {
           "word": "は",
-          "startSec": 197.738,
-          "endSec": 197.827,
+          "startSec": 202.642,
+          "endSec": 202.724,
           "charStart": 19,
           "charEnd": 20,
           "romaji": "wa",
@@ -3702,8 +3712,8 @@
         },
         {
           "word": "どれ",
-          "startSec": 197.827,
-          "endSec": 198.172,
+          "startSec": 202.724,
+          "endSec": 203.068,
           "charStart": 20,
           "charEnd": 22,
           "romaji": "dore",
@@ -3712,8 +3722,8 @@
         },
         {
           "word": "です",
-          "startSec": 198.172,
-          "endSec": 198.483,
+          "startSec": 203.068,
+          "endSec": 203.379,
           "charStart": 22,
           "charEnd": 24,
           "romaji": "desu",
@@ -3722,8 +3732,8 @@
         },
         {
           "word": "か",
-          "startSec": 198.503,
-          "endSec": 198.638,
+          "startSec": 203.399,
+          "endSec": 203.534,
           "charStart": 24,
           "charEnd": 25,
           "romaji": "ka",
@@ -3732,8 +3742,8 @@
         },
         {
           "word": "よく",
-          "startSec": 198.638,
-          "endSec": 200.856,
+          "startSec": 203.534,
+          "endSec": 205.752,
           "charStart": 26,
           "charEnd": 28,
           "romaji": "yoku",
@@ -3742,8 +3752,8 @@
         },
         {
           "word": "考えて",
-          "startSec": 200.856,
-          "endSec": 201.4,
+          "startSec": 205.752,
+          "endSec": 206.296,
           "charStart": 28,
           "charEnd": 31,
           "romaji": "kangaete",
@@ -3752,8 +3762,8 @@
         },
         {
           "word": "みてください",
-          "startSec": 201.4,
-          "endSec": 202.226,
+          "startSec": 206.296,
+          "endSec": 207.121,
           "charStart": 31,
           "charEnd": 37,
           "romaji": "mitekudasai",
@@ -3762,8 +3772,8 @@
         },
         {
           "word": "ね",
-          "startSec": 202.286,
-          "endSec": 202.696,
+          "startSec": 207.181,
+          "endSec": 207.592,
           "charStart": 37,
           "charEnd": 38,
           "romaji": "ne",
@@ -3776,8 +3786,8 @@
     },
     {
       "id": "sub-20",
-      "startSec": 206.016,
-      "endSec": 216.744,
+      "startSec": 210.912,
+      "endSec": 221.64,
       "speaker": "Sensei",
       "japanese": "正解はAの各駅停車でした！これで日本の駅もバッチリですね。また次回お会いしましょう！",
       "romaji": "Seikai wa A no kakueki teisha deshita! Kore de Nihon no eki mo bacchiri desu ne. Mata jikai oai shimashou!",
@@ -3785,8 +3795,8 @@
       "wordTimings": [
         {
           "word": "正解",
-          "startSec": 206.216,
-          "endSec": 206.564,
+          "startSec": 211.112,
+          "endSec": 211.46,
           "charStart": 0,
           "charEnd": 2,
           "romaji": "seekai",
@@ -3795,8 +3805,8 @@
         },
         {
           "word": "は",
-          "startSec": 206.564,
-          "endSec": 206.7,
+          "startSec": 211.46,
+          "endSec": 211.596,
           "charStart": 2,
           "charEnd": 3,
           "romaji": "wa",
@@ -3805,8 +3815,8 @@
         },
         {
           "word": "A",
-          "startSec": 206.7,
-          "endSec": 206.991,
+          "startSec": 211.596,
+          "endSec": 211.9,
           "charStart": 3,
           "charEnd": 4,
           "romaji": "ee",
@@ -3815,8 +3825,8 @@
         },
         {
           "word": "の",
-          "startSec": 206.991,
-          "endSec": 207.12,
+          "startSec": 211.9,
+          "endSec": 212.03,
           "charStart": 4,
           "charEnd": 5,
           "romaji": "no",
@@ -3825,8 +3835,8 @@
         },
         {
           "word": "各駅停車",
-          "startSec": 207.12,
-          "endSec": 208.134,
+          "startSec": 212.03,
+          "endSec": 213.03,
           "charStart": 5,
           "charEnd": 9,
           "romaji": "kakuekiteisha",
@@ -3835,8 +3845,8 @@
         },
         {
           "word": "でした",
-          "startSec": 208.134,
-          "endSec": 208.374,
+          "startSec": 213.03,
+          "endSec": 213.27,
           "charStart": 9,
           "charEnd": 12,
           "romaji": "deshita",
@@ -3845,8 +3855,8 @@
         },
         {
           "word": "これ",
-          "startSec": 208.414,
-          "endSec": 208.486,
+          "startSec": 213.31,
+          "endSec": 213.382,
           "charStart": 13,
           "charEnd": 15,
           "romaji": "kore",
@@ -3855,8 +3865,8 @@
         },
         {
           "word": "で",
-          "startSec": 210.186,
-          "endSec": 210.51,
+          "startSec": 215.082,
+          "endSec": 215.406,
           "charStart": 15,
           "charEnd": 16,
           "romaji": "de",
@@ -3865,8 +3875,8 @@
         },
         {
           "word": "日本",
-          "startSec": 210.51,
-          "endSec": 210.766,
+          "startSec": 215.406,
+          "endSec": 215.682,
           "charStart": 16,
           "charEnd": 18,
           "romaji": "nippon",
@@ -3875,8 +3885,8 @@
         },
         {
           "word": "の",
-          "startSec": 210.766,
-          "endSec": 211.024,
+          "startSec": 215.682,
+          "endSec": 215.92,
           "charStart": 18,
           "charEnd": 19,
           "romaji": "no",
@@ -3885,8 +3895,8 @@
         },
         {
           "word": "駅",
-          "startSec": 211.024,
-          "endSec": 211.251,
+          "startSec": 215.92,
+          "endSec": 216.147,
           "charStart": 19,
           "charEnd": 20,
           "romaji": "eki",
@@ -3895,8 +3905,8 @@
         },
         {
           "word": "も",
-          "startSec": 211.251,
-          "endSec": 211.472,
+          "startSec": 216.147,
+          "endSec": 216.368,
           "charStart": 20,
           "charEnd": 21,
           "romaji": "mo",
@@ -3905,8 +3915,8 @@
         },
         {
           "word": "バッチリ",
-          "startSec": 211.472,
-          "endSec": 211.997,
+          "startSec": 216.368,
+          "endSec": 216.895,
           "charStart": 21,
           "charEnd": 25,
           "romaji": "batchiri",
@@ -3915,8 +3925,8 @@
         },
         {
           "word": "です",
-          "startSec": 211.997,
-          "endSec": 212.233,
+          "startSec": 216.895,
+          "endSec": 217.145,
           "charStart": 25,
           "charEnd": 27,
           "romaji": "desu",
@@ -3925,8 +3935,8 @@
         },
         {
           "word": "ね",
-          "startSec": 212.233,
-          "endSec": 212.366,
+          "startSec": 217.145,
+          "endSec": 217.258,
           "charStart": 27,
           "charEnd": 28,
           "romaji": "ne",
@@ -3935,8 +3945,8 @@
         },
         {
           "word": "また",
-          "startSec": 214.046,
-          "endSec": 214.329,
+          "startSec": 218.938,
+          "endSec": 219.225,
           "charStart": 29,
           "charEnd": 31,
           "romaji": "mata",
@@ -3945,8 +3955,8 @@
         },
         {
           "word": "次回",
-          "startSec": 214.329,
-          "endSec": 214.667,
+          "startSec": 219.225,
+          "endSec": 219.563,
           "charStart": 31,
           "charEnd": 33,
           "romaji": "jikai",
@@ -3955,8 +3965,8 @@
         },
         {
           "word": "お",
-          "startSec": 214.667,
-          "endSec": 214.826,
+          "startSec": 219.563,
+          "endSec": 219.722,
           "charStart": 33,
           "charEnd": 34,
           "romaji": "o",
@@ -3965,8 +3975,8 @@
         },
         {
           "word": "会い",
-          "startSec": 214.826,
-          "endSec": 215.038,
+          "startSec": 219.722,
+          "endSec": 219.916,
           "charStart": 34,
           "charEnd": 36,
           "romaji": "ai",
@@ -3975,8 +3985,8 @@
         },
         {
           "word": "しましょう",
-          "startSec": 215.038,
-          "endSec": 215.576,
+          "startSec": 219.916,
+          "endSec": 220.472,
           "charStart": 36,
           "charEnd": 41,
           "romaji": "shimashoo",

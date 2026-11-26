@@ -48,7 +48,9 @@ STATION_READING_OVERRIDES: dict[str, tuple[str, str]] = {
     "東京駅": ("とうきょうえき", "toukyou-eki"),
     "特急券": ("とっきゅうけん", "tokkyuuken"),
     "第一問": ("だいいちもん", "daiichimon"),
+    "第1問": ("だいいちもん", "daiichimon"),
     "第二問": ("だいにもん", "dainimon"),
+    "第2問": ("だいにもん", "dainimon"),
     "何番線": ("なんばんせん", "nanbansen"),
     "三番線": ("さんばんせん", "sanbansen"),
     "一番線": ("いちばんせん", "ichibansen"),
@@ -77,9 +79,6 @@ STATION_READING_OVERRIDES: dict[str, tuple[str, str]] = {
     "種類": ("しゅるい", "shurui"),
     "N4": ("えぬよん", "n4"),
     "N3": ("えぬさん", "n3"),
-    "A": ("えー", "eei"),
-    "B": ("びー", "bii"),
-    "C": ("しー", "shii"),
 }
 
 _SORTED_OVERRIDES = sorted(
@@ -260,6 +259,9 @@ def _apply_reading_overrides(text: str) -> str:
     for surf, (kana, _) in _SORTED_OVERRIDES:
         if surf in out:
             out = out.replace(surf, kana)
+    out = re.sub(r"(?<![A-Za-z])[Aa](?![A-Za-z])", "えー", out)
+    out = re.sub(r"(?<![A-Za-z])[Bb](?![A-Za-z])", "びー", out)
+    out = re.sub(r"(?<![A-Za-z])[Cc](?![A-Za-z])", "しー", out)
     return out
 
 

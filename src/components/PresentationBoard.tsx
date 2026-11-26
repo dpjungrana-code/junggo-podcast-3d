@@ -14,6 +14,7 @@ import {
   KanjiLessonData,
   QuizCardData,
   StationGuideData,
+  StickmanSceneId,
   StudioMode,
   SubtitleCue,
   VocabCardData,
@@ -22,6 +23,7 @@ import {
   isGuestSpeaker,
   resolveCueGesture,
 } from "../data/demoEpisode";
+import { StickmanScenePlayer } from "./StickmanScenePlayer";
 
 export type PresentationBoardProps = {
   readonly episodeNumber: string;
@@ -199,9 +201,21 @@ const VocabBoardContent: React.FC<{
   readonly sectionLabel: string;
   readonly visualUrl?: string;
   readonly visualCaption?: string;
-}> = ({ vocab, sectionLabel, visualUrl, visualCaption }) => {
+  readonly animationScene?: StickmanSceneId;
+  readonly sectionStartSec?: number;
+  readonly sectionEndSec?: number;
+}> = ({
+  vocab,
+  sectionLabel,
+  visualUrl,
+  visualCaption,
+  animationScene,
+  sectionStartSec = 0,
+  sectionEndSec = 15,
+}) => {
   const mediaUrl = visualUrl ?? vocab.imageUrl ?? vocab.imageSrc;
   const mediaCaption = visualCaption ?? vocab.imageCaption;
+  const activeScene = animationScene ?? vocab.animationScene;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -319,7 +333,16 @@ const VocabBoardContent: React.FC<{
           </div>
         </div>
 
-        {mediaUrl ? (
+        {activeScene ? (
+          <StickmanScenePlayer
+            scene={activeScene}
+            sectionStartSec={sectionStartSec}
+            sectionEndSec={sectionEndSec}
+            caption={mediaCaption}
+            width={420}
+            height={315}
+          />
+        ) : mediaUrl ? (
           <MediaVisualFrame
             imageUrl={mediaUrl}
             caption={mediaCaption}
@@ -572,11 +595,23 @@ const KanjiLessonBoardContent: React.FC<{
   readonly sectionStartFrame: number;
   readonly visualUrl?: string;
   readonly visualCaption?: string;
-}> = ({ kanji, sectionStartFrame, visualUrl, visualCaption }) => {
+  readonly animationScene?: StickmanSceneId;
+  readonly sectionStartSec?: number;
+  readonly sectionEndSec?: number;
+}> = ({
+  kanji,
+  sectionStartFrame,
+  visualUrl,
+  visualCaption,
+  animationScene,
+  sectionStartSec = 0,
+  sectionEndSec = 15,
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const mediaUrl = visualUrl ?? kanji.imageUrl;
   const mediaCaption = visualCaption ?? kanji.imageCaption;
+  const activeScene = animationScene ?? kanji.animationScene;
 
   const kanjiScale = interpolate(
     frame,
@@ -830,8 +865,17 @@ const KanjiLessonBoardContent: React.FC<{
           </div>
         </div>
 
-        {/* Auto-Generated Illustration Slot */}
-        {mediaUrl ? (
+        {/* Auto-Generated Illustration or Animated Stickman Slot */}
+        {activeScene ? (
+          <StickmanScenePlayer
+            scene={activeScene}
+            sectionStartSec={sectionStartSec}
+            sectionEndSec={sectionEndSec}
+            caption={mediaCaption}
+            width={196}
+            height={146}
+          />
+        ) : mediaUrl ? (
           <MediaVisualFrame
             imageUrl={mediaUrl}
             caption={mediaCaption}
@@ -899,9 +943,20 @@ const StationGuideBoardContent: React.FC<{
   readonly guide: StationGuideData;
   readonly visualUrl?: string;
   readonly visualCaption?: string;
-}> = ({ guide, visualUrl, visualCaption }) => {
+  readonly animationScene?: StickmanSceneId;
+  readonly sectionStartSec: number;
+  readonly sectionEndSec: number;
+}> = ({
+  guide,
+  visualUrl,
+  visualCaption,
+  animationScene,
+  sectionStartSec,
+  sectionEndSec,
+}) => {
   const mediaUrl = visualUrl ?? guide.imageUrl;
   const mediaCaption = visualCaption ?? guide.imageCaption;
+  const activeScene = animationScene ?? guide.animationScene;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
@@ -1045,7 +1100,16 @@ const StationGuideBoardContent: React.FC<{
           </div>
         </div>
 
-        {mediaUrl ? (
+        {activeScene ? (
+          <StickmanScenePlayer
+            scene={activeScene}
+            sectionStartSec={sectionStartSec}
+            sectionEndSec={sectionEndSec}
+            caption={mediaCaption}
+            width={480}
+            height={360}
+          />
+        ) : mediaUrl ? (
           <MediaVisualFrame
             imageUrl={mediaUrl}
             caption={mediaCaption}
@@ -1130,6 +1194,9 @@ const OverviewBoardContent: React.FC<{
   readonly activeCue: SubtitleCue | null;
   readonly visualUrl?: string;
   readonly visualCaption?: string;
+  readonly animationScene?: StickmanSceneId;
+  readonly sectionStartSec: number;
+  readonly sectionEndSec: number;
 }> = ({
   episodeNumber,
   episodeTitle,
@@ -1141,8 +1208,12 @@ const OverviewBoardContent: React.FC<{
   activeCue,
   visualUrl,
   visualCaption,
+  animationScene,
+  sectionStartSec,
+  sectionEndSec,
 }) => {
   const isDialogue = activeSection.type === "dialogue";
+  const hasVisual = Boolean(animationScene || visualUrl);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
@@ -1182,7 +1253,7 @@ const OverviewBoardContent: React.FC<{
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <AudioWaveIcon />
           <span style={{ fontSize: 19, fontWeight: 700, color: "#e2f5ec" }}>
-            {visualUrl && !isDialogue
+            {hasVisual && !isDialogue
               ? "Visual Guide"
               : isDialogue
                 ? activeSection.label || "Station Roleplay"
@@ -1233,7 +1304,7 @@ const OverviewBoardContent: React.FC<{
             </div>
             <div
               style={{
-                fontSize: visualUrl ? 34 : 42,
+                fontSize: hasVisual ? 34 : 42,
                 fontWeight: 800,
                 color: "#ffffff",
                 lineHeight: 1.32,
@@ -1241,15 +1312,24 @@ const OverviewBoardContent: React.FC<{
             >
               {activeCue.japanese}
             </div>
-            <div style={{ fontSize: visualUrl ? 22 : 26, fontWeight: 600, color: "#fde68a" }}>
+            <div style={{ fontSize: hasVisual ? 22 : 26, fontWeight: 600, color: "#fde68a" }}>
               {activeCue.romaji}
             </div>
-            <div style={{ fontSize: visualUrl ? 23 : 27, fontWeight: 500, color: "#cbd5e1" }}>
+            <div style={{ fontSize: hasVisual ? 23 : 27, fontWeight: 500, color: "#cbd5e1" }}>
               {activeCue.english}
             </div>
           </div>
 
-          {visualUrl ? (
+          {animationScene ? (
+            <StickmanScenePlayer
+              scene={animationScene}
+              sectionStartSec={sectionStartSec}
+              sectionEndSec={sectionEndSec}
+              caption={visualCaption}
+              width={480}
+              height={360}
+            />
+          ) : visualUrl ? (
             <MediaVisualFrame
               imageUrl={visualUrl}
               caption={visualCaption}
@@ -1258,7 +1338,7 @@ const OverviewBoardContent: React.FC<{
             />
           ) : null}
         </div>
-      ) : visualUrl ? (
+      ) : hasVisual ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div
             style={{
@@ -1270,12 +1350,23 @@ const OverviewBoardContent: React.FC<{
           >
             {episodeTitle}
           </div>
-          <MediaVisualFrame
-            imageUrl={visualUrl}
-            caption={visualCaption}
-            width="100%"
-            height={230}
-          />
+          {animationScene ? (
+            <StickmanScenePlayer
+              scene={animationScene}
+              sectionStartSec={sectionStartSec}
+              sectionEndSec={sectionEndSec}
+              caption={visualCaption}
+              width={480}
+              height={320}
+            />
+          ) : visualUrl ? (
+            <MediaVisualFrame
+              imageUrl={visualUrl}
+              caption={visualCaption}
+              width="100%"
+              height={230}
+            />
+          ) : null}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1295,7 +1386,7 @@ const OverviewBoardContent: React.FC<{
         </div>
       )}
 
-      {!visualUrl && stationGuides.length > 0 ? (
+      {!hasVisual && stationGuides.length > 0 ? (
         <div
           style={{
             backgroundColor: "#0d141a",
@@ -1352,7 +1443,7 @@ const OverviewBoardContent: React.FC<{
             ))}
           </div>
         </div>
-      ) : !visualUrl && kanjiList.length > 0 ? (
+      ) : !hasVisual && kanjiList.length > 0 ? (
         <div
           style={{
             backgroundColor: "#0d141a",
@@ -1409,7 +1500,7 @@ const OverviewBoardContent: React.FC<{
             ))}
           </div>
         </div>
-      ) : !visualUrl && featuredVocab ? (
+      ) : !hasVisual && featuredVocab ? (
         <div
           style={{
             backgroundColor: "#0d141a",
@@ -1589,6 +1680,12 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
     activeSection.kanji?.imageCaption ??
     activeSection.vocab?.imageCaption ??
     activeSection.imageCaption;
+  const activeAnimationScene =
+    activeCue?.animationScene ??
+    activeSection.stationGuide?.animationScene ??
+    activeSection.kanji?.animationScene ??
+    activeSection.vocab?.animationScene ??
+    activeSection.animationScene;
 
   const fadeFrames = Math.max(6, Math.round(0.32 * fps));
   const sectionStartFrame = Math.round(activeSection.startSec * fps);
@@ -1664,6 +1761,9 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
               guide={activeSection.stationGuide}
               visualUrl={activeVisualUrl}
               visualCaption={activeVisualCaption}
+              animationScene={activeAnimationScene}
+              sectionStartSec={activeSection.startSec}
+              sectionEndSec={activeSection.endSec}
             />
           ) : (activeSection.type === "kanji_lesson" ||
               Boolean(activeSection.kanji)) &&
@@ -1673,6 +1773,9 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
               sectionStartFrame={sectionStartFrame}
               visualUrl={activeVisualUrl}
               visualCaption={activeVisualCaption}
+              animationScene={activeAnimationScene}
+              sectionStartSec={activeSection.startSec}
+              sectionEndSec={activeSection.endSec}
             />
           ) : (activeSection.type === "vocabulary" ||
               activeSection.type === "grammar") &&
@@ -1682,6 +1785,9 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
               sectionLabel={activeSection.label}
               visualUrl={activeVisualUrl}
               visualCaption={activeVisualCaption}
+              animationScene={activeAnimationScene}
+              sectionStartSec={activeSection.startSec}
+              sectionEndSec={activeSection.endSec}
             />
           ) : activeSection.type === "quiz" && activeSection.quiz ? (
             <QuizBoardContent quiz={activeSection.quiz} timeSec={timeSec} />
@@ -1697,6 +1803,9 @@ export const PresentationBoard: React.FC<PresentationBoardProps> = ({
               activeCue={activeCue}
               visualUrl={activeVisualUrl}
               visualCaption={activeVisualCaption}
+              animationScene={activeAnimationScene}
+              sectionStartSec={activeSection.startSec}
+              sectionEndSec={activeSection.endSec}
             />
           )}
         </div>

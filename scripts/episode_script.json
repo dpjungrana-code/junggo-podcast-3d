@@ -53,6 +53,7 @@
         ],
         "tipEn": "Always check which directional exit (北・南・東・西口) matches your destination map before leaving the gate.",
         "visualPrompt": "station_exits_map",
+        "animationScene": "walk_to_station",
         "imageCaption": "Station Map & Directional Exits (北・南・東・西口)"
       }
     },
@@ -96,6 +97,7 @@
         ],
         "tipEn": "Tap the English button on any JR or Metro 券売機 (ticket machine) to buy tickets or charge Suica / PASMO.",
         "visualPrompt": "ticket_machine_ic",
+        "animationScene": "buy_ticket_ic",
         "imageCaption": "Ticket Machine (券売機) & IC Card Top-Up"
       }
     },
@@ -139,6 +141,7 @@
         ],
         "tipEn": "If the gate beeps red or you rode past your stop, visit the yellow 精算機 (Fare Adjustment Machine) right next to the gate.",
         "visualPrompt": "ticket_gate_fare_adjust",
+        "animationScene": "tap_ticket_gate",
         "imageCaption": "IC Ticket Gate (改札口) & Fare Adjustment (精算機)"
       }
     },
@@ -186,6 +189,7 @@
         ],
         "tipEn": "Check the platform number (〇番線) and train type above the door—Limited Express (特急) often requires an extra fee!",
         "visualPrompt": "train_types_stops",
+        "animationScene": "ride_and_exit_train",
         "imageCaption": "Platform 3 & Local vs. Express Stop Diagram"
       }
     },
@@ -230,6 +234,7 @@
         ],
         "tipEn": "Across Japan, overhead EXIT (出口) signs are standardized in bright yellow with black text so you can spot them instantly.",
         "visualPrompt": "yellow_exit_transfer",
+        "animationScene": "ride_and_exit_train",
         "imageCaption": "Yellow Exit Sign (出口) & Line Transfer Arrows"
       }
     },

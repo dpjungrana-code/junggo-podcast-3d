@@ -661,6 +661,8 @@ async def build_episode(
             )
         if line.get("imageCaption"):
             cue_obj["imageCaption"] = line["imageCaption"]
+        if line.get("animationScene"):
+            cue_obj["animationScene"] = line["animationScene"]
         subtitles.append(cue_obj)
 
         sec_id = line.get("sectionId")
@@ -752,6 +754,16 @@ async def build_episode(
                 or (station_payload.get("imageCaption") if station_payload else None)
                 or (kanji_payload.get("imageCaption") if kanji_payload else None)
             )
+            sec_animation_scene = (
+                sec.get("animationScene")
+                or (station_payload.get("animationScene") if station_payload else None)
+                or (kanji_payload.get("animationScene") if kanji_payload else None)
+                or (
+                    sec["vocab"].get("animationScene")
+                    if isinstance(sec.get("vocab"), dict)
+                    else None
+                )
+            )
 
             prompt_text = str(
                 sec.get("visualPrompt")
@@ -771,11 +783,15 @@ async def build_episode(
             if station_payload is not None:
                 if sec_image_url and not station_payload.get("imageUrl"):
                     station_payload["imageUrl"] = sec_image_url
+                if sec_animation_scene and not station_payload.get("animationScene"):
+                    station_payload["animationScene"] = sec_animation_scene
                 built_sec["stationGuide"] = station_payload
 
             if kanji_payload is not None:
                 if sec_image_url and not kanji_payload.get("imageUrl"):
                     kanji_payload["imageUrl"] = sec_image_url
+                if sec_animation_scene and not kanji_payload.get("animationScene"):
+                    kanji_payload["animationScene"] = sec_animation_scene
                 built_sec["kanji"] = kanji_payload
 
             if sec.get("imageUrl"):
@@ -786,6 +802,8 @@ async def build_episode(
                 built_sec["imageSrc"] = sec["imageSrc"]
             if sec_image_caption:
                 built_sec["imageCaption"] = sec_image_caption
+            if sec_animation_scene:
+                built_sec["animationScene"] = sec_animation_scene
 
             if "quiz" in sec:
                 quiz = dict(sec["quiz"])
