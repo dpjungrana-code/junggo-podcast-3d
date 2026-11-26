@@ -3,7 +3,7 @@
   "title": "Japan Train Station Survival Guide",
   "jlptLevel": "JLPT N4–N3",
   "studioMode": "dual",
-  "speechRate": "-8%",
+  "speechRate": "+0%",
   "leadInSec": 0.45,
   "outroSec": 0.85,
   "sentenceMicroPauseSec": 0.45,
@@ -1316,7 +1316,7 @@
       "animationScene": "tap_ic_card_gate",
       "visualBeat": "staff",
       "pauseSec": 0.75,
-      "gaze": "partner"
+      "gaze": "camera"
     },
     {
       "id": "sub-41",

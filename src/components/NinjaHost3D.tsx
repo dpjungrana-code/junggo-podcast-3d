@@ -6,24 +6,37 @@ import {
   PodcastSectionType,
   StudioMode,
   SubtitleCue,
-  computeHostGazeWeights,
   getActiveSection,
   getActiveSubtitle,
-  isAddressingCoHost,
   isGuestSpeaker,
-  resolveCueGesture,
 } from "../data/demoEpisode";
 import {
   computeDualLockMouthMetrics,
   usePodcastAudioMetrics,
 } from "../utils/audio";
+import {
+  blendGazeTargets,
+  buildAudienceCheckIns,
+  buildBlinkSchedule,
+  buildListenerNods,
+  computeBlinkAmount,
+  computeLayeredGaze,
+  computeLensDirection,
+  computeListenerNodPitch,
+  computeSpeakingEnvelope,
+  gazeAngleToPupilOffset,
+} from "../utils/hostGaze";
 import { createHoodieLogoTexture } from "../utils/textures";
+import { computeCameraPose } from "./CameraRig";
 import { PixarHand3D, computeCalmGestureEnvelopes } from "./PixarHand3D";
+import { PixarIris3D, SENSEI_IRIS } from "./PixarIris3D";
 
 export type NinjaHost3DProps = {
   readonly sections: readonly EpisodeSection[];
   readonly subtitles?: readonly SubtitleCue[];
   readonly studioMode?: StudioMode;
+  /** 0 = studio wide, 1 = circular PIP (used to aim eye contact at the real lens). */
+  readonly boardFocusProgress?: number;
 };
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
@@ -66,53 +79,6 @@ const computeSectionWeight = (
   return clamp01(maxWeight);
 };
 
-const computeDialogueGuestWeight = (
-  sections: readonly EpisodeSection[],
-  subtitles: readonly SubtitleCue[] | undefined,
-  timeSec: number,
-  allowAllSections = false,
-): number => {
-  if (!subtitles || subtitles.length === 0) {
-    return 0;
-  }
-  const dialogueWeight = allowAllSections
-    ? 1
-    : computeSectionWeight(sections, ["dialogue"], timeSec);
-  if (dialogueWeight <= 0.005) {
-    return 0;
-  }
-
-  let guestWeight = 0;
-  for (const cue of subtitles) {
-    if (!isGuestSpeaker(cue.speaker)) {
-      continue;
-    }
-    const enter = interpolate(
-      timeSec,
-      [cue.startSec - 0.3, cue.startSec + 0.25],
-      [0, 1],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    const exit = interpolate(
-      timeSec,
-      [cue.endSec - 0.25, cue.endSec + 0.35],
-      [1, 0],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    guestWeight = Math.max(guestWeight, Math.min(enter, exit));
-  }
-
-  return clamp01(dialogueWeight * guestWeight);
-};
-
 const computeQuizRevealWeight = (
   sections: readonly EpisodeSection[],
   timeSec: number,
@@ -145,70 +111,6 @@ const computeQuizRevealWeight = (
     maxReveal = Math.max(maxReveal, Math.min(reveal, exit));
   }
   return clamp01(maxReveal);
-};
-
-const findSectionAt = (
-  sections: readonly EpisodeSection[],
-  timeSec: number,
-): EpisodeSection | undefined => {
-  for (const section of sections) {
-    if (timeSec >= section.startSec && timeSec < section.endSec) {
-      return section;
-    }
-  }
-  return sections[sections.length - 1];
-};
-
-/**
- * Smooth 0..1 envelope when the host directly addresses their co-host (by name,
- * question phrasing, or dialogue handoff) without pointing at the board.
- */
-const computeAddressCoHostWeight = (
-  sections: readonly EpisodeSection[],
-  subtitles: readonly SubtitleCue[] | undefined,
-  forGuest: boolean,
-  timeSec: number,
-): number => {
-  if (!subtitles || subtitles.length === 0) {
-    return 0;
-  }
-  let maxWeight = 0;
-  for (let i = 0; i < subtitles.length; i++) {
-    const cue = subtitles[i];
-    if (isGuestSpeaker(cue.speaker) !== forGuest) {
-      continue;
-    }
-    const midSec = (cue.startSec + cue.endSec) * 0.5;
-    const sec = findSectionAt(sections, midSec);
-    if (resolveCueGesture(cue, sec, forGuest) === "point_board") {
-      continue;
-    }
-    if (!isAddressingCoHost(cue, subtitles[i + 1])) {
-      continue;
-    }
-    const enter = interpolate(
-      timeSec,
-      [cue.startSec - 0.16, cue.startSec + 0.24],
-      [0, 1],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    const exit = interpolate(
-      timeSec,
-      [cue.endSec - 0.12, cue.endSec + 0.36],
-      [1, 0],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    maxWeight = Math.max(maxWeight, Math.min(enter, exit));
-  }
-  return clamp01(maxWeight);
 };
 
 type StylizedEyeProps = {
@@ -260,14 +162,15 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
         <meshStandardMaterial color="#382218" roughness={0.58} />
       </mesh>
 
-      {/* Wet-look glossy white sclera */}
+      {/* Soft moist sclera (gentle sheen, no hot specular bloom around the iris) */}
       <mesh scale={[1.0, 1.06, 0.34]}>
         <sphereGeometry args={[0.052, 18, 14]} />
         <meshPhysicalMaterial
-          color="#fcfdff"
-          roughness={0.14}
-          clearcoat={1.0}
-          clearcoatRoughness={0.06}
+          color="#fbfbf8"
+          roughness={0.34}
+          clearcoat={0.25}
+          clearcoatRoughness={0.32}
+          envMapIntensity={0}
         />
       </mesh>
 
@@ -281,58 +184,13 @@ const StylizedEye3D: React.FC<StylizedEyeProps> = ({
         <meshStandardMaterial color="#241818" roughness={0.4} />
       </mesh>
 
-      {/* Movable Glossy Iris, Pupil, and Bright Cornea Catchlights */}
-      <group position={[pupilOffsetX, pupilOffsetY, 0.0185]}>
-        <mesh>
-          <circleGeometry args={[0.0365, 20]} />
-          <meshPhysicalMaterial
-            color="#2b140b"
-            roughness={0.12}
-            clearcoat={1.0}
-            clearcoatRoughness={0.05}
-          />
-        </mesh>
-        <mesh position={[0, 0, 0.001]}>
-          <circleGeometry args={[0.033, 20]} />
-          <meshPhysicalMaterial
-            color="#6b371d"
-            roughness={0.14}
-            clearcoat={0.95}
-            clearcoatRoughness={0.06}
-          />
-        </mesh>
-        <mesh position={[0, -0.009, 0.002]} scale={[0.92, 0.72, 1]}>
-          <circleGeometry args={[0.022, 16]} />
-          <meshStandardMaterial
-            color="#bf7036"
-            emissive="#5e2d0e"
-            emissiveIntensity={0.42}
-            roughness={0.2}
-          />
-        </mesh>
-        <mesh position={[0, 0.001, 0.003]}>
-          <circleGeometry args={[0.016, 16]} />
-          <meshStandardMaterial color="#0b0706" roughness={0.12} />
-        </mesh>
-        <mesh position={[-0.0115, 0.0125, 0.0042]}>
-          <circleGeometry args={[0.0102, 12]} />
-          <meshStandardMaterial
-            color="#ffffff"
-            emissive="#ffffff"
-            emissiveIntensity={0.68}
-            roughness={0.1}
-          />
-        </mesh>
-        <mesh position={[0.0125, -0.0115, 0.0042]}>
-          <circleGeometry args={[0.005, 10]} />
-          <meshStandardMaterial
-            color="#ffffff"
-            emissive="#ffffff"
-            emissiveIntensity={0.54}
-            roughness={0.1}
-          />
-        </mesh>
-      </group>
+      {/* Glare-free matte iris & pupil with crisp controlled catchlights */}
+      <PixarIris3D
+        palette={SENSEI_IRIS}
+        radius={0.0365}
+        offsetX={pupilOffsetX}
+        offsetY={pupilOffsetY}
+      />
 
       {/* 3D Upper Eyelid Pivot */}
       {blinkAmount > 0.02 && (
@@ -492,10 +350,11 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
   sections,
   subtitles,
   studioMode = "solo",
+  boardFocusProgress = 0,
 }) => {
   const isDual = studioMode === "dual";
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
   const timeSec = frame / fps;
   const audio = usePodcastAudioMetrics();
 
@@ -524,15 +383,6 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     timeSec,
   );
   const quizWeight = computeSectionWeight(sections, ["quiz"], timeSec);
-  const dialogueGuestWeight = computeDialogueGuestWeight(
-    sections,
-    subtitles,
-    timeSec,
-    isDual,
-  );
-  const addressMariaWeight = isDual
-    ? computeAddressCoHostWeight(sections, subtitles, false, timeSec)
-    : 0;
   const quizRevealWeight = computeQuizRevealWeight(sections, timeSec);
 
   const calmGestures = computeCalmGestureEnvelopes(
@@ -611,78 +461,131 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     };
   }, [logoTexture, torsoGeometry, upperTailGeometry, lowerTailGeometry]);
 
-  // Natural Eye Blinking (~3.0s = frame % 90) + occasional double-blinks (offset from Maria's 3.4s)
-  const cycleFrame = frame % 90;
-  const cycleIndex = Math.floor(frame / 90);
-  const primaryBlink = interpolate(cycleFrame, [80, 83, 84, 87], [0, 1, 1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.inOut(Easing.cubic),
-  });
-  const secondaryBlink =
-    cycleIndex % 3 === 1
-      ? interpolate(cycleFrame, [70, 72.5, 73.5, 76], [0, 1, 1, 0], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-          easing: Easing.inOut(Easing.cubic),
-        })
-      : 0;
-  const blinkAmount = Math.max(primaryBlink, secondaryBlink);
+  const hostPos: [number, number, number] = isDual
+    ? [-1.14, 0.78, -0.6]
+    : [-0.78, 0.78, -0.62];
+  const rootYaw = isDual ? 0.34 : 0.24;
+  /** Maria sits to Sensei's left (+X world), so turning toward her is +yaw. */
+  const partnerSide = 1;
 
-  // Smart 3-target social gaze: camera (audience), partner (Maria), or board (right presentation)
-  const gaze = computeHostGazeWeights(sections, subtitles, timeSec);
-  const coHostEngageWeight = clamp01(
-    Math.max(gaze.partner, dialogueGuestWeight * 0.5, addressMariaWeight * 0.6),
+  // Natural irregular blinking (3–5s apart, rare double-blinks; independent of Maria's)
+  const blinkSchedule = useMemo(
+    () => buildBlinkSchedule("sensei", durationInFrames / fps, 2.1),
+    [durationInFrames, fps],
   );
-  const listenerAtBoard = isHostSpeaking ? 1 : 0.72 + 0.18 * Math.sin(timeSec * 0.9);
+  const blinkAmount = computeBlinkAmount(blinkSchedule, timeSec);
 
-  const camPupilX = 0;
-  const partnerPupilX = isDual ? 0.012 : 0.004;
-  const boardPupilX = lerp(0.0105, 0.015, Math.max(isHostSpeaking ? 1 : 0, pointBoardWeight)) * listenerAtBoard;
+  // Smooth speaking/listening envelopes (no per-syllable snapping)
+  const selfSpeaking = computeSpeakingEnvelope(subtitles, false, timeSec);
+  const mariaSpeaking = isDual
+    ? computeSpeakingEnvelope(subtitles, true, timeSec)
+    : 0;
+  const listenerWeight = clamp01(mariaSpeaking * (1 - selfSpeaking));
+
+  // Layered social gaze: eyes lead (150ms) -> head -> torso (120ms lag), with
+  // brief ~0.8s audience check-ins every 3.5–5s while talking to Maria.
+  const audienceCheckIns = useMemo(
+    () => (isDual ? buildAudienceCheckIns(sections, subtitles, false) : []),
+    [isDual, sections, subtitles],
+  );
+  const listenerNods = useMemo(
+    () => (isDual ? buildListenerNods(subtitles, false) : []),
+    [isDual, subtitles],
+  );
+  const gaze = computeLayeredGaze(sections, subtitles, timeSec, audienceCheckIns);
+
+  // True eye contact: aim at the real lens (studio wide or circular PIP camera)
+  const cameraPose = computeCameraPose(
+    timeSec,
+    sections,
+    subtitles ?? [],
+    studioMode,
+    boardFocusProgress,
+  );
+  const lens = computeLensDirection(cameraPose.pos, [
+    hostPos[0],
+    hostPos[1] + 0.78,
+    hostPos[2] + 0.02,
+  ]);
+
+  // World-space yaw targets per gaze mode.
+  // camera : torso gently open toward Maria, head & eyes square to the lens.
+  // partner: soft ~9.5° torso + ~18° head on top (≈27° from the lens line, never a
+  //          45° profile); the eyes finish the line toward Maria.
+  // board  : unchanged board-reading angles, eased by a smooth speaking envelope.
+  const boardTorsoWorld = rootYaw + lerp(0.08, 0.14, pointBoardWeight);
+  const boardHeadWorld =
+    boardTorsoWorld +
+    lerp(
+      lerp(0.22 + 0.05 * Math.sin(timeSec * 0.9), 0.28, selfSpeaking),
+      0.36,
+      pointBoardWeight,
+    );
+  const listenerAtBoard = lerp(
+    0.72 + 0.18 * Math.sin(timeSec * 0.9),
+    1,
+    selfSpeaking,
+  );
+  const partnerTorsoWorld = lens.yaw + partnerSide * (isDual ? 0.165 : 0.06);
+  const partnerHeadWorld = partnerTorsoWorld + partnerSide * (isDual ? 0.31 : 0.08);
+
+  const torsoTargets = {
+    camera: lens.yaw + partnerSide * 0.03,
+    partner: partnerTorsoWorld,
+    board: boardTorsoWorld,
+  };
+  const headTargets = {
+    camera: lens.yaw,
+    partner: partnerHeadWorld,
+    board: boardHeadWorld,
+  };
+  const eyeTargets = {
+    camera: lens.yaw,
+    partner: partnerHeadWorld + partnerSide * (isDual ? 0.24 : 0.08),
+    board:
+      boardHeadWorld +
+      lerp(0.21, 0.3, Math.max(selfSpeaking, pointBoardWeight)) *
+        listenerAtBoard,
+  };
+
+  // Breathing & Torso Motion (overlapping action: torso trails the head)
+  const breathY = Math.sin(timeSec * 2.15) * 0.011;
+  const torsoSway = Math.sin(timeSec * 0.75) * 0.015;
+  const torsoWorld = blendGazeTargets(gaze.torso, torsoTargets);
+  const torsoYaw = torsoWorld - rootYaw + torsoSway;
+  const torsoPitch =
+    voiceEnergy * 0.024 +
+    quizRevealWeight * -0.022 +
+    listenerWeight * gaze.torso.partner * 0.022;
+
+  // Head Turning (stabilised against torso sway), Nodding & Tilting
+  const speakBobY = isHostSpeaking ? voiceEnergy * 0.012 : 0;
+  const headWorld =
+    blendGazeTargets(gaze.head, headTargets) +
+    Math.sin(timeSec * 1.05) * 0.022 * (1 - pointBoardWeight * 0.4) +
+    (isHostSpeaking ? Math.cos(timeSec * 4.8) * voiceEnergy * 0.018 : 0);
+  const headYaw = headWorld - torsoWorld - torsoSway;
+
+  // Eyes lead the head and hold the target while the head drifts (VOR-style)
+  const eyeWorld = blendGazeTargets(gaze.eyes, eyeTargets);
   const pupilOffsetX =
-    gaze.camera * camPupilX +
-    gaze.partner * partnerPupilX +
-    gaze.board * boardPupilX +
-    Math.sin(timeSec * 0.85) * 0.0014;
+    gazeAngleToPupilOffset(eyeWorld - headWorld) +
+    Math.sin(timeSec * 0.85) * 0.0006;
   const pupilOffsetY =
-    Math.cos(timeSec * 1.35) * 0.0014 +
+    Math.cos(timeSec * 1.35) * 0.0012 +
+    gaze.eyes.camera * Math.sin(lens.pitch) * 0.05 +
     quizRevealWeight * 0.002 +
     pointBoardWeight * 0.003 +
     thinkingWeight * 0.0065;
 
-  // Breathing & Torso Motion (`camera` cancels root [0, 0.34, 0] so Sensei faces viewer directly)
-  const breathY = Math.sin(timeSec * 2.15) * 0.011;
-  const camTorsoYaw = isDual ? -0.14 : -0.10;
-  const partnerTorsoYaw = isDual ? 0.10 : 0.04;
-  const boardTorsoYaw = lerp(0.08, 0.14, pointBoardWeight);
-  const torsoYaw =
-    gaze.camera * camTorsoYaw +
-    gaze.partner * partnerTorsoYaw +
-    gaze.board * boardTorsoYaw +
-    Math.sin(timeSec * 0.75) * 0.015;
-  const torsoPitch = voiceEnergy * 0.024 + quizRevealWeight * -0.022;
-
-  // Head Turning, Nodding & Tilting
-  const speakBobY = isHostSpeaking ? voiceEnergy * 0.012 : 0;
-  const camHeadYaw = isDual ? -0.20 : -0.14;
-  const partnerHeadYaw = isDual ? 0.28 : 0.10;
-  const boardHeadYaw = lerp(
-    isHostSpeaking ? 0.28 : 0.22 + 0.05 * Math.sin(timeSec * 0.9),
-    0.36,
-    pointBoardWeight,
-  );
-  const headYaw =
-    gaze.camera * camHeadYaw +
-    gaze.partner * partnerHeadYaw +
-    gaze.board * boardHeadYaw +
-    Math.sin(timeSec * 1.05) * 0.022 * (1 - pointBoardWeight * 0.4) +
-    (isHostSpeaking ? Math.cos(timeSec * 4.8) * voiceEnergy * 0.018 : 0);
-
   const speechNod = isHostSpeaking
     ? Math.sin(timeSec * 7.2) * voiceEnergy * 0.045 + voiceEnergy * 0.02
     : 0;
+  // Organic listening nods on Maria's phrase boundaries (strongest when facing her)
   const listeningNod =
-    coHostEngageWeight * (0.03 * Math.max(0, Math.sin(timeSec * 3.8))) * (isHostSpeaking ? 0 : 1);
+    computeListenerNodPitch(listenerNods, timeSec) *
+    (1 - selfSpeaking) *
+    lerp(0.45, 1, gaze.head.partner);
   const revealNod = quizRevealWeight * Math.sin(timeSec * 5.6) * 0.035;
   const encourageNod =
     nodEncourageWeight * (0.055 + 0.125 * Math.sin(timeSec * 6.8));
@@ -695,8 +598,12 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
     pointBoardWeight * 0.045 -
     thinkingWeight * 0.055;
 
+  // Warm 3–5° head tilt toward Maria (a touch more while listening)
+  const partnerTilt =
+    -partnerSide * gaze.head.partner * lerp(0.055, 0.08, listenerWeight);
   const headRoll =
     Math.sin(timeSec * 1.25) * 0.022 +
+    partnerTilt +
     thinkingWeight * 0.16 -
     vocabWeight * 0.024 +
     nodEncourageWeight * 0.02;
@@ -861,12 +768,7 @@ export const NinjaHost3D: React.FC<NinjaHost3DProps> = ({
 
   void activeSection;
 
-  const hostPos: [number, number, number] = isDual
-    ? [-1.14, 0.78, -0.6]
-    : [-0.78, 0.78, -0.62];
-  const hostRot: [number, number, number] = isDual
-    ? [0, 0.34, 0]
-    : [0, 0.24, 0];
+  const hostRot: [number, number, number] = [0, rootYaw, 0];
 
   return (
     <group position={hostPos} rotation={hostRot}>

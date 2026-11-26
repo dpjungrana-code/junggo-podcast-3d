@@ -6,7 +6,7 @@ Pipeline:
 1. Audits `scripts/episode_script.json` with `fugashi` (`unidic-lite`) + `pykakasi`
    for morphological accuracy, Romaji consistency, and 100% English (zero Nepali).
 2. Synthesizes each line using `edge-tts` (`ja-JP-KeitaNeural` & `ja-JP-NanamiNeural`
-   at slow learner-friendly `rate="-16%"`), capturing `WordBoundary` metadata and
+   at natural native 1.0x speed `rate="+0%"`), capturing `WordBoundary` metadata and
    inserting crisp inter-sentence silent pauses (450ms–650ms).
 3. Verifies EVERY clip with `faster-whisper` (`language="ja"`, `word_timestamps=True`),
    auto-correcting any TTS reading discrepancy via `ttsText` phonetic Kana if needed.
@@ -46,11 +46,15 @@ from qa_engine import (
     transcribe_clip_whisper,
 )
 
+# Natural native speaking speed (exact 1.0x). Learner clarity comes from clean
+# inter-sentence pauses and phonetic は→わ rules, not from slowing the voice down.
+NATURAL_SPEECH_RATE = "+0%"
+
 VOICE_PROFILE_MAP: dict[str, tuple[str, str, str]] = {
-    "sensei": ("ja-JP-KeitaNeural", "-8%", "-2Hz"),
-    "junggo": ("ja-JP-KeitaNeural", "-8%", "-2Hz"),
-    "maria": ("ja-JP-NanamiNeural", "-8%", "+0Hz"),
-    "yuki": ("ja-JP-NanamiNeural", "-8%", "+0Hz"),
+    "sensei": ("ja-JP-KeitaNeural", NATURAL_SPEECH_RATE, "-2Hz"),
+    "junggo": ("ja-JP-KeitaNeural", NATURAL_SPEECH_RATE, "-2Hz"),
+    "maria": ("ja-JP-NanamiNeural", NATURAL_SPEECH_RATE, "+0Hz"),
+    "yuki": ("ja-JP-NanamiNeural", NATURAL_SPEECH_RATE, "+0Hz"),
 }
 
 # MPEG Layer III lookup tables
@@ -534,7 +538,7 @@ async def _synthesize_and_verify_line(
     whisper_model: str,
 ) -> tuple[Mp3StreamInfo, Any, list[dict[str, Any]] | None]:
     """
-    Synthesizes a cue clip with Edge-TTS (`rate="-8%"`), checks it blindly with
+    Synthesizes a cue clip with Edge-TTS (`rate="+0%"`), checks it blindly with
     `faster-whisper`, and auto-retries with phonetic separation if similarity < 0.88
     or any spoken content word falls below probability 0.68.
     """
@@ -796,7 +800,7 @@ async def build_episode(
     jlpt_level: str = raw_script.get("jlptLevel", "JLPT N4")
     raw_studio_mode: str = str(raw_script.get("studioMode", "solo")).strip().lower()
     studio_mode: str = raw_studio_mode if raw_studio_mode in ("solo", "dual") else "solo"
-    speech_rate: str = str(raw_script.get("speechRate", "-8%"))
+    speech_rate: str = str(raw_script.get("speechRate", NATURAL_SPEECH_RATE))
     lead_in_target: float = float(raw_script.get("leadInSec", 0.45))
     outro_target: float = float(raw_script.get("outroSec", 0.75))
     micro_pause_sec: float = float(raw_script.get("sentenceMicroPauseSec", 0.45))

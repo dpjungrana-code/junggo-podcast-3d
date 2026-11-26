@@ -30,6 +30,8 @@ type Studio3DProps = {
   readonly sections: readonly EpisodeSection[];
   readonly subtitles?: readonly SubtitleCue[];
   readonly studioMode?: StudioMode;
+  /** 0 = studio wide, 1 = circular PIP; lets hosts aim eye contact at the real lens. */
+  readonly boardFocusProgress?: number;
 };
 
 const BOKEH_LIGHTS: readonly {
@@ -785,6 +787,7 @@ export const Studio3D: React.FC<Studio3DProps> = ({
   sections,
   subtitles,
   studioMode = "solo",
+  boardFocusProgress = 0,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -1331,9 +1334,14 @@ export const Studio3D: React.FC<Studio3DProps> = ({
         sections={sections}
         subtitles={subtitles}
         studioMode={studioMode}
+        boardFocusProgress={boardFocusProgress}
       />
       {isDual ? (
-        <FemaleNinjaHost3D sections={sections} subtitles={subtitles} />
+        <FemaleNinjaHost3D
+          sections={sections}
+          subtitles={subtitles}
+          boardFocusProgress={boardFocusProgress}
+        />
       ) : null}
     </group>
   );

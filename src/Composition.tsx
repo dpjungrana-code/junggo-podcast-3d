@@ -378,6 +378,7 @@ export const JungGoPodcastStudio: React.FC<JungGoPodcastProps> = ({
                 sections={ACTIVE_EPISODE.sections}
                 subtitles={ACTIVE_EPISODE.subtitles}
                 studioMode={studioMode}
+                boardFocusProgress={boardFocusProgress}
               />
             </ThreeCanvas>
           </div>

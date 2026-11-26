@@ -1,4 +1,4 @@
-import { interpolate } from "remotion";
+import { Easing, interpolate } from "remotion";
 
 export type StudioMode = "solo" | "dual";
 
@@ -353,39 +353,97 @@ export const resolveCueGaze = (
   return "camera";
 };
 
+export type HostGazeWeights = {
+  readonly camera: number;
+  readonly partner: number;
+  readonly board: number;
+};
+
+/**
+ * Calm ~0.6s gaze turn around each cue boundary (starts ~0.35s before speech).
+ * Sine in/out keeps peak head speed near ~120°/s on a 40° turn (broadcast-calm,
+ * never a whip), with zero velocity at both ends.
+ */
+const GAZE_TURN_LEAD_SEC = 0.35;
+const GAZE_TURN_SETTLE_SEC = 0.25;
+/** Pauses shorter than this keep the previous cue's gaze until the next turn begins. */
+const GAZE_HOLD_MAX_GAP_SEC = 2.2;
+
+const GAZE_EASE = Easing.inOut(Easing.sin);
+
+const fallbackGazeForSection = (section: EpisodeSection): HostGazeWeights => {
+  if (section.type === "dialogue") {
+    return { camera: 0.2, partner: 0.8, board: 0 };
+  }
+  if (section.type === "station_guide" || section.type === "vocabulary") {
+    return { camera: 0.5, partner: 0, board: 0.5 };
+  }
+  return { camera: 1, partner: 0, board: 0 };
+};
+
 /**
  * Computes smooth `0..1` weights across `camera`, `partner`, and `board` gaze targets
  * so both 3D hosts turn cleanly toward the viewer on greetings, openers, and quizzes.
+ *
+ * - Eased (cubic in/out) turns instead of linear ramps.
+ * - Short conversational pauses hold the previous gaze and cross-fade exactly into
+ *   the next cue's turn, so hosts never drift to a neutral pose mid-exchange.
+ * - Longer silences blend continuously into a section fallback (no snapping).
  */
 export const computeHostGazeWeights = (
   sections: readonly EpisodeSection[],
   subtitles: readonly SubtitleCue[] | undefined,
   timeSec: number,
-): { readonly camera: number; readonly partner: number; readonly board: number } => {
+): HostGazeWeights => {
+  const activeSec = getActiveSection(sections, timeSec);
   if (!subtitles || subtitles.length === 0) {
-    return { camera: 1, partner: 0, board: 0 };
+    return fallbackGazeForSection(activeSec);
   }
 
   let cameraW = 0;
   let partnerW = 0;
   let boardW = 0;
-  const secAt = (t: number) => getActiveSection(sections, t);
 
   for (let i = 0; i < subtitles.length; i++) {
     const cue = subtitles[i];
-    const enter = interpolate(timeSec, [cue.startSec - 0.25, cue.startSec + 0.18], [0, 1], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    });
-    const exit = interpolate(timeSec, [cue.endSec - 0.12, cue.endSec + 0.28], [1, 0], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    });
-    const w = Math.min(enter, exit);
-    if (w <= 0.001) {
+    const nextCue = subtitles[i + 1];
+    const enterStart = cue.startSec - GAZE_TURN_LEAD_SEC;
+    if (timeSec < enterStart) {
       continue;
     }
-    const mode = resolveCueGaze(cue, secAt((cue.startSec + cue.endSec) * 0.5), subtitles[i + 1]);
+    const holdsIntoNext =
+      nextCue !== undefined &&
+      nextCue.startSec - cue.endSec <= GAZE_HOLD_MAX_GAP_SEC;
+    const exitStart = holdsIntoNext
+      ? nextCue.startSec - GAZE_TURN_LEAD_SEC
+      : cue.endSec - 0.12;
+    const exitEnd = holdsIntoNext
+      ? nextCue.startSec + GAZE_TURN_SETTLE_SEC
+      : cue.endSec + 0.4;
+    if (timeSec > exitEnd) {
+      continue;
+    }
+
+    const enter = interpolate(
+      timeSec,
+      [enterStart, cue.startSec + GAZE_TURN_SETTLE_SEC],
+      [0, 1],
+      { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: GAZE_EASE },
+    );
+    const exit = interpolate(timeSec, [exitStart, exitEnd], [1, 0], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: GAZE_EASE,
+    });
+    const w = Math.min(enter, exit);
+    if (w <= 0.0005) {
+      continue;
+    }
+    const mode = resolveCueGaze(
+      cue,
+      getActiveSection(sections, (cue.startSec + cue.endSec) * 0.5),
+      nextCue,
+    );
     if (mode === "camera") {
       cameraW += w;
     } else if (mode === "partner") {
@@ -395,22 +453,16 @@ export const computeHostGazeWeights = (
     }
   }
 
-  const activeSec = secAt(timeSec);
+  // Continuous blend into the section fallback when cue coverage drops below 1.
   const total = cameraW + partnerW + boardW;
-  if (total <= 0.001) {
-    if (activeSec.type === "dialogue") {
-      return { camera: 0.2, partner: 0.8, board: 0 };
-    }
-    if (activeSec.type === "station_guide" || activeSec.type === "vocabulary") {
-      return { camera: 0.5, partner: 0, board: 0.5 };
-    }
-    return { camera: 1, partner: 0, board: 0 };
-  }
+  const fill = Math.max(0, 1 - total);
+  const fallback = fallbackGazeForSection(activeSec);
+  const sum = total + fill;
 
   return {
-    camera: cameraW / total,
-    partner: partnerW / total,
-    board: boardW / total,
+    camera: (cameraW + fallback.camera * fill) / sum,
+    partner: (partnerW + fallback.partner * fill) / sum,
+    board: (boardW + fallback.board * fill) / sum,
   };
 };
 

@@ -17,7 +17,7 @@ type CameraRigProps = {
   readonly boardFocusProgress?: number;
 };
 
-type CameraPose = {
+export type CameraPose = {
   readonly pos: readonly [number, number, number];
   readonly lookAt: readonly [number, number, number];
   readonly fov: number;
@@ -144,18 +144,17 @@ const getSectionPose = (
 };
 
 /**
- * Dynamic 3D Camera Rig choreographer driven purely by `useCurrentFrame()`.
+ * Pure, deterministic camera pose for a moment in the episode. Shared by
+ * `CameraRig` (which applies it) and the 3D hosts (which aim their eyes at the
+ * real lens position for true audience eye contact in wide and PIP shots).
  */
-export const CameraRig: React.FC<CameraRigProps> = ({
-  sections,
-  subtitles,
-  studioMode = "solo",
+export const computeCameraPose = (
+  timeSec: number,
+  sections: readonly EpisodeSection[],
+  subtitles: readonly SubtitleCue[],
+  studioMode: StudioMode = "solo",
   boardFocusProgress = 0,
-}) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const { camera } = useThree();
-  const timeSec = frame / fps;
+): CameraPose => {
   const isDual = studioMode === "dual";
   const focusP = Math.max(0, Math.min(1, boardFocusProgress));
 
@@ -253,6 +252,30 @@ export const CameraRig: React.FC<CameraRigProps> = ({
         };
     pose = lerpPose(pose, circlePose, focusP);
   }
+
+  return pose;
+};
+
+/**
+ * Dynamic 3D Camera Rig choreographer driven purely by `useCurrentFrame()`.
+ */
+export const CameraRig: React.FC<CameraRigProps> = ({
+  sections,
+  subtitles,
+  studioMode = "solo",
+  boardFocusProgress = 0,
+}) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const { camera } = useThree();
+  const timeSec = frame / fps;
+  const pose = computeCameraPose(
+    timeSec,
+    sections,
+    subtitles,
+    studioMode,
+    boardFocusProgress,
+  );
 
   const applyCamera = (): void => {
     camera.position.set(pose.pos[0], pose.pos[1], pose.pos[2]);

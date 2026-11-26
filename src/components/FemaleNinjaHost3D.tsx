@@ -5,24 +5,37 @@ import {
   EpisodeSection,
   PodcastSectionType,
   SubtitleCue,
-  computeHostGazeWeights,
   getActiveSubtitle,
-  isAddressingCoHost,
   isGuestSpeaker,
-  resolveCueGesture,
 } from "../data/demoEpisode";
 import {
   computeDualLockMouthMetrics,
   usePodcastAudioMetrics,
 } from "../utils/audio";
+import {
+  blendGazeTargets,
+  buildAudienceCheckIns,
+  buildBlinkSchedule,
+  buildListenerNods,
+  computeBlinkAmount,
+  computeLayeredGaze,
+  computeLensDirection,
+  computeListenerNodPitch,
+  computeSpeakingEnvelope,
+  gazeAngleToPupilOffset,
+} from "../utils/hostGaze";
 import { createHoodieLogoTexture } from "../utils/textures";
+import { computeCameraPose } from "./CameraRig";
 import { PixarHand3D, computeCalmGestureEnvelopes } from "./PixarHand3D";
+import { MARIA_IRIS, PixarIris3D } from "./PixarIris3D";
 
 export type FemaleNinjaHost3DProps = {
   readonly sections: readonly EpisodeSection[];
   readonly subtitles?: readonly SubtitleCue[];
   readonly position?: readonly [number, number, number];
   readonly rotation?: readonly [number, number, number];
+  /** 0 = studio wide, 1 = circular PIP (used to aim eye contact at the real lens). */
+  readonly boardFocusProgress?: number;
 };
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
@@ -77,96 +90,6 @@ const findSectionAt = (
   return sections[sections.length - 1];
 };
 
-const computeSpeakerEnvelope = (
-  subtitles: readonly SubtitleCue[] | undefined,
-  guestSpeaker: boolean,
-  timeSec: number,
-): number => {
-  if (!subtitles || subtitles.length === 0) {
-    return 0;
-  }
-
-  let maxWeight = 0;
-  for (const cue of subtitles) {
-    if (isGuestSpeaker(cue.speaker) !== guestSpeaker) {
-      continue;
-    }
-    const enter = interpolate(
-      timeSec,
-      [cue.startSec - 0.22, cue.startSec + 0.22],
-      [0, 1],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    const exit = interpolate(
-      timeSec,
-      [cue.endSec - 0.16, cue.endSec + 0.34],
-      [1, 0],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    maxWeight = Math.max(maxWeight, Math.min(enter, exit));
-  }
-  return clamp01(maxWeight);
-};
-
-/**
- * Smooth 0..1 envelope when Maria directly addresses Sensei (by name, question
- * phrasing, or dialogue handoff) without pointing at the board.
- */
-const computeAddressSenseiWeight = (
-  sections: readonly EpisodeSection[],
-  subtitles: readonly SubtitleCue[] | undefined,
-  timeSec: number,
-): number => {
-  if (!subtitles || subtitles.length === 0) {
-    return 0;
-  }
-  let maxWeight = 0;
-  for (let i = 0; i < subtitles.length; i++) {
-    const cue = subtitles[i];
-    if (!isGuestSpeaker(cue.speaker)) {
-      continue;
-    }
-    const midSec = (cue.startSec + cue.endSec) * 0.5;
-    const sec = findSectionAt(sections, midSec);
-    if (resolveCueGesture(cue, sec, true) === "point_board") {
-      continue;
-    }
-    if (!isAddressingCoHost(cue, subtitles[i + 1])) {
-      continue;
-    }
-    const enter = interpolate(
-      timeSec,
-      [cue.startSec - 0.16, cue.startSec + 0.24],
-      [0, 1],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    const exit = interpolate(
-      timeSec,
-      [cue.endSec - 0.12, cue.endSec + 0.36],
-      [1, 0],
-      {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-        easing: Easing.inOut(Easing.cubic),
-      },
-    );
-    maxWeight = Math.max(maxWeight, Math.min(enter, exit));
-  }
-  return clamp01(maxWeight);
-};
-
 type FemaleEyeProps = {
   readonly name: string;
   readonly side: "left" | "right";
@@ -216,14 +139,15 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
         <meshStandardMaterial color="#382218" roughness={0.56} />
       </mesh>
 
-      {/* Wet-look glossy white sclera */}
+      {/* Soft moist sclera (gentle sheen, no hot specular bloom around the iris) */}
       <mesh scale={[1.02, 1.08, 0.34]}>
         <sphereGeometry args={[0.052, 18, 14]} />
         <meshPhysicalMaterial
-          color="#fcfdff"
-          roughness={0.14}
-          clearcoat={1.0}
-          clearcoatRoughness={0.06}
+          color="#fbfbf8"
+          roughness={0.34}
+          clearcoat={0.25}
+          clearcoatRoughness={0.32}
+          envMapIntensity={0}
         />
       </mesh>
 
@@ -253,58 +177,13 @@ const FemaleStylizedEye3D: React.FC<FemaleEyeProps> = ({
         <meshStandardMaterial color="#211618" roughness={0.38} />
       </mesh>
 
-      {/* Movable Glossy Iris, Pupil, and Bright Cornea Catchlights */}
-      <group position={[pupilOffsetX, pupilOffsetY, 0.0185]}>
-        <mesh>
-          <circleGeometry args={[0.037, 20]} />
-          <meshPhysicalMaterial
-            color="#2b120e"
-            roughness={0.12}
-            clearcoat={1.0}
-            clearcoatRoughness={0.05}
-          />
-        </mesh>
-        <mesh position={[0, 0, 0.001]}>
-          <circleGeometry args={[0.0335, 20]} />
-          <meshPhysicalMaterial
-            color="#662d1b"
-            roughness={0.14}
-            clearcoat={0.95}
-            clearcoatRoughness={0.06}
-          />
-        </mesh>
-        <mesh position={[0, -0.009, 0.002]} scale={[0.92, 0.72, 1]}>
-          <circleGeometry args={[0.022, 16]} />
-          <meshStandardMaterial
-            color="#c7683e"
-            emissive="#632612"
-            emissiveIntensity={0.42}
-            roughness={0.2}
-          />
-        </mesh>
-        <mesh position={[0, 0.001, 0.003]}>
-          <circleGeometry args={[0.016, 16]} />
-          <meshStandardMaterial color="#0b0706" roughness={0.12} />
-        </mesh>
-        <mesh position={[-0.0115, 0.0125, 0.0042]}>
-          <circleGeometry args={[0.0104, 12]} />
-          <meshStandardMaterial
-            color="#ffffff"
-            emissive="#ffffff"
-            emissiveIntensity={0.68}
-            roughness={0.1}
-          />
-        </mesh>
-        <mesh position={[0.0125, -0.0115, 0.0042]}>
-          <circleGeometry args={[0.0052, 10]} />
-          <meshStandardMaterial
-            color="#ffffff"
-            emissive="#ffffff"
-            emissiveIntensity={0.54}
-            roughness={0.1}
-          />
-        </mesh>
-      </group>
+      {/* Glare-free matte iris & pupil with crisp controlled catchlights */}
+      <PixarIris3D
+        palette={MARIA_IRIS}
+        radius={0.037}
+        offsetX={pupilOffsetX}
+        offsetY={pupilOffsetY}
+      />
 
       {/* 3D Upper Eyelid Pivot */}
       {blinkAmount > 0.02 && (
@@ -467,17 +346,18 @@ const FemaleArticulatedArm3D: React.FC<FemaleArmProps> = ({
 /**
  * Stylized 3D Pixar-Chibi Female Ninja Co-Host (Maria) matched in proportions
  * and craft to `NinjaHost3D`, with sleek deep-teal hoodie, crimson ninja headband,
- * high ponytail, winged eyelashes, independent audio-reactive lip-sync, offset
- * blinking (`+37` frames), and cross-character gaze + active listening nods.
+ * high ponytail, winged eyelashes, independent audio-reactive lip-sync, irregular
+ * natural blinking, layered lens/partner gaze, and phrase-synced listening nods.
  */
 export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   sections,
   subtitles,
   position = [-0.08, 0.78, -0.64],
   rotation = [0, -0.26, 0],
+  boardFocusProgress = 0,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
   const timeSec = frame / fps;
   const audio = usePodcastAudioMetrics();
 
@@ -500,16 +380,15 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
   const mouthOpen = mouthMetrics.jawOpen;
   const mouthWidth = mouthMetrics.mouthWidth;
 
-  const mariaSpeakingWeight = computeSpeakerEnvelope(subtitles, true, timeSec);
-  const senseiSpeakingWeight = computeSpeakerEnvelope(
+  // Smooth speaking/listening envelopes (no per-syllable snapping)
+  const mariaSpeakingWeight = computeSpeakingEnvelope(subtitles, true, timeSec);
+  const senseiSpeakingWeight = computeSpeakingEnvelope(
     subtitles,
     false,
     timeSec,
   );
-  const addressSenseiWeight = computeAddressSenseiWeight(
-    sections,
-    subtitles,
-    timeSec,
+  const listenerWeight = clamp01(
+    senseiSpeakingWeight * (1 - mariaSpeakingWeight),
   );
   const senseiCalmGestures = computeCalmGestureEnvelopes(
     frame,
@@ -620,80 +499,112 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
     lowerTailGeometry,
   ]);
 
-  // Offset 102-frame (~3.4s) blink cycle so Maria & Sensei never blink in unison
-  const blinkFrame = (frame + 37) % 102;
-  const blinkCycleIdx = Math.floor((frame + 37) / 102);
-  const primaryBlink = interpolate(blinkFrame, [92, 95, 96, 99], [0, 1, 1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.inOut(Easing.cubic),
-  });
-  const doubleBlink =
-    blinkCycleIdx % 4 === 2
-      ? interpolate(blinkFrame, [82, 84.5, 85.5, 88], [0, 1, 1, 0], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-          easing: Easing.inOut(Easing.cubic),
-        })
-      : 0;
-  const blinkAmount = Math.max(primaryBlink, doubleBlink);
+  const rootYaw = rotation[1];
+  /** Sensei sits to Maria's right (-X world), so turning toward him is -yaw. */
+  const partnerSide = -1;
 
-  // Smart 3-target social gaze: camera (audience), partner (Sensei), or board (right presentation)
-  const gaze = computeHostGazeWeights(sections, subtitles, timeSec);
-  const lookAtSenseiWeight = clamp01(
-    Math.max(gaze.partner, addressSenseiWeight * 0.65),
+  // Natural irregular blinking (3–5s apart, rare double-blinks; independent of Sensei's)
+  const blinkSchedule = useMemo(
+    () => buildBlinkSchedule("maria", durationInFrames / fps, 3.3),
+    [durationInFrames, fps],
   );
+  const blinkAmount = computeBlinkAmount(blinkSchedule, timeSec);
+
+  // Layered social gaze: eyes lead (150ms) -> head -> torso (120ms lag), with
+  // brief ~0.8s audience check-ins every 3.5–5s while talking to Sensei.
+  const audienceCheckIns = useMemo(
+    () => buildAudienceCheckIns(sections, subtitles, true),
+    [sections, subtitles],
+  );
+  const listenerNods = useMemo(
+    () => buildListenerNods(subtitles, true),
+    [subtitles],
+  );
+  const gaze = computeLayeredGaze(sections, subtitles, timeSec, audienceCheckIns);
+  const lookAtSenseiWeight = gaze.head.partner;
   const lookAtBoardWeight = clamp01(
-    Math.max(gaze.board, mariaPointWeight, senseiPointWeight * 0.5),
+    Math.max(gaze.head.board, mariaPointWeight, senseiPointWeight * 0.5),
   );
-  void senseiSpeakingWeight;
   void introWeight;
   void kanjiOrVocabWeight;
-  void mariaSpeakingWeight;
 
-  const camHeadYaw = 0.16; // cancels root rotation [0, -0.26, 0] + camTorsoYaw (0.10) => world 0.00!
-  const partnerHeadYaw = -0.26;
-  const boardHeadYaw = isMariaSpeaking
-    ? 0.36
-    : 0.14 + 0.14 * Math.sin(timeSec * 0.85);
-  const headYaw =
-    gaze.camera * camHeadYaw +
-    gaze.partner * partnerHeadYaw +
-    gaze.board * boardHeadYaw +
+  // True eye contact: aim at the real lens (studio wide or circular PIP camera)
+  const cameraPose = computeCameraPose(
+    timeSec,
+    sections,
+    subtitles ?? [],
+    "dual",
+    boardFocusProgress,
+  );
+  const lens = computeLensDirection(cameraPose.pos, [
+    position[0],
+    position[1] + 0.78,
+    position[2] + 0.02,
+  ]);
+
+  // World-space yaw targets per gaze mode.
+  // camera : torso gently open toward Sensei, head & eyes square to the lens.
+  // partner: soft ~9.5° torso + ~18° head on top (≈27° from the lens line, never a
+  //          45° profile); the eyes finish the line toward Sensei.
+  // board  : unchanged board-reading angles, eased by a smooth speaking envelope.
+  const boardTorsoWorld = rootYaw + lerp(0.06, 0.16, mariaSpeakingWeight);
+  const boardHeadWorld =
+    boardTorsoWorld +
+    lerp(0.14 + 0.14 * Math.sin(timeSec * 0.85), 0.36, mariaSpeakingWeight);
+  const partnerTorsoWorld = lens.yaw + partnerSide * 0.165;
+  const partnerHeadWorld = partnerTorsoWorld + partnerSide * 0.31;
+
+  const torsoTargets = {
+    camera: lens.yaw + partnerSide * 0.03,
+    partner: partnerTorsoWorld,
+    board: boardTorsoWorld,
+  };
+  const headTargets = {
+    camera: lens.yaw,
+    partner: partnerHeadWorld,
+    board: boardHeadWorld,
+  };
+  const eyeTargets = {
+    camera: lens.yaw,
+    partner: partnerHeadWorld + partnerSide * 0.24,
+    board:
+      boardHeadWorld +
+      lerp(0.14 * Math.sin(timeSec * 0.85), 0.28, mariaSpeakingWeight),
+  };
+
+  // Breathing & Torso Motion (overlapping action: torso trails the head)
+  const breathY = Math.sin(timeSec * 2.3 + 1.2) * 0.01;
+  const torsoWorld = blendGazeTargets(gaze.torso, torsoTargets);
+  const torsoYaw = torsoWorld - rootYaw;
+  const torsoPitch =
+    voiceEnergy * 0.022 + listenerWeight * gaze.torso.partner * 0.022;
+
+  // Head Turning (relative to the trailing torso), Nodding & Tilting
+  const headWorld =
+    blendGazeTargets(gaze.head, headTargets) +
     Math.sin(timeSec * 0.95 + 0.8) * 0.022 * (1 - lookAtBoardWeight * 0.4);
+  const headYaw = headWorld - torsoWorld;
 
-  const boardPupilX = isMariaSpeaking
-    ? 0.014
-    : 0.007 * Math.sin(timeSec * 0.85);
+  // Eyes lead the head and hold the target while the head drifts (VOR-style)
+  const eyeWorld = blendGazeTargets(gaze.eyes, eyeTargets);
   const pupilOffsetX =
-    gaze.camera * 0.0 +
-    gaze.partner * -0.012 +
-    gaze.board * boardPupilX +
-    Math.sin(timeSec * 0.8 + 1.4) * 0.0012;
+    gazeAngleToPupilOffset(eyeWorld - headWorld) +
+    Math.sin(timeSec * 0.8 + 1.4) * 0.0006;
   const pupilOffsetY =
-    Math.cos(timeSec * 1.25 + 0.6) * 0.0014 +
+    Math.cos(timeSec * 1.25 + 0.6) * 0.0012 +
+    gaze.eyes.camera * Math.sin(lens.pitch) * 0.05 +
     quizWeight * 0.003 +
     lookAtBoardWeight * 0.0025;
-
-  // Breathing, posture & attentive listening nods
-  const breathY = Math.sin(timeSec * 2.3 + 1.2) * 0.01;
-  const camTorsoYaw = 0.10;
-  const partnerTorsoYaw = -0.10;
-  const boardTorsoYaw = isMariaSpeaking ? 0.16 : 0.06;
-  const torsoYaw =
-    gaze.camera * camTorsoYaw +
-    gaze.partner * partnerTorsoYaw +
-    gaze.board * boardTorsoYaw;
-  const torsoPitch = voiceEnergy * 0.022;
 
   const speakBobY = isMariaSpeaking ? voiceEnergy * 0.011 : 0;
   const speechNod = isMariaSpeaking
     ? Math.sin(timeSec * 7.6) * voiceEnergy * 0.042 + voiceEnergy * 0.018
     : 0;
+  // Organic listening nods on Sensei's phrase boundaries (strongest when facing him)
   const activeListeningNod =
-    lookAtSenseiWeight *
-    (0.03 + 0.055 * Math.max(0, Math.sin(timeSec * 4.1)) * (0.4 + audio.volume)) *
-    (isMariaSpeaking ? 0 : 1);
+    computeListenerNodPitch(listenerNods, timeSec) *
+    (1 - mariaSpeakingWeight) *
+    lerp(0.45, 1, lookAtSenseiWeight);
   const mariaEncourageNod = mariaNodWeight * Math.sin(timeSec * 6.4) * 0.075;
   const headPitch =
     Math.sin(timeSec * 1.45 + 0.9) * 0.018 +
@@ -702,9 +613,12 @@ export const FemaleNinjaHost3D: React.FC<FemaleNinjaHost3DProps> = ({
     mariaEncourageNod -
     lookAtBoardWeight * 0.03;
 
+  // Warm 3–5° head tilt toward Sensei (a touch more while listening)
+  const partnerTilt =
+    -partnerSide * lookAtSenseiWeight * lerp(0.055, 0.08, listenerWeight);
   const headRoll =
     Math.sin(timeSec * 1.15 + 0.7) * 0.024 +
-    lookAtSenseiWeight * -0.045 +
+    partnerTilt +
     quizWeight * -0.09;
 
   const browRaise =
